@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
 
-import { RouteMode, RouteTimeResponse } from '@automata/types';
+import type { RouteMode, RouteTimeResponse } from '@automata/types';
 import { FastifyInstance, FastifyPluginOptions } from 'fastify';
 import { z } from 'zod';
 

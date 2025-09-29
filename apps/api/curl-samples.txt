@@ -1,0 +1,16 @@
+### Route Time (Google Routes provider)
+
+# Driving directions between two addresses
+curl -G "http://localhost:4000/route-time" \
+  -H "accept: application/json" \
+  --data-urlencode "from=1600 Amphitheatre Parkway, Mountain View, CA" \
+  --data-urlencode "to=1 Infinite Loop, Cupertino, CA" \
+  --data-urlencode "mode=driving"
+
+# Transit directions with explicit freshness window
+curl -G "http://localhost:4000/route-time" \
+  -H "accept: application/json" \
+  --data-urlencode "from=Empire State Building, New York, NY" \
+  --data-urlencode "to=John F. Kennedy International Airport" \
+  --data-urlencode "mode=transit" \
+  --data-urlencode "freshnessSeconds=420"

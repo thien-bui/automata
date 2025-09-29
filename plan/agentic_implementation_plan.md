@@ -56,10 +56,10 @@
 - [ ] Document key management in `README` or plan doc; highlight LAN-only restrictions.
 
 ## 10. Dockerization
-- [ ] Author multi-stage Dockerfile for `apps/api` (builder + runtime) with `npm` install strategy.
-- [ ] Author multi-stage Dockerfile for `apps/web`, final stage `nginx:alpine` serving `dist` with template config.
-- [ ] Create `docker-compose.yml` wiring `api`, `web`, `redis`, optional `nginx`; configure healthchecks and shared network.
-- [ ] Provide `Makefile`/scripts for `docker-compose build` and `up` to streamline agent workflows.
+- [x] Author multi-stage Dockerfile for `apps/api` (builder + runtime) with `npm` install strategy.
+- [x] Author multi-stage Dockerfile for `apps/web`, final stage `nginx:alpine` serving `dist` with template config.
+- [x] Create `docker-compose.yml` wiring `api`, `web`, `redis`, optional `nginx`; configure healthchecks and shared network.
+- [x] Provide `Makefile`/scripts for `docker-compose build` and `up` to streamline agent workflows.
 
 ## 11. Observability & Ops
 - [ ] Configure Fastify Pino logging with requestId plugin; expose `/metrics` using `prom-client` (local only).
