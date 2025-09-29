@@ -1,0 +1,9 @@
+{
+  "name": "@automata/types",
+  "version": "0.0.0",
+  "private": true,
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc -p tsconfig.json"
+  }
+}
