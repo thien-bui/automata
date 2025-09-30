@@ -1,6 +1,6 @@
 <template>
   <v-card class="map-preview" elevation="2" :aria-label="ariaLabel">
-    <v-responsive aspect-ratio="16/9">
+    <div class="map-frame">
       <div ref="mapContainer" class="map-surface">
         <div v-if="status !== 'ready'" class="placeholder d-flex align-center justify-center text-body-2 text-medium-emphasis">
           <span v-if="status === 'inactive'">Enable Nav mode to display the map.</span>
@@ -16,12 +16,11 @@
           <div v-if="lastUpdatedLabel">Last update {{ lastUpdatedLabel }}</div>
         </div>
       </div>
-    </v-responsive>
+    </div>
   </v-card>
 </template>
 
 <script setup lang="ts">
-import { Loader } from '@googlemaps/js-api-loader';
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 
 const props = defineProps<{
@@ -36,12 +35,9 @@ type MapStatus = 'inactive' | 'loading' | 'ready' | 'no-key' | 'error';
 const mapContainer = ref<HTMLDivElement | null>(null);
 const status = ref<MapStatus>('inactive');
 const errorMessage = ref('');
-const loader = ref<Loader | null>(null);
 
-type LoadedGoogle = Awaited<ReturnType<Loader['load']>>;
-
-let googleModule: LoadedGoogle | null = null;
-let mapInstance: unknown = null;
+let googleMapsPromise: Promise<any> | null = null;
+let mapInstance: google.maps.Map | null = null;
 
 const ariaLabel = computed(
   () => `Route preview map from ${props.origin} to ${props.destination}.`,
@@ -59,6 +55,63 @@ const lastUpdatedLabel = computed(() => {
 });
 
 const apiKey = import.meta.env.VITE_GOOGLE_MAPS_BROWSER_KEY;
+
+function loadGoogleMaps(apiKey: string): Promise<any> {
+  if (typeof window === 'undefined') {
+    return Promise.reject(new Error('Google Maps is unavailable in this environment.'));
+  }
+
+  if (window.google?.maps) {
+    return Promise.resolve(window.google);
+  }
+
+  if (googleMapsPromise) {
+    return googleMapsPromise;
+  }
+
+  const existingScript = document.querySelector<HTMLScriptElement>('script[data-google-maps-loader="true"]');
+
+  if (existingScript) {
+    googleMapsPromise = new Promise((resolve, reject) => {
+      existingScript.addEventListener('load', () => {
+        if (window.google?.maps) {
+          resolve(window.google);
+          return;
+        }
+        reject(new Error('Google Maps script loaded without maps namespace.'));
+      });
+      existingScript.addEventListener('error', () => {
+        googleMapsPromise = null;
+        reject(new Error('Failed to load Google Maps script.'));
+      });
+    });
+    return googleMapsPromise;
+  }
+
+  googleMapsPromise = new Promise((resolve, reject) => {
+    const script = document.createElement('script');
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(apiKey)}&v=weekly`;
+    script.async = true;
+    script.defer = true;
+    script.dataset.googleMapsLoader = 'true';
+    script.onload = () => {
+      if (window.google?.maps) {
+        resolve(window.google);
+      } else {
+        googleMapsPromise = null;
+        reject(new Error('Google Maps script loaded without maps namespace.'));
+      }
+    };
+    script.onerror = () => {
+      script.remove();
+      googleMapsPromise = null;
+      reject(new Error('Failed to load Google Maps script.'));
+    };
+    document.head.appendChild(script);
+  });
+
+  return googleMapsPromise;
+}
 
 async function ensureMap() {
   if (!props.active) {
@@ -80,25 +133,16 @@ async function ensureMap() {
     return;
   }
 
-  if (!loader.value) {
-    loader.value = new Loader({
-      apiKey,
-      version: 'weekly',
-    });
-  }
-
   status.value = 'loading';
 
   try {
-    googleModule = await loader.value.load();
+    const mapsApi = await loadGoogleMaps(apiKey);
 
     if (!mapContainer.value) {
       status.value = 'error';
       errorMessage.value = 'Unable to attach map container.';
       return;
     }
-
-    const mapsApi = googleModule as LoadedGoogle;
 
     mapInstance = new mapsApi.maps.Map(mapContainer.value, {
       center: { lat: 37.7749, lng: -122.4194 },
@@ -137,7 +181,6 @@ onMounted(() => {
 
 onBeforeUnmount(() => {
   mapInstance = null;
-  googleModule = null;
 });
 </script>
 
@@ -146,10 +189,15 @@ onBeforeUnmount(() => {
   overflow: hidden;
 }
 
-.map-surface {
+.map-frame {
   position: relative;
   width: 100%;
-  height: 100%;
+  min-height: 280px;
+}
+
+.map-surface {
+  position: absolute;
+  inset: 0;
   background: repeating-linear-gradient(
     45deg,
     rgba(30, 136, 229, 0.08),
@@ -164,6 +212,7 @@ onBeforeUnmount(() => {
   inset: 0;
   padding: 0 16px;
   text-align: center;
+  background: rgba(18, 18, 18, 0.12);
 }
 
 .map-overlay {

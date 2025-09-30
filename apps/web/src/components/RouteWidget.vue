@@ -46,6 +46,7 @@
           </v-sheet>
 
           <MapPreview
+            v-if="mode === 'nav'"
             class="mt-4"
             :active="mode === 'nav'"
             :origin="originLabel"
