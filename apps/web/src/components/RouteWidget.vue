@@ -148,8 +148,8 @@ type RouteAlert = {
   message: string;
 };
 
-const DEFAULT_FROM = 'Automata HQ, Innovation Way';
-const DEFAULT_TO = 'Central Transit Depot, Downtown';
+const DEFAULT_FROM = '443 Ramsay Way, Kent, WA 98032';
+const DEFAULT_TO = '35522 21st Ave SW ste B, Federal Way, WA 98023';
 const NAV_MODE_REFRESH_SECONDS = 300;
 
 const mode = ref<MonitoringMode>('simple');
