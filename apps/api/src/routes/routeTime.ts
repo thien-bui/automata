@@ -22,6 +22,7 @@ const querySchema = z.object({
     .min(60)
     .max(900)
     .optional(),
+  forceRefresh: z.coerce.boolean().optional(),
 });
 
 interface CachedRouteRecord {
@@ -79,7 +80,13 @@ export async function registerRouteTime(app: FastifyInstance, _opts: FastifyPlug
       return;
     }
 
-    const { from, to, mode, freshnessSeconds: freshnessOverride } = validation.data;
+    const {
+      from,
+      to,
+      mode,
+      freshnessSeconds: freshnessOverride,
+      forceRefresh = false,
+    } = validation.data;
     const freshnessSeconds = freshnessOverride ?? baseTtlSeconds;
     const maxAcceptableAgeSeconds = freshnessSeconds + staleGraceSeconds;
     const cacheKey = buildCacheKey({ from, to, mode });
@@ -97,7 +104,7 @@ export async function registerRouteTime(app: FastifyInstance, _opts: FastifyPlug
         Math.floor((now - new Date(cachedRecord.cachedAtIso).getTime()) / 1000),
       );
 
-      if (cachedAgeSeconds <= freshnessSeconds) {
+      if (!forceRefresh && cachedAgeSeconds <= freshnessSeconds) {
         return toResponse(cachedRecord, cachedAgeSeconds, true, false);
       }
     }

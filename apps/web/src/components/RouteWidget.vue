@@ -96,17 +96,30 @@
               Alert threshold {{ thresholdMinutes }} min.
             </div>
 
-            <v-btn
-              class="w-100"
-              color="primary"
-              size="large"
-              prepend-icon="mdi-refresh"
-              :loading="isPolling"
-              :disabled="isPolling"
-              @click="triggerPolling('manual')"
-            >
-              Refresh now
-            </v-btn>
+            <v-btn-group class="w-100 d-flex" divided>
+              <v-btn
+                class="flex-grow-1"
+                color="primary"
+                size="large"
+                prepend-icon="mdi-refresh"
+                :loading="isPolling"
+                :disabled="isPolling"
+                @click="triggerPolling('manual')"
+              >
+                Refresh now
+              </v-btn>
+              <v-btn
+                class="flex-grow-1"
+                color="secondary"
+                size="large"
+                prepend-icon="mdi-refresh-alert"
+                :loading="isPolling"
+                :disabled="isPolling"
+                @click="triggerPolling('hard-manual', { forceRefresh: true })"
+              >
+                Hard refresh
+              </v-btn>
+            </v-btn-group>
           </v-sheet>
         </div>
       </div>
@@ -272,12 +285,13 @@ function schedulePolling() {
   }, intervalMs);
 }
 
-async function triggerPolling(reason: PollingReason) {
+async function triggerPolling(reason: PollingReason, options: { forceRefresh?: boolean } = {}) {
   const background = reason === 'interval' || reason === 'mode-change';
-  await refreshRoute({ background, reason });
-  if (reason === 'manual' && !routeError.value) {
+  await refreshRoute({ background, reason, forceRefresh: options.forceRefresh });
+  const manualTrigger = reason === 'manual' || reason === 'hard-manual';
+  if (manualTrigger && !routeError.value) {
     pushToast({
-      text: 'Route data refreshed.',
+      text: options.forceRefresh ? 'Route data refreshed from provider.' : 'Route data refreshed.',
       variant: 'success',
     });
   }

@@ -15,6 +15,5 @@ if (!global.ResizeObserver) {
     disconnect() {}
   }
 
-  // @ts-expect-error - assign stub for tests
   global.ResizeObserver = ResizeObserverStub;
 }

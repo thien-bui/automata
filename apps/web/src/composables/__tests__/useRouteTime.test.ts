@@ -73,9 +73,10 @@ describe('useRouteTime', () => {
     await composable.refresh();
 
     const thresholdMinutes = 45;
-    const shouldAlert = computed(
-      () => composable.data.value?.durationMinutes > thresholdMinutes,
-    );
+    const shouldAlert = computed(() => {
+      const duration = composable.data.value?.durationMinutes ?? 0;
+      return duration > thresholdMinutes;
+    });
 
     expect(composable.data.value?.durationMinutes).toBe(58);
     expect(shouldAlert.value).toBe(true);

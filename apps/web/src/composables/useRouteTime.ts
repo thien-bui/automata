@@ -1,7 +1,7 @@
 import { computed, ref, type ComputedRef, type Ref } from 'vue';
 import type { RouteMode, RouteTimeResponse } from '@automata/types';
 
-export type RouteFetchReason = 'initial' | 'interval' | 'manual' | 'mode-change';
+export type RouteFetchReason = 'initial' | 'interval' | 'manual' | 'mode-change' | 'hard-manual';
 
 const defaultFreshnessSeconds = Number(import.meta.env.VITE_DEFAULT_FRESHNESS ?? '300');
 
@@ -15,6 +15,7 @@ interface UseRouteTimeOptions {
 interface RefreshOptions {
   background?: boolean;
   reason?: RouteFetchReason;
+  forceRefresh?: boolean;
 }
 
 interface UseRouteTimeResult {
@@ -93,6 +94,10 @@ export function useRouteTime(options: UseRouteTimeOptions): UseRouteTimeResult {
 
       if (freshnessSeconds.value > 0) {
         search.set('freshnessSeconds', String(freshnessSeconds.value));
+      }
+
+      if (refreshOptions.forceRefresh) {
+        search.set('forceRefresh', 'true');
       }
 
       const response = await fetch(`/api/route-time?${search.toString()}`, {

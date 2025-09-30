@@ -85,6 +85,40 @@ describe('route-time cache behaviour', () => {
     expect(mockedFetch).not.toHaveBeenCalled();
   });
 
+  it('bypasses fresh cache when forceRefresh is true', async () => {
+    const cachedRecord = buildCachedRecord(basePayload, new Date().toISOString());
+
+    const redis: MockRedis = {
+      get: vi.fn().mockResolvedValue(JSON.stringify(cachedRecord)),
+      set: vi.fn(),
+    };
+
+    mockedFetch.mockResolvedValueOnce({
+      durationMinutes: 9,
+      distanceKm: 7.5,
+      providerStatus: null,
+    });
+
+    app = await buildTestApp(redis);
+
+    const response = await app.inject({
+      method: 'GET',
+      url: '/api/route-time?from=A&to=B&mode=driving&forceRefresh=true',
+    });
+
+    expect(response.statusCode).toBe(200);
+
+    const body = response.json<RouteTimeResponse>();
+
+    expect(body.cache.hit).toBe(false);
+    expect(body.cache.ageSeconds).toBe(0);
+    expect(body.durationMinutes).toBe(9);
+    expect(body.distanceKm).toBe(7.5);
+
+    expect(mockedFetch).toHaveBeenCalledTimes(1);
+    expect(redis.set).toHaveBeenCalledTimes(1);
+  });
+
   it('returns stale cache when provider fails within grace period', async () => {
     const cachedAt = new Date(Date.now() - 90_000).toISOString();
     const cachedRecord = buildCachedRecord({
