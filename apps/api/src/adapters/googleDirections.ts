@@ -22,7 +22,18 @@ const travelModeMap: Record<RouteMode, RouteTravelMode> = {
   transit: protos.google.maps.routing.v2.RouteTravelMode.TRANSIT,
 };
 
-const routesClient = new RoutesClient({ fallback: true });
+let routesClient: RoutesClient | null = null;
+
+function getRoutesClient(apiKey: string): RoutesClient {
+  if (!routesClient) {
+    routesClient = new RoutesClient({
+      fallback: true,
+      apiKey,
+    });
+  }
+
+  return routesClient;
+}
 
 export interface GoogleDirectionsQuery {
   from: string;
@@ -44,6 +55,8 @@ export async function fetchGoogleDirections(
     throw new Error('GOOGLE_MAPS_API_KEY is not configured.');
   }
 
+  const client = getRoutesClient(apiKey);
+
   const travelMode = travelModeMap[query.mode];
   if (travelMode === undefined) {
     throw new Error(`Unsupported travel mode: ${query.mode}`);
@@ -59,7 +72,7 @@ export async function fetchGoogleDirections(
     request.routingPreference = protos.google.maps.routing.v2.RoutingPreference.TRAFFIC_AWARE;
   }
 
-  const [response] = await routesClient.computeRoutes(request, {
+  const [response] = await client.computeRoutes(request, {
     otherArgs: {
       headers: {
         'X-Goog-Api-Key': apiKey,
