@@ -23,7 +23,7 @@
       </v-container>
     </v-main>
 
-    <ToastHost :messages="toastMessages" @dismiss="removeToast" />
+    <ToastHost :messages="toastMessages" @dismiss="dismissToast" />
   </v-app>
 </template>
 
@@ -33,45 +33,43 @@ import { ref } from 'vue';
 import AlertBell from './components/AlertBell.vue';
 import RouteWidget from './components/RouteWidget.vue';
 import ToastHost from './components/ToastHost.vue';
+import { provideToasts } from './composables/useToasts';
 
 const pageTitle = 'Automata Commute Console';
 const alertCount = ref(0);
-const toastMessages = ref<Array<{ id: number; text: string }>>([
-  { id: 1, text: 'Welcome back! Route monitoring is idle.' },
-]);
 
-const removeToast = (id: number) => {
-  toastMessages.value = toastMessages.value.filter((toast) => toast.id !== id);
-};
+const { messages: toastMessages, dismiss: dismissToast, push: pushToast } = provideToasts([
+  {
+    text: 'Welcome back! Route monitoring is idle.',
+    variant: 'info',
+    timeout: 4000,
+  },
+]);
 
 const onAlertsAcknowledged = () => {
   alertCount.value = 0;
 };
 
 const openAlertsPanel = () => {
-  toastMessages.value = [
-    ...toastMessages.value,
-    {
-      id: Date.now(),
-      text: alertCount.value > 0
+  pushToast({
+    text:
+      alertCount.value > 0
         ? `You have ${alertCount.value} pending alerts.`
         : 'No new alerts at this time.',
-    },
-  ];
+    variant: alertCount.value > 0 ? 'warning' : 'info',
+  });
 };
 
 const onAlertsUpdated = (count: number) => {
   alertCount.value = count;
   if (count > 0) {
-    toastMessages.value = [
-      ...toastMessages.value,
-      {
-        id: Date.now() + 1,
-        text: `Alert status changed. ${count} pending alert${count === 1 ? '' : 's'}.`,
-      },
-    ];
+    pushToast({
+      text: `Alert status changed. ${count} pending alert${count === 1 ? '' : 's'}.`,
+      variant: 'warning',
+    });
   }
 };
+
 </script>
 
 <style scoped>

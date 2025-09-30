@@ -6,8 +6,8 @@
         :key="message.id"
         :model-value="true"
         location="top right"
-        color="secondary"
-        timeout="4000"
+        :color="variantColors[message.variant]"
+        :timeout="message.timeout ?? 5000"
         elevation="2"
         class="mb-2"
         @timeout="() => emit('dismiss', message.id)"
@@ -24,10 +24,14 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 
-interface ToastMessage {
-  id: number;
-  text: string;
-}
+import type { ToastMessage } from '../composables/useToasts';
+
+const variantColors: Record<ToastMessage['variant'], string> = {
+  info: 'secondary',
+  success: 'success',
+  warning: 'warning',
+  error: 'error',
+};
 
 const props = defineProps<{
   messages: ToastMessage[];

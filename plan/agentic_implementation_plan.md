@@ -34,10 +34,10 @@
 - [x] Integrate Vuetify theming with responsive defaults and ARIA attributes.
 
 ## 6. Frontend Data Layer
-- [ ] Implement composable `useRouteTime` fetching API with SWR awareness.
-- [ ] Handle alert threshold settings, storing in `localStorage` via composable.
-- [ ] Integrate Google Maps JS loader with restricted browser key placeholder; guard to only instantiate in Nav mode.
-- [ ] Create toast/banner system using Vuetify snackbars; ensure accessible live region.
+- [x] Implement composable `useRouteTime` fetching API with SWR awareness.
+- [x] Handle alert threshold settings, storing in `localStorage` via composable.
+- [x] Integrate Google Maps JS loader with restricted browser key placeholder; guard to only instantiate in Nav mode.
+- [x] Create toast/banner system using Vuetify snackbars; ensure accessible live region.
 
 ## 7. Frontend Testing
 - [ ] Configure Vitest for unit/component tests with `@vue/test-utils`.
