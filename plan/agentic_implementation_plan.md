@@ -40,9 +40,9 @@
 - [x] Create toast/banner system using Vuetify snackbars; ensure accessible live region.
 
 ## 7. Frontend Testing
-- [ ] Configure Vitest for unit/component tests with `@vue/test-utils`.
-- [ ] Write tests for `useRouteTime` handling of stale cache and alert triggers.
-- [ ] Set up Playwright with Docker-friendly config; create E2E specs for Simple/Nav mode and alert flows.
+- [x] Configure Vitest for unit/component tests with `@vue/test-utils`.
+- [x] Write tests for `useRouteTime` handling of stale cache and alert triggers.
+- [x] Set up Playwright with Docker-friendly config; create E2E specs for Simple/Nav mode and alert flows.
 
 ## 8. Shared Types Package (`packages/types`)
 - [ ] Define TypeScript interfaces matching API response and request query options.
