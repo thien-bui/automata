@@ -21,17 +21,17 @@
 - [x] Update `package.json` scripts: `dev`, `build`, `start`, `test`.
 
 ## 4. Backend Testing Harness
-- [ ] Configure Vitest for API package (prefer Vitest for speed); scaffold `vitest.config.ts`.
-- [ ] Author unit tests for cache logic using mocked Redis.
-- [ ] Create contract test for `/api/route-time` leveraging Fastify instance with mocked Google adapter.
-- [ ] Set up coverage thresholds and CI-friendly npm script (`test:ci`).
+- [x] Configure Vitest for API package (prefer Vitest for speed); scaffold `vitest.config.ts`.
+- [x] Author unit tests for cache logic using mocked Redis.
+- [x] Create contract test for `/api/route-time` leveraging Fastify instance with mocked Google adapter.
+- [x] Set up coverage thresholds and CI-friendly npm script (`test:ci`).
 
 ## 5. Frontend Bootstrapping (`apps/web`)
-- [ ] Initialize Vite Vue 3 project in workspace; ensure Vuetify plugin installed and registered.
-- [ ] Implement core layout: `App.vue` embedding `RouteWidget`.
-- [ ] Create component stubs (`RouteWidget`, `AlertBell`, `SettingsDrawer`, `MapPreview`, `ToastHost`).
-- [ ] Wire mode toggle logic, reactive state, and polling hook placeholder.
-- [ ] Integrate Vuetify theming with responsive defaults and ARIA attributes.
+- [x] Initialize Vite Vue 3 project in workspace; ensure Vuetify plugin installed and registered.
+- [x] Implement core layout: `App.vue` embedding `RouteWidget`.
+- [x] Create component stubs (`RouteWidget`, `AlertBell`, `SettingsDrawer`, `MapPreview`, `ToastHost`).
+- [x] Wire mode toggle logic, reactive state, and polling hook placeholder.
+- [x] Integrate Vuetify theming with responsive defaults and ARIA attributes.
 
 ## 6. Frontend Data Layer
 - [ ] Implement composable `useRouteTime` fetching API with SWR awareness.
