@@ -188,7 +188,10 @@ async function updateRoute() {
     return;
   }
 
-  if (!mapInstance || !directionsService || !directionsRenderer) {
+  const service = directionsService;
+  const renderer = directionsRenderer;
+
+  if (!mapInstance || !service || !renderer) {
     return;
   }
 
@@ -209,7 +212,7 @@ async function updateRoute() {
 
   try {
     const result = await new Promise<google.maps.DirectionsResult>((resolve, reject) => {
-      directionsService.route(
+      service.route(
         {
           origin: trimmedOrigin,
           destination: trimmedDestination,
@@ -242,7 +245,7 @@ async function updateRoute() {
       return;
     }
 
-    directionsRenderer.setDirections(result);
+    renderer.setDirections(result);
     status.value = 'ready';
   } catch (error) {
     if (requestId !== latestRouteRequestId) {
