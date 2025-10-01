@@ -62,59 +62,76 @@ const lastUpdatedLabel = computed(() => {
 
 const apiKey = import.meta.env.VITE_GOOGLE_MAPS_BROWSER_KEY;
 
-function loadGoogleMaps(apiKey: string): Promise<any> {
+async function loadGoogleMaps(apiKey: string): Promise<any> {
   if (typeof window === 'undefined') {
-    return Promise.reject(new Error('Google Maps is unavailable in this environment.'));
+    throw new Error('Google Maps is unavailable in this environment.');
   }
 
   if (window.google?.maps) {
-    return Promise.resolve(window.google);
+    return window.google;
   }
 
   if (googleMapsPromise) {
     return googleMapsPromise;
   }
 
-  const existingScript = document.querySelector<HTMLScriptElement>('script[data-google-maps-loader="true"]');
+  const waitForScript = (script: HTMLScriptElement, removeOnError: boolean) =>
+    new Promise<any>((resolve, reject) => {
+      const cleanup = () => {
+        script.removeEventListener('load', handleLoad);
+        script.removeEventListener('error', handleError);
+      };
 
-  if (existingScript) {
-    googleMapsPromise = new Promise((resolve, reject) => {
-      existingScript.addEventListener('load', () => {
+      const handleLoad = () => {
+        cleanup();
         if (window.google?.maps) {
           resolve(window.google);
           return;
         }
-        reject(new Error('Google Maps script loaded without maps namespace.'));
-      });
-      existingScript.addEventListener('error', () => {
-        googleMapsPromise = null;
-        reject(new Error('Failed to load Google Maps script.'));
-      });
-    });
-    return googleMapsPromise;
-  }
 
-  googleMapsPromise = new Promise((resolve, reject) => {
-    const script = document.createElement('script');
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(apiKey)}&v=weekly&libraries=routes`;
-    script.async = true;
-    script.defer = true;
-    script.dataset.googleMapsLoader = 'true';
-    script.onload = () => {
-      if (window.google?.maps) {
-        resolve(window.google);
-      } else {
-        googleMapsPromise = null;
+        if (removeOnError) {
+          script.remove();
+        }
+
         reject(new Error('Google Maps script loaded without maps namespace.'));
-      }
-    };
-    script.onerror = () => {
-      script.remove();
+      };
+
+      const handleError = () => {
+        cleanup();
+        if (removeOnError) {
+          script.remove();
+        }
+
+        reject(new Error('Failed to load Google Maps script.'));
+      };
+
+      script.addEventListener('load', handleLoad, { once: true });
+      script.addEventListener('error', handleError, { once: true });
+    });
+
+  const existingScript = document.querySelector<HTMLScriptElement>('script[data-google-maps-loader="true"]');
+
+  const loaderPromise = existingScript
+    ? waitForScript(existingScript, true)
+    : (() => {
+        const script = document.createElement('script');
+        script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(apiKey)}&v=weekly&libraries=routes`;
+        script.async = true;
+        script.defer = true;
+        script.dataset.googleMapsLoader = 'true';
+        const promise = waitForScript(script, true);
+        document.head.appendChild(script);
+        return promise;
+      })();
+
+  googleMapsPromise = (async () => {
+    try {
+      return await loaderPromise;
+    } catch (error) {
       googleMapsPromise = null;
-      reject(new Error('Failed to load Google Maps script.'));
-    };
-    document.head.appendChild(script);
-  });
+      throw error;
+    }
+  })();
 
   return googleMapsPromise;
 }
