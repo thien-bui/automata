@@ -40,7 +40,9 @@ function buildMessage(input: string | Omit<ToastMessage, 'id'>): ToastMessage {
   };
 }
 
-export function provideToasts(initialMessages: Array<string | Omit<ToastMessage, 'id'>> = []) {
+export function provideToasts(
+  initialMessages: Array<string | Omit<ToastMessage, 'id'>> = [],
+): ToastContext {
   const messages = ref<ToastMessage[]>(initialMessages.map((message) => buildMessage(message)));
 
   const context: ToastContext = {

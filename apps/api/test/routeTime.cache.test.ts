@@ -7,6 +7,7 @@ vi.mock('../src/adapters/googleDirections', () => ({
 
 import type { FastifyInstance } from 'fastify';
 import type { RouteMode, RouteTimeResponse } from '@automata/types';
+import type Redis from 'ioredis';
 
 import { fetchGoogleDirections } from '../src/adapters/googleDirections';
 import { registerRouteTime } from '../src/routes/routeTime';
@@ -18,7 +19,7 @@ type MockRedis = {
 
 async function buildTestApp(redis: MockRedis): Promise<FastifyInstance> {
   const app = Fastify();
-  app.decorate('redis', redis as any);
+  app.decorate('redis', redis as unknown as Redis);
   await app.register(registerRouteTime, { prefix: '/api' });
   await app.ready();
   return app;
@@ -27,7 +28,10 @@ async function buildTestApp(redis: MockRedis): Promise<FastifyInstance> {
 function buildCachedRecord(
   payload: Omit<RouteTimeResponse, 'cache'>,
   cachedAtIso: string,
-) {
+): {
+  payload: Omit<RouteTimeResponse, 'cache'>;
+  cachedAtIso: string;
+} {
   return {
     payload,
     cachedAtIso,

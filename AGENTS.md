@@ -12,6 +12,7 @@
 - Use `satisfies` for object literals that must align with shared contracts and leverage exhaustiveness checks on discriminated unions.
 - Prefer async/await over promise chaining and model recoverable errors with `Result`-style utilities instead of throwing.
 - Prefer async/await over promise chaining.
+- Specify types for parameters, objects, and variables when possible.
 
 ## Backend (Fastify)
 - Build new routes through Fastify plugins under `apps/api/src/routes`, and register them from a single entrypoint to keep encapsulation.

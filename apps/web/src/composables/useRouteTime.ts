@@ -37,7 +37,12 @@ interface UseRouteTimeResult {
   setFreshnessSeconds: (value: number) => void;
 }
 
-function normaliseError(message: unknown) {
+type EndpointUpdate = {
+  from?: string;
+  to?: string;
+};
+
+function normaliseError(message: unknown): string {
   if (message instanceof Error) {
     return message.message;
   }
@@ -62,7 +67,7 @@ export function useRouteTime(options: UseRouteTimeOptions): UseRouteTimeResult {
 
   let inFlightController: AbortController | null = null;
 
-  const refresh = async (refreshOptions: RefreshOptions = {}) => {
+  const refresh = async (refreshOptions: RefreshOptions = {}): Promise<void> => {
     if (!from.value || !to.value) {
       error.value = 'Route endpoints are not configured.';
       return;
@@ -149,13 +154,13 @@ export function useRouteTime(options: UseRouteTimeOptions): UseRouteTimeResult {
   const cacheAgeSeconds = computed(() => data.value?.cache.ageSeconds ?? null);
   const cacheHit = computed(() => data.value?.cache.hit ?? false);
 
-  const setMode = (value: RouteMode) => {
+  const setMode = (value: RouteMode): void => {
     if (mode.value !== value) {
       mode.value = value;
     }
   };
 
-  const setEndpoints = ({ from: nextFrom, to: nextTo }: { from?: string; to?: string }) => {
+  const setEndpoints = ({ from: nextFrom, to: nextTo }: EndpointUpdate): void => {
     if (typeof nextFrom === 'string') {
       from.value = nextFrom;
     }
@@ -165,7 +170,7 @@ export function useRouteTime(options: UseRouteTimeOptions): UseRouteTimeResult {
     }
   };
 
-  const setFreshnessSeconds = (value: number) => {
+  const setFreshnessSeconds = (value: number): void => {
     if (!Number.isFinite(value) || value <= 0) {
       freshnessSeconds.value = defaultFreshnessSeconds;
       return;
@@ -174,7 +179,7 @@ export function useRouteTime(options: UseRouteTimeOptions): UseRouteTimeResult {
     freshnessSeconds.value = Math.round(value);
   };
 
-  return {
+  const composable: UseRouteTimeResult = {
     data,
     error,
     isLoading,
@@ -192,4 +197,6 @@ export function useRouteTime(options: UseRouteTimeOptions): UseRouteTimeResult {
     setEndpoints,
     setFreshnessSeconds,
   };
+
+  return composable;
 }

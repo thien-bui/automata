@@ -67,7 +67,7 @@ export function buildServer(options: BuildServerOptions = {}): FastifyInstance {
   return app;
 }
 
-export async function start() {
+export async function start(): Promise<void> {
   const app = buildServer();
   const port = Number(process.env.API_PORT ?? 4000);
   const host = process.env.API_HOST ?? '0.0.0.0';

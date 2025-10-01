@@ -1,4 +1,4 @@
-import { ref, watch } from 'vue';
+import { ref, watch, type Ref } from 'vue';
 
 const STORAGE_KEY = 'automata.alertThresholdMinutes';
 const MIN_THRESHOLD_MINUTES = 5;
@@ -7,7 +7,13 @@ export const defaultAlertThresholdMinutes = Number(
   import.meta.env.VITE_DEFAULT_ALERT_THRESHOLD ?? '45',
 );
 
-function clampThreshold(value: number) {
+type AlertThresholdState = {
+  thresholdMinutes: Ref<number>;
+  setThreshold: (value: number) => void;
+  resetThreshold: () => void;
+};
+
+function clampThreshold(value: number): number {
   if (Number.isNaN(value)) {
     return defaultAlertThresholdMinutes;
   }
@@ -15,7 +21,7 @@ function clampThreshold(value: number) {
   return Math.max(MIN_THRESHOLD_MINUTES, Math.round(value));
 }
 
-export function useAlertThreshold() {
+export function useAlertThreshold(): AlertThresholdState {
   const thresholdMinutes = ref(defaultAlertThresholdMinutes);
 
   if (typeof window !== 'undefined') {
@@ -37,18 +43,19 @@ export function useAlertThreshold() {
     { flush: 'post' },
   );
 
-  const setThreshold = (value: number) => {
+  const setThreshold = (value: number): void => {
     thresholdMinutes.value = clampThreshold(value);
   };
 
-  const resetThreshold = () => {
+  const resetThreshold = (): void => {
     thresholdMinutes.value = defaultAlertThresholdMinutes;
   };
 
-  return {
+  const state: AlertThresholdState = {
     thresholdMinutes,
     setThreshold,
     resetThreshold,
   };
-}
 
+  return state;
+}

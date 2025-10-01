@@ -39,7 +39,9 @@ const errorMessage = ref('');
 const defaultCenter: google.maps.LatLngLiteral = { lat: 37.7749, lng: -122.4194 };
 const defaultZoom = 11;
 
-let googleMapsPromise: Promise<any> | null = null;
+type GoogleMapsApi = typeof google;
+
+let googleMapsPromise: Promise<GoogleMapsApi> | null = null;
 let mapInstance: google.maps.Map | null = null;
 let directionsService: google.maps.DirectionsService | null = null;
 let directionsRenderer: google.maps.DirectionsRenderer | null = null;
@@ -62,7 +64,7 @@ const lastUpdatedLabel = computed(() => {
 
 const apiKey = import.meta.env.VITE_GOOGLE_MAPS_BROWSER_KEY;
 
-async function loadGoogleMaps(apiKey: string): Promise<any> {
+async function loadGoogleMaps(apiKey: string): Promise<GoogleMapsApi> {
   if (typeof window === 'undefined') {
     throw new Error('Google Maps is unavailable in this environment.');
   }
@@ -75,8 +77,8 @@ async function loadGoogleMaps(apiKey: string): Promise<any> {
     return googleMapsPromise;
   }
 
-  const waitForScript = (script: HTMLScriptElement, removeOnError: boolean) =>
-    new Promise<any>((resolve, reject) => {
+  const waitForScript = (script: HTMLScriptElement, removeOnError: boolean): Promise<GoogleMapsApi> =>
+    new Promise<GoogleMapsApi>((resolve, reject) => {
       const cleanup = () => {
         script.removeEventListener('load', handleLoad);
         script.removeEventListener('error', handleError);
@@ -111,7 +113,7 @@ async function loadGoogleMaps(apiKey: string): Promise<any> {
 
   const existingScript = document.querySelector<HTMLScriptElement>('script[data-google-maps-loader="true"]');
 
-  const loaderPromise = existingScript
+  const loaderPromise: Promise<GoogleMapsApi> = existingScript
     ? waitForScript(existingScript, true)
     : (() => {
         const script = document.createElement('script');
@@ -124,7 +126,7 @@ async function loadGoogleMaps(apiKey: string): Promise<any> {
         return promise;
       })();
 
-  googleMapsPromise = (async () => {
+  googleMapsPromise = (async (): Promise<GoogleMapsApi> => {
     try {
       return await loaderPromise;
     } catch (error) {
@@ -136,7 +138,7 @@ async function loadGoogleMaps(apiKey: string): Promise<any> {
   return googleMapsPromise;
 }
 
-function clearRoute() {
+function clearRoute(): void {
   latestRouteRequestId += 1;
   if (directionsRenderer) {
     directionsRenderer.setDirections(null);
@@ -147,7 +149,7 @@ function clearRoute() {
   }
 }
 
-async function ensureMap() {
+async function ensureMap(): Promise<void> {
   if (!props.active) {
     status.value = 'inactive';
     clearRoute();
@@ -200,7 +202,7 @@ async function ensureMap() {
   }
 }
 
-async function updateRoute() {
+async function updateRoute(): Promise<void> {
   if (!props.active) {
     return;
   }
@@ -236,13 +238,13 @@ async function updateRoute() {
           travelMode: google.maps.TravelMode.DRIVING,
           provideRouteAlternatives: false,
         },
-        (response, responseStatus) => {
+        (response, responseStatus: google.maps.DirectionsStatus) => {
           if (responseStatus === 'OK' && response) {
             resolve(response);
             return;
           }
 
-          const statusMessageMap: Record<string, string> = {
+          const statusMessageMap: Partial<Record<google.maps.DirectionsStatus, string>> = {
             INVALID_REQUEST: 'The navigation request is invalid. Check the addresses.',
             MAX_WAYPOINTS_EXCEEDED: 'Too many waypoints were requested.',
             NOT_FOUND: 'One or both addresses could not be found.',
@@ -252,7 +254,7 @@ async function updateRoute() {
             ZERO_RESULTS: 'No routes could be found between the specified addresses.',
           };
 
-          const message = statusMessageMap[responseStatus] || 'Failed to load the navigation preview.';
+          const message = statusMessageMap[responseStatus] ?? 'Failed to load the navigation preview.';
           reject(new Error(message));
         },
       );
@@ -275,14 +277,14 @@ async function updateRoute() {
   }
 }
 
-async function refreshMap() {
+async function refreshMap(): Promise<void> {
   await ensureMap();
   await updateRoute();
 }
 
 watch(
   () => props.active,
-  async (isActive) => {
+  async (isActive: boolean) => {
     if (isActive) {
       await refreshMap();
     } else {
@@ -295,7 +297,7 @@ watch(
 
 watch(
   () => mapContainer.value,
-  async (container) => {
+  async (container: HTMLDivElement | null) => {
     if (container && props.active) {
       await refreshMap();
     }

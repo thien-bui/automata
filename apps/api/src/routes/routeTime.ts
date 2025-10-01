@@ -1,7 +1,12 @@
 import { createHash } from 'node:crypto';
 
 import type { RouteMode, RouteTimeResponse } from '@automata/types';
-import { FastifyInstance, FastifyPluginOptions } from 'fastify';
+import type {
+  FastifyInstance,
+  FastifyPluginOptions,
+  FastifyReply,
+  FastifyRequest,
+} from 'fastify';
 import { z } from 'zod';
 
 import { fetchGoogleDirections } from '../adapters/googleDirections';
@@ -30,7 +35,9 @@ interface CachedRouteRecord {
   cachedAtIso: string;
 }
 
-function buildCacheKey({ from, to, mode }: { from: string; to: string; mode: RouteMode }) {
+type RouteTimeQueryParams = z.infer<typeof querySchema>;
+
+function buildCacheKey({ from, to, mode }: { from: string; to: string; mode: RouteMode }): string {
   const hasher = createHash('sha256');
   hasher.update(`${mode}:${from}:${to}`);
   return `route:${mode}:${hasher.digest('hex')}`;
@@ -52,7 +59,10 @@ function toResponse(
   };
 }
 
-function coerceCachedRecord(raw: string | null, logFn: (msg: string, meta?: unknown) => void) {
+function coerceCachedRecord(
+  raw: string | null,
+  logFn: (msg: string, meta?: unknown) => void,
+): CachedRouteRecord | null {
   if (!raw) {
     return null;
   }
@@ -69,15 +79,20 @@ function coerceCachedRecord(raw: string | null, logFn: (msg: string, meta?: unkn
   return null;
 }
 
-export async function registerRouteTime(app: FastifyInstance, _opts: FastifyPluginOptions) {
-  app.get('/route-time', async (request, reply) => {
+export async function registerRouteTime(
+  app: FastifyInstance,
+  _opts: FastifyPluginOptions,
+): Promise<void> {
+  app.get<{ Querystring: RouteTimeQueryParams }>('/route-time', async (
+    request: FastifyRequest<{ Querystring: RouteTimeQueryParams }>,
+    reply: FastifyReply,
+  ) => {
     const validation = querySchema.safeParse(request.query);
     if (!validation.success) {
       const { statusCode, payload } = buildValidationError('Invalid query parameters', {
         issues: validation.error.flatten(),
       });
-      reply.status(statusCode).send(payload);
-      return;
+      return reply.status(statusCode).send(payload);
     }
 
     const {
@@ -149,7 +164,7 @@ export async function registerRouteTime(app: FastifyInstance, _opts: FastifyPlug
         'Failed to fetch route information from provider.',
         error instanceof Error ? { message: error.message } : error,
       );
-      reply.status(statusCode).send(payload);
+      return reply.status(statusCode).send(payload);
     }
   });
 }
