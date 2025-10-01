@@ -1,4 +1,15 @@
-import { test, expect } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
+
+const waitForToastsToClear = async (page: Page): Promise<void> => {
+  const toastLocator = page.locator('.v-snackbar__content');
+  if ((await toastLocator.count()) === 0) {
+    return;
+  }
+
+  await toastLocator.first().waitFor({ state: 'hidden', timeout: 7_000 }).catch(() => {
+    /* ignore timeout so the test can proceed */
+  });
+};
 
 test.describe('Route Widget', () => {
   test('renders simple mode by default', async ({ page }) => {
@@ -22,9 +33,11 @@ test.describe('Route Widget', () => {
     });
 
     await page.goto('/');
+    await waitForToastsToClear(page);
 
-    await expect(page.getByRole('button', { name: 'Simple' })).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Nav' })).toBeVisible();
+    const toggle = page.getByLabel('Select monitoring mode');
+    await expect(toggle.getByRole('button', { name: 'Simple' })).toBeVisible();
+    await expect(toggle.getByRole('button', { name: 'Nav' })).toBeVisible();
     await expect(page.getByText(/Estimated duration/i)).toBeVisible();
     await expect(page.getByRole('button', { name: 'Refresh now' })).toBeVisible();
   });
@@ -50,14 +63,47 @@ test.describe('Route Widget', () => {
     });
 
     await page.goto('/');
+    await waitForToastsToClear(page);
 
-    await page.getByRole('button', { name: 'Nav' }).click();
+    const toggle = page.getByLabel('Select monitoring mode');
+    await toggle.getByRole('button', { name: 'Nav' }).click();
 
-    await expect(
-      page.getByText('Set VITE_GOOGLE_MAPS_BROWSER_KEY to enable the map preview.', {
-        exact: false,
-      }),
-    ).toBeVisible();
+    await expect(page.getByLabel(/Route preview map/i)).toBeVisible();
+  });
+
+  test('switching back to Simple mode hides the map placeholder', async ({ page }) => {
+    await page.route('**/api/route-time?**', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          durationMinutes: 18,
+          distanceKm: 7,
+          provider: 'google-directions',
+          mode: 'driving',
+          lastUpdatedIso: new Date().toISOString(),
+          cache: {
+            hit: false,
+            ageSeconds: 0,
+            staleWhileRevalidate: false,
+          },
+        }),
+      });
+    });
+
+    await page.goto('/');
+    await waitForToastsToClear(page);
+
+    const toggle = page.getByLabel('Select monitoring mode');
+    await toggle.getByRole('button', { name: 'Nav' }).click();
+
+    const mapCard = page.getByLabel(/Route preview map/i);
+    await expect(mapCard).toBeVisible();
+
+    await waitForToastsToClear(page);
+    await toggle.getByRole('button', { name: 'Simple' }).click();
+
+    await expect(mapCard).toBeHidden();
   });
 
   test('shows an alert banner when travel time exceeds threshold', async ({ page }) => {
@@ -85,9 +131,12 @@ test.describe('Route Widget', () => {
     });
 
     await page.goto('/');
+    await waitForToastsToClear(page);
 
-    await expect(
-      page.getByText(/Travel time 22.0 min exceeds threshold of 10 min./i),
-    ).toBeVisible();
+    const toggle = page.getByLabel('Select monitoring mode');
+    await toggle.getByRole('button', { name: 'Nav' }).click();
+
+    const alertBanner = page.getByRole('alert');
+    await expect(alertBanner.getByText(/Travel time 22.0 min exceeds threshold of 10 min./i)).toBeVisible();
   });
 });

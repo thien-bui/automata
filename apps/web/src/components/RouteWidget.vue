@@ -46,9 +46,9 @@
           </v-sheet>
 
           <MapPreview
-            v-if="mode === 'nav'"
+            v-if="isNavMode"
             class="mt-4"
-            :active="mode === 'nav'"
+            :active="isNavMode"
             :origin="originLabel"
             :destination="destinationLabel"
             :last-updated-iso="lastUpdatedIso"
@@ -202,7 +202,9 @@ let lastErrorMessage: string | null = null;
 let staleNotified = false;
 let lastEmittedAlertCount = 0;
 
-const pollingSeconds = computed(() => (mode.value === 'nav' ? NAV_MODE_REFRESH_SECONDS : refreshInterval.value));
+const isNavMode = computed(() => mode.value === 'nav');
+
+const pollingSeconds = computed(() => (isNavMode.value ? NAV_MODE_REFRESH_SECONDS : refreshInterval.value));
 
 const isPolling = computed(() => isLoading.value || isRefreshing.value);
 

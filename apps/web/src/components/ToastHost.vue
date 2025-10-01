@@ -5,7 +5,7 @@
         v-for="message in messages"
         :key="message.id"
         :model-value="true"
-        location="top right"
+        location="bottom right"
         :color="variantColors[message.variant]"
         :timeout="message.timeout ?? 5000"
         elevation="2"
@@ -45,7 +45,7 @@ const messages = computed(() => props.messages);
 <style scoped>
 .toast-host {
   position: fixed;
-  top: 16px;
+  bottom: 16px;
   right: 16px;
   display: flex;
   flex-direction: column;

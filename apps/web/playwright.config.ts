@@ -1,12 +1,15 @@
 import { defineConfig, devices } from '@playwright/test';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const baseURL = process.env.PLAYWRIGHT_BASE_URL ?? 'http://127.0.0.1:5173';
 
 const webServerCommand = process.env.PLAYWRIGHT_WEB_SERVER ?? '';
 
 export default defineConfig({
-  testDir: path.join(__dirname, 'tests/e2e'),
+  testDir: path.join(dirname, 'tests/e2e'),
   timeout: 60_000,
   expect: {
     timeout: 5_000,
