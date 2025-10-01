@@ -21,7 +21,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
+import { computed, onBeforeUnmount, ref, watch } from 'vue';
 
 const props = defineProps<{
   active: boolean;
@@ -36,8 +36,14 @@ const mapContainer = ref<HTMLDivElement | null>(null);
 const status = ref<MapStatus>('inactive');
 const errorMessage = ref('');
 
+const defaultCenter: google.maps.LatLngLiteral = { lat: 37.7749, lng: -122.4194 };
+const defaultZoom = 11;
+
 let googleMapsPromise: Promise<any> | null = null;
 let mapInstance: google.maps.Map | null = null;
+let directionsService: google.maps.DirectionsService | null = null;
+let directionsRenderer: google.maps.DirectionsRenderer | null = null;
+let latestRouteRequestId = 0;
 
 const ariaLabel = computed(
   () => `Route preview map from ${props.origin} to ${props.destination}.`,
@@ -90,7 +96,7 @@ function loadGoogleMaps(apiKey: string): Promise<any> {
 
   googleMapsPromise = new Promise((resolve, reject) => {
     const script = document.createElement('script');
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(apiKey)}&v=weekly`;
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(apiKey)}&v=weekly&libraries=routes`;
     script.async = true;
     script.defer = true;
     script.dataset.googleMapsLoader = 'true';
@@ -113,9 +119,21 @@ function loadGoogleMaps(apiKey: string): Promise<any> {
   return googleMapsPromise;
 }
 
+function clearRoute() {
+  latestRouteRequestId += 1;
+  if (directionsRenderer) {
+    directionsRenderer.setDirections(null);
+  }
+  if (mapInstance) {
+    mapInstance.setCenter(defaultCenter);
+    mapInstance.setZoom(defaultZoom);
+  }
+}
+
 async function ensureMap() {
   if (!props.active) {
     status.value = 'inactive';
+    clearRoute();
     return;
   }
 
@@ -145,10 +163,17 @@ async function ensureMap() {
     }
 
     mapInstance = new mapsApi.maps.Map(mapContainer.value, {
-      center: { lat: 37.7749, lng: -122.4194 },
-      zoom: 11,
+      center: defaultCenter,
+      zoom: defaultZoom,
       disableDefaultUI: true,
       keyboardShortcuts: false,
+    });
+
+    directionsService = new mapsApi.maps.DirectionsService();
+    directionsRenderer = new mapsApi.maps.DirectionsRenderer({
+      map: mapInstance,
+      suppressMarkers: false,
+      preserveViewport: false,
     });
 
     status.value = 'ready';
@@ -158,29 +183,123 @@ async function ensureMap() {
   }
 }
 
+async function updateRoute() {
+  if (!props.active) {
+    return;
+  }
+
+  if (!mapInstance || !directionsService || !directionsRenderer) {
+    return;
+  }
+
+  const trimmedOrigin = props.origin.trim();
+  const trimmedDestination = props.destination.trim();
+
+  if (!trimmedOrigin || !trimmedDestination) {
+    status.value = 'ready';
+    errorMessage.value = '';
+    clearRoute();
+    return;
+  }
+
+  status.value = 'ready';
+  errorMessage.value = '';
+
+  const requestId = ++latestRouteRequestId;
+
+  try {
+    const result = await new Promise<google.maps.DirectionsResult>((resolve, reject) => {
+      directionsService.route(
+        {
+          origin: trimmedOrigin,
+          destination: trimmedDestination,
+          travelMode: google.maps.TravelMode.DRIVING,
+          provideRouteAlternatives: false,
+        },
+        (response, responseStatus) => {
+          if (responseStatus === 'OK' && response) {
+            resolve(response);
+            return;
+          }
+
+          const statusMessageMap: Record<string, string> = {
+            INVALID_REQUEST: 'The navigation request is invalid. Check the addresses.',
+            MAX_WAYPOINTS_EXCEEDED: 'Too many waypoints were requested.',
+            NOT_FOUND: 'One or both addresses could not be found.',
+            OVER_QUERY_LIMIT: 'Route requests are temporarily limited. Try again later.',
+            REQUEST_DENIED: 'Navigation preview is not permitted with the current API key.',
+            UNKNOWN_ERROR: 'An unknown error occurred while fetching the route.',
+            ZERO_RESULTS: 'No routes could be found between the specified addresses.',
+          };
+
+          const message = statusMessageMap[responseStatus] || 'Failed to load the navigation preview.';
+          reject(new Error(message));
+        },
+      );
+    });
+
+    if (requestId !== latestRouteRequestId) {
+      return;
+    }
+
+    directionsRenderer.setDirections(result);
+    status.value = 'ready';
+  } catch (error) {
+    if (requestId !== latestRouteRequestId) {
+      return;
+    }
+
+    status.value = 'error';
+    errorMessage.value = error instanceof Error ? error.message : 'Failed to load the navigation preview.';
+    clearRoute();
+  }
+}
+
+async function refreshMap() {
+  await ensureMap();
+  await updateRoute();
+}
+
 watch(
   () => props.active,
-  () => {
-    ensureMap();
+  async (isActive) => {
+    if (isActive) {
+      await refreshMap();
+    } else {
+      clearRoute();
+      status.value = 'inactive';
+    }
   },
   { immediate: true },
 );
 
 watch(
   () => mapContainer.value,
-  (container) => {
+  async (container) => {
     if (container && props.active) {
-      ensureMap();
+      await refreshMap();
     }
   },
 );
 
-onMounted(() => {
-  ensureMap();
-});
+watch(
+  () => [props.origin, props.destination],
+  async () => {
+    if (props.active) {
+      await refreshMap();
+    } else {
+      clearRoute();
+    }
+  },
+);
 
 onBeforeUnmount(() => {
   mapInstance = null;
+  directionsService = null;
+  if (directionsRenderer) {
+    directionsRenderer.setMap(null);
+    directionsRenderer = null;
+  }
 });
 </script>
 
