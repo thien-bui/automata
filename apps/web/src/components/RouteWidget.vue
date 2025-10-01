@@ -16,8 +16,8 @@
           density="compact"
           aria-label="Select monitoring mode"
         >
-          <v-btn value="simple">Simple</v-btn>
-          <v-btn value="nav">Nav</v-btn>
+          <v-btn :value="MonitoringMode.Simple">Simple</v-btn>
+          <v-btn :value="MonitoringMode.Nav">Nav</v-btn>
         </v-btn-toggle>
         <v-btn icon="mdi-cog" variant="text" :aria-label="settingsAria" @click="drawerOpen = true" />
       </div>
@@ -148,13 +148,13 @@ import SettingsDrawer from './SettingsDrawer.vue';
 import { useRouteTime, type RouteFetchReason } from '../composables/useRouteTime';
 import { useAlertThreshold } from '../composables/useAlertThreshold';
 import { useToasts } from '../composables/useToasts';
+import { MonitoringMode } from './monitoringMode';
 
 const emit = defineEmits<{
   (e: 'alerts-acknowledged'): void;
   (e: 'alerts-updated', count: number): void;
 }>();
 
-type MonitoringMode = 'simple' | 'nav';
 type PollingReason = RouteFetchReason;
 
 type RouteAlert = {
@@ -166,7 +166,7 @@ const DEFAULT_FROM = '443 Ramsay Way, Kent, WA 98032';
 const DEFAULT_TO = '35522 21st Ave SW ste B, Federal Way, WA 98023';
 const NAV_MODE_REFRESH_SECONDS = 300;
 
-const mode = ref<MonitoringMode>('simple');
+const mode = ref<MonitoringMode>(MonitoringMode.Simple);
 const refreshInterval = ref(120);
 const drawerOpen = ref(false);
 
@@ -202,13 +202,15 @@ let lastErrorMessage: string | null = null;
 let staleNotified = false;
 let lastEmittedAlertCount = 0;
 
-const isNavMode = computed(() => mode.value === 'nav');
+const isNavMode = computed(() => mode.value === MonitoringMode.Nav);
 
 const pollingSeconds = computed(() => (isNavMode.value ? NAV_MODE_REFRESH_SECONDS : refreshInterval.value));
 
 const isPolling = computed(() => isLoading.value || isRefreshing.value);
 
-const currentModeLabel = computed(() => (mode.value === 'simple' ? 'Simple Mode' : 'Navigation Mode'));
+const currentModeLabel = computed(() =>
+  mode.value === MonitoringMode.Simple ? 'Simple Mode' : 'Navigation Mode',
+);
 
 const settingsAria = computed(() => `Open settings. Current mode ${currentModeLabel.value}.`);
 
@@ -341,7 +343,7 @@ onBeforeUnmount(() => {
 watch(
   () => refreshInterval.value,
   () => {
-    if (mode.value === 'simple') {
+    if (mode.value === MonitoringMode.Simple) {
       schedulePolling();
     }
   },
@@ -353,8 +355,7 @@ watch(
     if (value === previous) {
       return;
     }
-    const routeMode: RouteMode = value === 'nav' ? 'driving' : 'transit';
-    setRouteMode(routeMode);
+    setRouteMode('driving');
     schedulePolling();
     triggerPolling('mode-change');
   },

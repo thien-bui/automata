@@ -23,8 +23,8 @@
         class="my-2"
         aria-label="Toggle monitoring mode"
       >
-        <v-btn value="simple">Simple</v-btn>
-        <v-btn value="nav">Nav</v-btn>
+        <v-btn :value="MonitoringMode.Simple">Simple</v-btn>
+        <v-btn :value="MonitoringMode.Nav">Nav</v-btn>
       </v-btn-toggle>
 
       <v-list-subheader class="mt-6">Refresh cadence</v-list-subheader>
@@ -62,22 +62,24 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue';
 
+import { MonitoringMode } from './monitoringMode';
+
 const props = defineProps<{
   modelValue: boolean;
-  mode: 'simple' | 'nav';
+  mode: MonitoringMode;
   refreshInterval: number;
   alertThreshold: number;
 }>();
 
 const emit = defineEmits<{
   (e: 'update:modelValue', value: boolean): void;
-  (e: 'update:mode', value: 'simple' | 'nav'): void;
+  (e: 'update:mode', value: MonitoringMode): void;
   (e: 'update:refreshInterval', value: number): void;
   (e: 'update:alertThreshold', value: number): void;
   (e: 'reset-alert-threshold'): void;
 }>();
 
-const localMode = ref(props.mode);
+const localMode = ref<MonitoringMode>(props.mode);
 const interval = ref(props.refreshInterval);
 const clampThreshold = (value: number) => Math.max(5, Math.min(180, Math.round(value)));
 const threshold = ref(clampThreshold(props.alertThreshold));
