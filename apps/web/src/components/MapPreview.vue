@@ -1,5 +1,5 @@
 <template>
-  <v-card class="map-preview" elevation="2" :aria-label="ariaLabel">
+  <v-card class="map-preview" elevation="2" :aria-label="ariaLabel" data-testid="map-preview">
     <div class="map-frame">
       <div ref="mapContainer" class="map-surface">
         <div v-if="status !== MapStatus.Ready" class="placeholder d-flex align-center justify-center text-body-2 text-medium-emphasis">

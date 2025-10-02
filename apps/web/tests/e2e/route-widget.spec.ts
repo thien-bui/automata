@@ -68,7 +68,7 @@ test.describe('Route Widget', () => {
     const toggle = page.getByLabel('Select monitoring mode');
     await toggle.getByRole('button', { name: 'Nav' }).click();
 
-    await expect(page.getByLabel(/Route preview map/i)).toBeVisible();
+    await expect(page.getByTestId('map-preview')).toBeVisible();
   });
 
   test('switching back to Simple mode hides the map placeholder', async ({ page }) => {
@@ -97,13 +97,13 @@ test.describe('Route Widget', () => {
     const toggle = page.getByLabel('Select monitoring mode');
     await toggle.getByRole('button', { name: 'Nav' }).click();
 
-    const mapCard = page.getByLabel(/Route preview map/i);
+    const mapCard = page.getByTestId('map-preview');
     await expect(mapCard).toBeVisible();
 
     await waitForToastsToClear(page);
     await toggle.getByRole('button', { name: 'Simple' }).click();
 
-    await expect(page.getByLabel(/Route preview map/i)).toHaveCount(0);
+    await expect(page.getByTestId('map-preview')).toHaveCount(0);
   });
 
   test('shows an alert banner when travel time exceeds threshold', async ({ page }) => {
