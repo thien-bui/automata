@@ -2,13 +2,13 @@
   <v-card class="map-preview" elevation="2" :aria-label="ariaLabel">
     <div class="map-frame">
       <div ref="mapContainer" class="map-surface">
-        <div v-if="status !== 'ready'" class="placeholder d-flex align-center justify-center text-body-2 text-medium-emphasis">
-          <span v-if="status === 'inactive'">Enable Nav mode to display the map.</span>
-          <span v-else-if="status === 'no-key'">
+        <div v-if="status !== MapStatus.Ready" class="placeholder d-flex align-center justify-center text-body-2 text-medium-emphasis">
+          <span v-if="status === MapStatus.Inactive">Enable Nav mode to display the map.</span>
+          <span v-else-if="status === MapStatus.NoKey">
             Set <code>VITE_GOOGLE_MAPS_BROWSER_KEY</code> to enable the map preview.
           </span>
-          <span v-else-if="status === 'loading'">Loading map…</span>
-          <span v-else-if="status === 'error'">{{ errorMessage }}</span>
+          <span v-else-if="status === MapStatus.Loading">Loading map…</span>
+          <span v-else-if="status === MapStatus.Error">{{ errorMessage }}</span>
         </div>
         <div class="map-overlay text-caption">
           <div>Origin: {{ origin }}</div>
@@ -30,10 +30,16 @@ const props = defineProps<{
   lastUpdatedIso: string | null;
 }>();
 
-type MapStatus = 'inactive' | 'loading' | 'ready' | 'no-key' | 'error';
+enum MapStatus {
+  Inactive = 'inactive',
+  Loading = 'loading',
+  Ready = 'ready',
+  NoKey = 'no-key',
+  Error = 'error',
+}
 
 const mapContainer = ref<HTMLDivElement | null>(null);
-const status = ref<MapStatus>('inactive');
+const status = ref<MapStatus>(MapStatus.Inactive);
 const errorMessage = ref('');
 
 const defaultCenter: google.maps.LatLngLiteral = { lat: 37.7749, lng: -122.4194 };
@@ -151,7 +157,7 @@ function clearRoute(): void {
 
 async function ensureMap(): Promise<void> {
   if (!props.active) {
-    status.value = 'inactive';
+    status.value = MapStatus.Inactive;
     clearRoute();
     return;
   }
@@ -161,22 +167,22 @@ async function ensureMap(): Promise<void> {
   }
 
   if (!apiKey) {
-    status.value = 'no-key';
+    status.value = MapStatus.NoKey;
     return;
   }
 
   if (mapInstance) {
-    status.value = 'ready';
+    status.value = MapStatus.Ready;
     return;
   }
 
-  status.value = 'loading';
+  status.value = MapStatus.Loading;
 
   try {
     const mapsApi = await loadGoogleMaps(apiKey);
 
     if (!mapContainer.value) {
-      status.value = 'error';
+      status.value = MapStatus.Error;
       errorMessage.value = 'Unable to attach map container.';
       return;
     }
@@ -195,9 +201,9 @@ async function ensureMap(): Promise<void> {
       preserveViewport: false,
     });
 
-    status.value = 'ready';
+    status.value = MapStatus.Ready;
   } catch (error) {
-    status.value = 'error';
+    status.value = MapStatus.Error;
     errorMessage.value = error instanceof Error ? error.message : 'Failed to load map.';
   }
 }
@@ -218,13 +224,13 @@ async function updateRoute(): Promise<void> {
   const trimmedDestination = props.destination.trim();
 
   if (!trimmedOrigin || !trimmedDestination) {
-    status.value = 'ready';
+    status.value = MapStatus.Ready;
     errorMessage.value = '';
     clearRoute();
     return;
   }
 
-  status.value = 'ready';
+  status.value = MapStatus.Ready;
   errorMessage.value = '';
 
   const requestId = ++latestRouteRequestId;
@@ -265,13 +271,13 @@ async function updateRoute(): Promise<void> {
     }
 
     renderer.setDirections(result);
-    status.value = 'ready';
+    status.value = MapStatus.Ready;
   } catch (error) {
     if (requestId !== latestRouteRequestId) {
       return;
     }
 
-    status.value = 'error';
+    status.value = MapStatus.Error;
     errorMessage.value = error instanceof Error ? error.message : 'Failed to load the navigation preview.';
     clearRoute();
   }
@@ -289,7 +295,7 @@ watch(
       await refreshMap();
     } else {
       clearRoute();
-      status.value = 'inactive';
+      status.value = MapStatus.Inactive;
     }
   },
   { immediate: true },

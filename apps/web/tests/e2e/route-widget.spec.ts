@@ -103,7 +103,7 @@ test.describe('Route Widget', () => {
     await waitForToastsToClear(page);
     await toggle.getByRole('button', { name: 'Simple' }).click();
 
-    await expect(mapCard).toBeHidden();
+    await expect(page.getByLabel(/Route preview map/i)).toHaveCount(0);
   });
 
   test('shows an alert banner when travel time exceeds threshold', async ({ page }) => {
