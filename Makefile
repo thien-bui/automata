@@ -13,3 +13,11 @@ compose-down:
 
 compose-logs:
 	$(COMPOSE) logs -f
+
+.PHONY: ollama-up ollama-pull
+
+ollama-up:
+	$(COMPOSE) --profile llm up -d ollama
+
+ollama-pull:
+	$(COMPOSE) --profile llm run --rm ollama ollama pull $${MODEL}

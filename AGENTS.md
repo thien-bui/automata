@@ -50,3 +50,8 @@
 - Use `npm run test --workspace=@automata/api` for a single run.
 - Use `npm run test:watch --workspace=@automata/api` while iterating; press `q` to exit watch mode.
 - Use `npm run test:ci --workspace=@automata/api` to produce coverage reports.
+
+## Ollama Runtime
+- Bring up the local model runtime with `make ollama-up` (wrapper for `docker compose --profile llm up -d ollama`).
+- Pull or update models via `make ollama-pull MODEL="llama3.1:8b"`.
+- The container exposes `http://ollama:11434` on the host and `http://ollama:11434` inside the Docker network; models persist under `deploy/ollama/`.

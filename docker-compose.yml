@@ -55,6 +55,25 @@ services:
     networks:
       - automata
 
+  ollama:
+    image: ollama/ollama:latest
+    profiles:
+      - llm
+    ports:
+      - "11434:11434"
+    volumes:
+      - ./deploy/ollama:/root/.ollama
+    environment:
+      - OLLAMA_KEEP_ALIVE=5m
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsSL http://localhost:11434/api/tags || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+    networks:
+      - automata
+
   gateway:
     image: nginx:1.27-alpine
     profiles:
