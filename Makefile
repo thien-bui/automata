@@ -1,4 +1,6 @@
 COMPOSE ?= docker compose
+OLLAMA_DEFAULT_MODEL ?= phi3:mini
+MODEL ?= $(OLLAMA_DEFAULT_MODEL)
 
 .PHONY: compose-build compose-up compose-down compose-logs
 

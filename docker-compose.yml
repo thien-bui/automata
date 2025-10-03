@@ -1,5 +1,3 @@
-version: "3.9"
-
 services:
   redis:
     image: redis:7-alpine
@@ -63,8 +61,12 @@ services:
       - "11434:11434"
     volumes:
       - ./deploy/ollama:/root/.ollama
+      - ./deploy/ollama-entrypoint.sh:/entrypoint.sh:ro
     environment:
       - OLLAMA_KEEP_ALIVE=5m
+      - OLLAMA_DEFAULT_MODEL=phi3:mini
+    entrypoint:
+      - /entrypoint.sh
     healthcheck:
       test: ["CMD-SHELL", "curl -fsSL http://localhost:11434/api/tags || exit 1"]
       interval: 30s
