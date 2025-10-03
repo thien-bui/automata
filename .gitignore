@@ -8,3 +8,5 @@ node_modules
 
 deploy/ollama/*
 !deploy/ollama/.gitkeep
+!deploy/ollama/Dockerfile
+

@@ -1,7 +1,7 @@
 #!/bin/sh
 set -eu
 
-DEFAULT_MODEL=${OLLAMA_DEFAULT_MODEL:-phi3:mini}
+DEFAULT_MODEL=${OLLAMA_DEFAULT_MODEL:-llama3.2:latest}
 
 log() {
   printf '[ollama-entrypoint] %s\n' "$1" >&2

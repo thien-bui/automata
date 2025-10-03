@@ -54,7 +54,9 @@ services:
       - automata
 
   ollama:
-    image: ollama/ollama:latest
+    build:
+      context: .
+      dockerfile: deploy/ollama/Dockerfile
     profiles:
       - llm
     ports:
@@ -64,7 +66,7 @@ services:
       - ./deploy/ollama-entrypoint.sh:/entrypoint.sh:ro
     environment:
       - OLLAMA_KEEP_ALIVE=5m
-      - OLLAMA_DEFAULT_MODEL=phi3:mini
+      - OLLAMA_DEFAULT_MODEL=llama3.2:latest
     entrypoint:
       - /entrypoint.sh
     healthcheck:
@@ -100,4 +102,5 @@ services:
 
 networks:
   automata:
-    driver: bridge
+    external: true
+    name: automata
