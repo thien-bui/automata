@@ -1,180 +1,245 @@
 <template>
-  <v-card class="map-preview" elevation="2" :aria-label="ariaLabel" data-testid="map-preview">
-    <div class="map-frame">
-      <div class="map-surface">
-        <div
-          v-if="status !== 'ready'"
-          class="placeholder d-flex align-center justify-center text-body-2 text-medium-emphasis"
-        >
-          <span v-if="status === 'inactive'">Enable Nav mode to display the map.</span>
-          <span v-else-if="status === 'no-key'">
-            Set <code>VITE_GOOGLE_MAPS_BROWSER_KEY</code> to enable the map preview.
-          </span>
-          <span v-else-if="status === 'loading'">Loading map…</span>
-          <span v-else-if="status === 'error'">{{ errorMessage }}</span>
-        </div>
-
-        <GoogleMap
-          v-if="shouldRenderMap"
-          class="map-canvas"
-          :api-key="apiKey"
-          :libraries="mapLibraries"
-          :center="defaultCenter"
-          :zoom="defaultZoom"
-          :disable-default-ui="true"
-          :keyboard-shortcuts="false"
-        >
-          <MapRouteRenderer
-            :active="props.active"
-            :origin="props.origin"
-            :destination="props.destination"
-            :last-updated-iso="props.lastUpdatedIso"
-            :default-center="defaultCenter"
-            :default-zoom="defaultZoom"
-            @route-loading="handleRouteLoading"
-            @route-ready="handleRouteReady"
-            @route-error="handleRouteError"
-            @route-cleared="handleRouteCleared"
-          />
-        </GoogleMap>
-
-        <div class="map-overlay text-caption">
-          <div>Origin: {{ origin }}</div>
-          <div>Destination: {{ destination }}</div>
-          <div v-if="lastUpdatedLabel">Last update {{ lastUpdatedLabel }}</div>
-        </div>
-      </div>
+  <div v-if="showMap" class="map-preview-container">
+    <div ref="mapContainer" class="map-container"></div>
+    <div v-if="isLoading" class="map-loading-overlay">
+      <v-progress-circular indeterminate color="primary" size="48" />
+      <div class="mt-2 text-body-2">Loading map...</div>
     </div>
-  </v-card>
+    <div v-if="error" class="map-error-overlay">
+      <v-alert type="error" variant="tonal" class="ma-2">
+        {{ error }}
+      </v-alert>
+    </div>
+  </div>
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue';
-import { GoogleMap } from 'vue3-google-map';
-import type { Library } from '@googlemaps/js-api-loader';
-import MapRouteRenderer from './MapRouteRenderer.vue';
+import { ref, onMounted, onBeforeUnmount, watch, computed } from 'vue';
+import { Loader } from '@googlemaps/js-api-loader';
+import { MonitoringMode } from './monitoringMode';
 
-const props = defineProps<{
-  active: boolean;
-  origin: string;
-  destination: string;
-  lastUpdatedIso: string | null;
-}>();
+interface Props {
+  mode?: MonitoringMode;
+  from?: string;
+  to?: string;
+}
 
-type MapStatus = 'inactive' | 'loading' | 'ready' | 'no-key' | 'error';
-
-const status = ref<MapStatus>('inactive');
-const errorMessage = ref('');
-
-const defaultCenter: google.maps.LatLngLiteral = { lat: 37.7749, lng: -122.4194 };
-const defaultZoom = 11;
-
-const apiKey = import.meta.env.VITE_GOOGLE_MAPS_BROWSER_KEY ?? '';
-const mapLibraries: Library[] = ['routes', 'marker'];
-
-const ariaLabel = computed(() => `Route preview map from ${props.origin} to ${props.destination}.`);
-
-const lastUpdatedLabel = computed(() => {
-  if (!props.lastUpdatedIso) return '';
-  const timestamp = new Date(props.lastUpdatedIso);
-  return Number.isNaN(timestamp.getTime()) ? '' : timestamp.toLocaleTimeString();
+const props = withDefaults(defineProps<Props>(), {
+  mode: MonitoringMode.Simple,
+  from: '',
+  to: '',
 });
 
-const shouldRenderMap = computed(() => props.active && Boolean(apiKey));
+const mapContainer = ref<HTMLElement>();
+const isLoading = ref(false);
+const error = ref<string | null>(null);
+let map: google.maps.Map | null = null;
+let directionsService: google.maps.DirectionsService | null = null;
+let directionsRenderer: google.maps.DirectionsRenderer | null = null;
+let loader: Loader | null = null;
 
+const showMap = computed(() => props.mode === MonitoringMode.Nav && props.from && props.to);
+
+const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_BROWSER_KEY;
+
+async function initializeGoogleMaps() {
+  if (!GOOGLE_MAPS_API_KEY) {
+    error.value = 'Google Maps API key is not configured';
+    return false;
+  }
+
+  if (loader) {
+    return true; // Already initialized
+  }
+
+  try {
+    isLoading.value = true;
+    error.value = null;
+
+    loader = new Loader({
+      apiKey: GOOGLE_MAPS_API_KEY,
+      version: 'weekly',
+      libraries: ['geometry', 'places'],
+    });
+
+    await loader.load();
+    
+    // Initialize services
+    directionsService = new google.maps.DirectionsService();
+    directionsRenderer = new google.maps.DirectionsRenderer({
+      suppressMarkers: false,
+      suppressInfoWindows: true,
+      polylineOptions: {
+        strokeColor: '#1976D2',
+        strokeWeight: 4,
+        strokeOpacity: 0.8,
+      },
+    });
+
+    return true;
+  } catch (err) {
+    console.error('Failed to load Google Maps:', err);
+    error.value = 'Failed to load Google Maps. Please check your API key configuration.';
+    return false;
+  } finally {
+    isLoading.value = false;
+  }
+}
+
+async function initializeMap() {
+  if (!mapContainer.value || !showMap.value) {
+    return;
+  }
+
+  const mapsInitialized = await initializeGoogleMaps();
+  if (!mapsInitialized) {
+    return;
+  }
+
+  try {
+    isLoading.value = true;
+    error.value = null;
+
+    // Create map instance
+    map = new google.maps.Map(mapContainer.value, {
+      zoom: 10,
+      center: { lat: 47.6062, lng: -122.3321 }, // Default to Seattle
+      mapTypeControl: false,
+      streetViewControl: false,
+      fullscreenControl: false,
+      zoomControl: true,
+      gestureHandling: 'cooperative',
+    });
+
+    // Bind directions renderer to map
+    if (directionsRenderer) {
+      directionsRenderer.setMap(map);
+    }
+
+    // Load the route
+    await loadRoute();
+  } catch (err) {
+    console.error('Failed to initialize map:', err);
+    error.value = 'Failed to initialize map';
+  } finally {
+    isLoading.value = false;
+  }
+}
+
+async function loadRoute() {
+  if (!directionsService || !directionsRenderer || !props.from || !props.to) {
+    return;
+  }
+
+  try {
+    isLoading.value = true;
+    error.value = null;
+
+    const request: google.maps.DirectionsRequest = {
+      origin: props.from,
+      destination: props.to,
+      travelMode: google.maps.TravelMode.DRIVING,
+      unitSystem: google.maps.UnitSystem.IMPERIAL,
+    };
+
+    const result = await directionsService.route(request);
+    directionsRenderer.setDirections(result);
+
+    // Fit map to route bounds
+    if (result.routes[0]?.bounds && map) {
+      map.fitBounds(result.routes[0].bounds);
+    }
+  } catch (err) {
+    console.error('Failed to load route:', err);
+    error.value = 'Failed to load route. Please check the addresses and try again.';
+  } finally {
+    isLoading.value = false;
+  }
+}
+
+function cleanupMap() {
+  if (directionsRenderer) {
+    directionsRenderer.setMap(null);
+  }
+  map = null;
+  directionsService = null;
+  directionsRenderer = null;
+}
+
+// Watch for mode changes
 watch(
-  () => props.active,
-  (isActive) => {
-    if (!isActive) {
-      status.value = 'inactive';
-      errorMessage.value = '';
-      return;
+  () => showMap.value,
+  (shouldShow) => {
+    if (shouldShow) {
+      // Delay initialization to ensure DOM is ready
+      setTimeout(() => {
+        initializeMap();
+      }, 100);
+    } else {
+      cleanupMap();
     }
-
-    if (!apiKey) {
-      status.value = 'no-key';
-      errorMessage.value = '';
-      return;
-    }
-
-    status.value = 'loading';
-    errorMessage.value = '';
   },
-  { immediate: true },
+  { immediate: true }
 );
 
-const handleRouteLoading = (): void => {
-  status.value = 'loading';
-  errorMessage.value = '';
-};
+// Watch for route changes
+watch(
+  [() => props.from, () => props.to],
+  () => {
+    if (showMap.value && map) {
+      loadRoute();
+    }
+  }
+);
 
-const handleRouteReady = (): void => {
-  status.value = 'ready';
-  errorMessage.value = '';
-};
+onMounted(() => {
+  // Component will initialize map when showMap becomes true
+});
 
-const handleRouteCleared = (): void => {
-  status.value = 'ready';
-  errorMessage.value = '';
-};
-
-const handleRouteError = (message: string): void => {
-  status.value = 'error';
-  errorMessage.value = message;
-};
+onBeforeUnmount(() => {
+  cleanupMap();
+});
 </script>
 
 <style scoped>
-.map-preview {
-  overflow: hidden;
-}
-
-.map-frame {
+.map-preview-container {
   position: relative;
   width: 100%;
-  min-height: 280px;
+  height: 400px;
+  border-radius: 8px;
+  overflow: hidden;
+  margin-top: 16px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
-.map-surface {
-  position: absolute;
-  inset: 0;
-  background: repeating-linear-gradient(
-    45deg,
-    rgba(30, 136, 229, 0.08),
-    rgba(30, 136, 229, 0.08) 10px,
-    rgba(30, 136, 229, 0.16) 10px,
-    rgba(30, 136, 229, 0.16) 20px
-  );
-}
-
-.map-canvas {
-  position: absolute;
-  inset: 0;
-}
-
-.map-canvas :deep(.mapdiv) {
+.map-container {
   width: 100%;
   height: 100%;
+  background-color: #f5f5f5;
 }
 
-.placeholder {
+.map-loading-overlay,
+.map-error-overlay {
   position: absolute;
-  inset: 0;
-  padding: 0 16px;
-  text-align: center;
-  background: rgba(18, 18, 18, 0.12);
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background-color: rgba(255, 255, 255, 0.9);
+  z-index: 10;
 }
 
-.map-overlay {
-  position: absolute;
-  left: 12px;
-  bottom: 12px;
-  padding: 8px 12px;
-  border-radius: 8px;
-  background: rgba(33, 33, 33, 0.64);
-  color: rgba(255, 255, 255, 0.92);
-  pointer-events: none;
-  max-width: calc(100% - 24px);
-  line-height: 1.4;
+.map-error-overlay {
+  padding: 16px;
+}
+
+@media (max-width: 960px) {
+  .map-preview-container {
+    height: 300px;
+  }
 }
 </style>

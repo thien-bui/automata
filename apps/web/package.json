@@ -16,10 +16,9 @@
     "vue": "^3.4.31",
     "vuetify": "^3.6.10",
     "@mdi/font": "^7.4.47",
-    "vue3-google-map": "^0.24.1"
+    "@googlemaps/js-api-loader": "^1.16.6"
   },
   "devDependencies": {
-    "@googlemaps/js-api-loader": "^1.16.6",
     "@playwright/test": "^1.47.1",
     "@vue/test-utils": "^2.4.6",
     "@types/google.maps": "^3.55.8",

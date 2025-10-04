@@ -45,14 +45,7 @@
             </div>
           </v-sheet>
 
-          <MapPreview
-            v-if="isNavMode"
-            class="mt-4"
-            :active="isNavMode"
-            :origin="originLabel"
-            :destination="destinationLabel"
-            :last-updated-iso="lastUpdatedIso"
-          />
+          <MapPreview :mode="mode" :from="origin" :to="destination"/>
 
           <v-alert
             v-if="activeAlerts.length > 0"
