@@ -52,7 +52,8 @@
 - Use `npm run test:ci --workspace=@automata/api` to produce coverage reports.
 
 ## Ollama Runtime
-- Bring up the local model runtime with `make ollama-up` (wrapper for `docker compose --profile llm up -d ollama`).
+- Bring up the local model runtime and Open WebUI frontend with `make ollama-up` (wrapper for `docker compose --profile llm up -d ollama open-webui`).
+- Reach Open WebUI at `http://localhost:3000` and complete the onboarding flow on first launch.
 - The service preloads the `phi3:mini` model by default; override with `OLLAMA_DEFAULT_MODEL=<model>` when booting the container if you need something else.
 - Pull or update models via `make ollama-pull` (defaults to `phi3:mini`; override with `MODEL="<model>"`).
-- The container exposes `http://ollama:11434` on the host and `http://ollama:11434` inside the Docker network; models persist under `deploy/ollama/`.
+- Model artifacts persist under `deploy/ollama/`; Open WebUI state persists under `deploy/open-webui/`.

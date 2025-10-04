@@ -19,7 +19,7 @@ compose-logs:
 .PHONY: ollama-up ollama-pull
 
 ollama-up:
-	$(COMPOSE) --profile llm up -d ollama
+	$(COMPOSE) --profile llm up -d ollama open-webui
 
 ollama-pull:
 	$(COMPOSE) --profile llm run --rm ollama ollama pull $${MODEL}

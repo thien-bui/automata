@@ -9,4 +9,5 @@ node_modules
 deploy/ollama/*
 !deploy/ollama/.gitkeep
 !deploy/ollama/Dockerfile
-
+deploy/open-webui/*
+!deploy/open-webui/.gitkeep
