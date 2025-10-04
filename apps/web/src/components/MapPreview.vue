@@ -3,15 +3,15 @@
     <div class="map-frame">
       <div class="map-surface">
         <div
-          v-if="status !== MapStatus.Ready"
+          v-if="status !== 'ready'"
           class="placeholder d-flex align-center justify-center text-body-2 text-medium-emphasis"
         >
-          <span v-if="status === MapStatus.Inactive">Enable Nav mode to display the map.</span>
-          <span v-else-if="status === MapStatus.NoKey">
+          <span v-if="status === 'inactive'">Enable Nav mode to display the map.</span>
+          <span v-else-if="status === 'no-key'">
             Set <code>VITE_GOOGLE_MAPS_BROWSER_KEY</code> to enable the map preview.
           </span>
-          <span v-else-if="status === MapStatus.Loading">Loading map…</span>
-          <span v-else-if="status === MapStatus.Error">{{ errorMessage }}</span>
+          <span v-else-if="status === 'loading'">Loading map…</span>
+          <span v-else-if="status === 'error'">{{ errorMessage }}</span>
         </div>
 
         <GoogleMap
@@ -49,18 +49,10 @@
 </template>
 
 <script setup lang="ts">
-import {
-  computed,
-  defineComponent,
-  inject,
-  onBeforeUnmount,
-  ref,
-  watch,
-  type PropType,
-} from 'vue';
-
-import { GoogleMap, apiSymbol, mapSymbol } from 'vue3-google-map';
+import { computed, ref, watch } from 'vue';
+import { GoogleMap } from 'vue3-google-map';
 import type { Library } from '@googlemaps/js-api-loader';
+import MapRouteRenderer from './MapRouteRenderer.vue';
 
 const props = defineProps<{
   active: boolean;
@@ -69,15 +61,9 @@ const props = defineProps<{
   lastUpdatedIso: string | null;
 }>();
 
-enum MapStatus {
-  Inactive = 'inactive',
-  Loading = 'loading',
-  Ready = 'ready',
-  NoKey = 'no-key',
-  Error = 'error',
-}
+type MapStatus = 'inactive' | 'loading' | 'ready' | 'no-key' | 'error';
 
-const status = ref<MapStatus>(MapStatus.Inactive);
+const status = ref<MapStatus>('inactive');
 const errorMessage = ref('');
 
 const defaultCenter: google.maps.LatLngLiteral = { lat: 37.7749, lng: -122.4194 };
@@ -86,19 +72,12 @@ const defaultZoom = 11;
 const apiKey = import.meta.env.VITE_GOOGLE_MAPS_BROWSER_KEY ?? '';
 const mapLibraries: Library[] = ['routes', 'marker'];
 
-const ariaLabel = computed(
-  () => `Route preview map from ${props.origin} to ${props.destination}.`,
-);
+const ariaLabel = computed(() => `Route preview map from ${props.origin} to ${props.destination}.`);
 
 const lastUpdatedLabel = computed(() => {
-  if (!props.lastUpdatedIso) {
-    return '';
-  }
+  if (!props.lastUpdatedIso) return '';
   const timestamp = new Date(props.lastUpdatedIso);
-  if (Number.isNaN(timestamp.getTime())) {
-    return '';
-  }
-  return timestamp.toLocaleTimeString();
+  return Number.isNaN(timestamp.getTime()) ? '' : timestamp.toLocaleTimeString();
 });
 
 const shouldRenderMap = computed(() => props.active && Boolean(apiKey));
@@ -107,237 +86,42 @@ watch(
   () => props.active,
   (isActive) => {
     if (!isActive) {
-      status.value = MapStatus.Inactive;
+      status.value = 'inactive';
       errorMessage.value = '';
       return;
     }
 
     if (!apiKey) {
-      status.value = MapStatus.NoKey;
+      status.value = 'no-key';
       errorMessage.value = '';
       return;
     }
 
-    status.value = MapStatus.Loading;
+    status.value = 'loading';
     errorMessage.value = '';
   },
   { immediate: true },
 );
 
-function handleRouteLoading(): void {
-  status.value = MapStatus.Loading;
+const handleRouteLoading = (): void => {
+  status.value = 'loading';
   errorMessage.value = '';
-}
+};
 
-function handleRouteReady(): void {
-  status.value = MapStatus.Ready;
+const handleRouteReady = (): void => {
+  status.value = 'ready';
   errorMessage.value = '';
-}
+};
 
-function handleRouteCleared(): void {
-  status.value = MapStatus.Ready;
+const handleRouteCleared = (): void => {
+  status.value = 'ready';
   errorMessage.value = '';
-}
+};
 
-function handleRouteError(message: string): void {
-  status.value = MapStatus.Error;
+const handleRouteError = (message: string): void => {
+  status.value = 'error';
   errorMessage.value = message;
-}
-
-const MapRouteRenderer = defineComponent({
-  name: 'MapRouteRenderer',
-  props: {
-    active: {
-      type: Boolean,
-      required: true,
-    },
-    origin: {
-      type: String,
-      required: true,
-    },
-    destination: {
-      type: String,
-      required: true,
-    },
-    lastUpdatedIso: {
-      type: String as PropType<string | null>,
-      default: null,
-    },
-    defaultCenter: {
-      type: Object as PropType<google.maps.LatLngLiteral>,
-      required: true,
-    },
-    defaultZoom: {
-      type: Number,
-      required: true,
-    },
-  },
-  emits: {
-    'route-loading': () => true,
-    'route-ready': () => true,
-    'route-error': (message: string) => typeof message === 'string',
-    'route-cleared': () => true,
-  },
-  setup(componentProps, { emit }) {
-    const mapRef = inject(mapSymbol, ref<google.maps.Map | undefined>());
-    const apiRef = inject(apiSymbol, ref<typeof google.maps | undefined>());
-
-    const directionsService = ref<google.maps.DirectionsService | null>(null);
-    const directionsRenderer = ref<google.maps.DirectionsRenderer | null>(null);
-    const latestRequestId = ref(0);
-
-    const ensureDirections = (): boolean => {
-      const map = mapRef.value;
-      const api = apiRef.value;
-
-      if (!map || !api) {
-        return false;
-      }
-
-      if (!directionsService.value) {
-        directionsService.value = new api.DirectionsService();
-      }
-
-      if (!directionsRenderer.value) {
-        directionsRenderer.value = new api.DirectionsRenderer({
-          map,
-          suppressMarkers: false,
-          preserveViewport: false,
-        });
-      } else {
-        directionsRenderer.value.setMap(map);
-      }
-
-      return Boolean(directionsService.value && directionsRenderer.value);
-    };
-
-    const resetViewport = (): void => {
-      const map = mapRef.value;
-      if (!map) {
-        return;
-      }
-      map.setCenter(componentProps.defaultCenter);
-      map.setZoom(componentProps.defaultZoom);
-    };
-
-    const clearRoute = (cancelOutstanding: boolean): void => {
-      if (cancelOutstanding) {
-        latestRequestId.value += 1;
-      }
-      directionsRenderer.value?.setDirections(null);
-      resetViewport();
-    };
-
-    const statusMessageMap: Partial<Record<google.maps.DirectionsStatus, string>> = {
-      INVALID_REQUEST: 'The navigation request is invalid. Check the addresses.',
-      MAX_WAYPOINTS_EXCEEDED: 'Too many waypoints were requested.',
-      NOT_FOUND: 'One or both addresses could not be found.',
-      OVER_QUERY_LIMIT: 'Route requests are temporarily limited. Try again later.',
-      REQUEST_DENIED: 'Navigation preview is not permitted with the current API key.',
-      UNKNOWN_ERROR: 'An unknown error occurred while fetching the route.',
-      ZERO_RESULTS: 'No routes could be found between the specified addresses.',
-    };
-
-    const fetchRoute = async (
-      origin: string,
-      destination: string,
-      isCancelled: () => boolean,
-    ): Promise<void> => {
-      if (!ensureDirections()) {
-        return;
-      }
-
-      emit('route-loading');
-
-      const requestId = ++latestRequestId.value;
-
-      try {
-        const result = await new Promise<google.maps.DirectionsResult>((resolve, reject) => {
-          directionsService.value?.route(
-            {
-              origin,
-              destination,
-              travelMode: apiRef.value?.TravelMode.DRIVING ?? google.maps.TravelMode.DRIVING,
-              provideRouteAlternatives: false,
-            },
-            (response, responseStatus: google.maps.DirectionsStatus) => {
-              if (responseStatus === 'OK' && response) {
-                resolve(response);
-                return;
-              }
-
-              const message = statusMessageMap[responseStatus] ?? 'Failed to load the navigation preview.';
-              reject(new Error(message));
-            },
-          );
-        });
-
-        if (isCancelled() || latestRequestId.value !== requestId) {
-          return;
-        }
-
-        directionsRenderer.value?.setDirections(result);
-        emit('route-ready');
-      } catch (error) {
-        if (isCancelled() || latestRequestId.value !== requestId) {
-          return;
-        }
-
-        clearRoute(false);
-        const message = error instanceof Error ? error.message : 'Failed to load the navigation preview.';
-        emit('route-error', message);
-      }
-    };
-
-    watch(
-      [
-        () => componentProps.active,
-        () => componentProps.origin,
-        () => componentProps.destination,
-        () => componentProps.lastUpdatedIso,
-        mapRef,
-        apiRef,
-      ],
-      async ([isActive, origin, destination], _oldValue, onCleanup) => {
-        let cancelled = false;
-        onCleanup(() => {
-          cancelled = true;
-          latestRequestId.value += 1;
-        });
-
-        if (!isActive) {
-          clearRoute(true);
-          return;
-        }
-
-        if (!mapRef.value || !apiRef.value) {
-          return;
-        }
-
-        const trimmedOrigin = origin.trim();
-        const trimmedDestination = destination.trim();
-
-        if (!trimmedOrigin || !trimmedDestination) {
-          clearRoute(true);
-          emit('route-cleared');
-          return;
-        }
-
-        await fetchRoute(trimmedOrigin, trimmedDestination, () => cancelled);
-      },
-      { immediate: true },
-    );
-
-    onBeforeUnmount(() => {
-      latestRequestId.value += 1;
-      directionsRenderer.value?.setMap(null);
-      directionsRenderer.value = null;
-      directionsService.value = null;
-    });
-
-    return {};
-  },
-});
+};
 </script>
 
 <style scoped>
