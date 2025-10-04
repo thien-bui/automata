@@ -49,6 +49,19 @@ async function initializeGoogleMaps() {
   }
 
   if (loader) {
+    // Re-initialize services if they were cleaned up
+    if (!directionsService || !directionsRenderer) {
+      directionsService = new google.maps.DirectionsService();
+      directionsRenderer = new google.maps.DirectionsRenderer({
+        suppressMarkers: false,
+        suppressInfoWindows: true,
+        polylineOptions: {
+          strokeColor: '#1976D2',
+          strokeWeight: 4,
+          strokeOpacity: 0.8,
+        },
+      });
+    }
     return true; // Already initialized
   }
 
