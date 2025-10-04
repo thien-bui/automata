@@ -40,8 +40,8 @@ describe('Weather API', () => {
 
     it('should handle weather API errors gracefully', async () => {
       // Mock the environment to have no API key
-      const originalApiKey = process.env.VITE_GOOGLE_WEATHER_API_KEY;
-      delete process.env.VITE_GOOGLE_WEATHER_API_KEY;
+      const originalApiKey = process.env.GOOGLE_WEATHER_API_KEY;
+      delete process.env.GOOGLE_WEATHER_API_KEY;
 
       const response = await app.inject({
         method: 'GET',
@@ -54,23 +54,23 @@ describe('Weather API', () => {
 
       // Restore the original API key
       if (originalApiKey) {
-        process.env.VITE_GOOGLE_WEATHER_API_KEY = originalApiKey;
+        process.env.GOOGLE_WEATHER_API_KEY = originalApiKey;
       }
     });
   });
 
   describe('fetchGoogleWeather', () => {
     it('should throw error when API key is missing', async () => {
-      const originalApiKey = process.env.VITE_GOOGLE_WEATHER_API_KEY;
-      delete process.env.VITE_GOOGLE_WEATHER_API_KEY;
+      const originalApiKey = process.env.GOOGLE_WEATHER_API_KEY;
+      delete process.env.GOOGLE_WEATHER_API_KEY;
 
       await expect(fetchGoogleWeather({ location: 'New York' })).rejects.toThrow(
-        'VITE_GOOGLE_WEATHER_API_KEY is not configured.'
+        'GOOGLE_WEATHER_API_KEY is not configured.'
       );
 
       // Restore the original API key
       if (originalApiKey) {
-        process.env.VITE_GOOGLE_WEATHER_API_KEY = originalApiKey;
+        process.env.GOOGLE_WEATHER_API_KEY = originalApiKey;
       }
     });
   });

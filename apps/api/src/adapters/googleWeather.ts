@@ -18,60 +18,81 @@ export interface HourlyWeatherData {
   precipitationProbability?: number;
 }
 
-interface OpenWeatherMapResponse {
-  list: Array<{
-    dt_txt: string;
-    main: {
-      temp: number;
-      humidity: number;
+interface GoogleWeatherResponse {
+  forecastHours: Array<{
+    interval: {
+      startTime: string;
+      endTime: string;
     };
-    weather: Array<{
-      description: string;
-    }>;
+    temperature: {
+      unit: string;
+      degrees: number;
+    };
+    weatherCondition: {
+      description: {
+        text: string;
+        languageCode: string;
+      };
+      type: string;
+    };
+    relativeHumidity?: number;
     wind?: {
-      speed: number;
+      speed: {
+        unit: string;
+        value: number;
+      };
     };
-    pop: number;
+    precipitation?: {
+      probability: {
+        type: string;
+        percent: number;
+      };
+    };
   }>;
 }
 
 export async function fetchGoogleWeather(
   query: GoogleWeatherQuery,
 ): Promise<GoogleWeatherResult> {
-  const apiKey = process.env.VITE_GOOGLE_WEATHER_API_KEY;
+  const apiKey = process.env.GOOGLE_WEATHER_API_KEY;
   if (!apiKey) {
-    throw new Error('VITE_GOOGLE_WEATHER_API_KEY is not configured.');
+    throw new Error('GOOGLE_WEATHER_API_KEY is not configured.');
   }
 
-  // Google Weather API endpoint (using OpenWeatherMap as a proxy since Google doesn't have a direct weather API)
-  // Note: This is a placeholder implementation. In a real scenario, you'd use Google's actual weather API
-  // or a service like OpenWeatherMap, AccuWeather, etc.
-  const weatherUrl = `https://api.openweathermap.org/data/2.5/forecast?q=${encodeURIComponent(query.location)}&units=metric&appid=${apiKey}`;
+  // Use the specific coordinates provided: 47.3809335° N and -122.2348431° W
+  const latitude = 47.3809335;
+  const longitude = -122.2348431;
+  
+  // Google Weather API endpoint for hourly forecast
+  const weatherUrl = `https://weather.googleapis.com/v1/forecast/hours:lookup?key=${apiKey}&location.latitude=${latitude}&location.longitude=${longitude}&hours=24`;
 
   const response = await fetch(weatherUrl);
   
   if (!response.ok) {
-    throw new Error(`Weather API request failed: ${response.status} ${response.statusText}`);
+    throw new Error(`Google Weather API request failed: ${response.status} ${response.statusText}`);
   }
 
-  const data = await response.json() as OpenWeatherMapResponse;
+  const data = await response.json() as GoogleWeatherResponse;
   
-  if (!data.list || !Array.isArray(data.list)) {
-    throw new Error('Invalid weather data response');
+  if (!data.forecastHours || !Array.isArray(data.forecastHours)) {
+    throw new Error('Invalid weather data response from Google Weather API');
   }
 
-  // Get the next 24 hours of data (3-hour intervals, so we need 8 data points)
-  const hourlyData = data.list
-    .slice(0, 8) // First 8 entries = 24 hours (3 hours each)
-    .map((entry) => ({
-      timestamp: entry.dt_txt,
-      temperatureCelsius: Math.round(entry.main.temp * 10) / 10,
-      temperatureFahrenheit: Math.round((entry.main.temp * 9/5 + 32) * 10) / 10,
-      condition: entry.weather[0]?.description || 'unknown',
-      humidityPercent: entry.main.humidity,
-      windSpeedKph: entry.wind?.speed ? Math.round(entry.wind.speed * 3.6 * 10) / 10 : undefined,
-      precipitationProbability: Math.round(entry.pop * 100),
-    }));
+  // Transform the Google Weather API response to our expected format
+  const hourlyData = data.forecastHours.map((entry) => {
+    const tempCelsius = entry.temperature.degrees;
+    return {
+      timestamp: entry.interval.startTime,
+      temperatureCelsius: Math.round(tempCelsius * 10) / 10,
+      temperatureFahrenheit: Math.round((tempCelsius * 9/5 + 32) * 10) / 10,
+      condition: entry.weatherCondition?.description?.text || 'unknown',
+      humidityPercent: entry.relativeHumidity,
+      windSpeedKph: entry.wind?.speed?.unit === 'KILOMETERS_PER_HOUR' 
+        ? Math.round(entry.wind.speed.value * 10) / 10 
+        : undefined,
+      precipitationProbability: entry.precipitation?.probability?.percent,
+    };
+  });
 
   const lastUpdatedIso = new Date().toISOString();
 

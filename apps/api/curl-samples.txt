@@ -14,3 +14,22 @@ curl -G "http://localhost:4000/route-time" \
   --data-urlencode "to=John F. Kennedy International Airport" \
   --data-urlencode "mode=transit" \
   --data-urlencode "freshnessSeconds=420"
+
+### Weather (Google Weather provider)
+
+# Basic weather request for a location
+curl -G "http://localhost:4000/api/weather" \
+  -H "accept: application/json" \
+  --data-urlencode "location=San Francisco, CA"
+
+# Weather request with custom freshness window
+curl -G "http://localhost:4000/api/weather" \
+  -H "accept: application/json" \
+  --data-urlencode "location=New York, NY" \
+  --data-urlencode "freshnessSeconds=600"
+
+# Weather request forcing refresh (bypass cache)
+curl -G "http://localhost:4000/api/weather" \
+  -H "accept: application/json" \
+  --data-urlencode "location=London, UK" \
+  --data-urlencode "forceRefresh=true"
