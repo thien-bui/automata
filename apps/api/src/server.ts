@@ -5,6 +5,7 @@ import rateLimit from '@fastify/rate-limit';
 
 import { redisPlugin } from './plugins/redis';
 import { registerRouteTime } from './routes/routeTime';
+import { registerWeather } from './routes/weather';
 import { buildRateLimitError } from './utils/errors';
 
 export interface BuildServerOptions {
@@ -63,6 +64,7 @@ export function buildServer(options: BuildServerOptions = {}): FastifyInstance {
   }));
 
   app.register(registerRouteTime, { prefix: '/api' });
+  app.register(registerWeather, { prefix: '/api' });
 
   return app;
 }

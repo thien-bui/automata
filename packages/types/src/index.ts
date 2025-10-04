@@ -21,3 +21,32 @@ export interface RouteTimeQuery {
   mode?: RouteMode;
   freshnessSeconds?: number;
 }
+
+export interface HourlyWeatherData {
+  timestamp: string;
+  temperatureCelsius: number;
+  temperatureFahrenheit: number;
+  condition: string;
+  humidityPercent?: number;
+  windSpeedKph?: number;
+  precipitationProbability?: number;
+}
+
+export interface WeatherCacheMetadata {
+  hit: boolean;
+  ageSeconds: number;
+  staleWhileRevalidate: boolean;
+}
+
+export interface WeatherResponse {
+  hourlyData: HourlyWeatherData[];
+  provider: 'google-weather';
+  lastUpdatedIso: string;
+  cache: WeatherCacheMetadata;
+}
+
+export interface WeatherQuery {
+  location: string;
+  freshnessSeconds?: number;
+  forceRefresh?: boolean;
+}
