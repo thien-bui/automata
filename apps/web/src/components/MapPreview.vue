@@ -116,7 +116,10 @@ async function initializeMap() {
     // Create map instance
     map = new google.maps.Map(mapContainer.value, {
       zoom: 10,
-      center: { lat: 47.6062, lng: -122.3321 }, // Default to Seattle
+      center: { 
+        lat: parseFloat(import.meta.env.VITE_DEFAULT_LATITUDE || '47.6062'), 
+        lng: parseFloat(import.meta.env.VITE_DEFAULT_LONGITUDE || '-122.3321')
+      }, // Default coordinates from environment
       mapTypeControl: false,
       streetViewControl: false,
       fullscreenControl: false,

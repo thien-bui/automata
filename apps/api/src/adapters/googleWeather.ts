@@ -59,9 +59,9 @@ export async function fetchGoogleWeather(
     throw new Error('GOOGLE_WEATHER_API_KEY is not configured.');
   }
 
-  // Use the specific coordinates provided: 47.3809335° N and -122.2348431° W
-  const latitude = 47.3809335;
-  const longitude = -122.2348431;
+  // Use coordinates from environment variables
+  const latitude = parseFloat(process.env.WEATHER_LATITUDE || '47.3809335');
+  const longitude = parseFloat(process.env.WEATHER_LONGITUDE || '-122.2348431');
   
   // Google Weather API endpoint for hourly forecast
   const weatherUrl = `https://weather.googleapis.com/v1/forecast/hours:lookup?key=${apiKey}&location.latitude=${latitude}&location.longitude=${longitude}&hours=24`;
