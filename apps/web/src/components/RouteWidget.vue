@@ -141,7 +141,6 @@
 
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
-import type { RouteMode } from '@automata/types';
 
 import MapPreview from './MapPreview.vue';
 import SettingsDrawer from './SettingsDrawer.vue';
@@ -281,15 +280,6 @@ function clearIntervalHandle() {
   }
 }
 
-function schedulePolling() {
-  clearIntervalHandle();
-  const intervalMs = pollingSeconds.value * 1000;
-  setFreshnessSeconds(pollingSeconds.value);
-  intervalHandle = window.setInterval(() => {
-    triggerPolling('interval');
-  }, intervalMs);
-}
-
 async function triggerPolling(reason: PollingReason, options: { forceRefresh?: boolean } = {}) {
   const background = reason === 'interval' || reason === 'mode-change';
   await refreshRoute({ background, reason, forceRefresh: options.forceRefresh });
@@ -332,8 +322,7 @@ function acknowledgeAlerts() {
 }
 
 onMounted(() => {
-  triggerPolling('initial');
-  schedulePolling();
+  void triggerPolling('initial');
 });
 
 onBeforeUnmount(() => {
@@ -341,23 +330,34 @@ onBeforeUnmount(() => {
 });
 
 watch(
-  () => refreshInterval.value,
-  () => {
-    if (mode.value === MonitoringMode.Simple) {
-      schedulePolling();
+  () => pollingSeconds.value,
+  (seconds, _previous, onCleanup) => {
+    setFreshnessSeconds(seconds);
+    clearIntervalHandle();
+
+    if (!Number.isFinite(seconds) || seconds <= 0) {
+      return;
     }
+
+    intervalHandle = window.setInterval(() => {
+      void triggerPolling('interval');
+    }, seconds * 1000);
+
+    onCleanup(() => {
+      clearIntervalHandle();
+    });
   },
+  { immediate: true },
 );
 
 watch(
   () => mode.value,
-  (value, previous) => {
+  async (value, previous) => {
     if (value === previous) {
       return;
     }
     setRouteMode('driving');
-    schedulePolling();
-    triggerPolling('mode-change');
+    await triggerPolling('mode-change');
   },
 );
 

@@ -23,6 +23,8 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, ref, watch } from 'vue';
 
+import { useGoogleMaps } from '../composables/useGoogleMaps';
+
 const props = defineProps<{
   active: boolean;
   origin: string;
@@ -45,9 +47,12 @@ const errorMessage = ref('');
 const defaultCenter: google.maps.LatLngLiteral = { lat: 37.7749, lng: -122.4194 };
 const defaultZoom = 11;
 
-type GoogleMapsApi = typeof google;
+const apiKey = import.meta.env.VITE_GOOGLE_MAPS_BROWSER_KEY;
+const mapsLoader = useGoogleMaps({
+  apiKey,
+  libraries: ['routes'],
+});
 
-let googleMapsPromise: Promise<GoogleMapsApi> | null = null;
 let mapInstance: google.maps.Map | null = null;
 let directionsService: google.maps.DirectionsService | null = null;
 let directionsRenderer: google.maps.DirectionsRenderer | null = null;
@@ -68,126 +73,43 @@ const lastUpdatedLabel = computed(() => {
   return timestamp.toLocaleTimeString();
 });
 
-const apiKey = import.meta.env.VITE_GOOGLE_MAPS_BROWSER_KEY;
-
-async function loadGoogleMaps(apiKey: string): Promise<GoogleMapsApi> {
-  if (typeof window === 'undefined') {
-    throw new Error('Google Maps is unavailable in this environment.');
-  }
-
-  if (window.google?.maps) {
-    return window.google;
-  }
-
-  if (googleMapsPromise) {
-    return googleMapsPromise;
-  }
-
-  const waitForScript = (script: HTMLScriptElement, removeOnError: boolean): Promise<GoogleMapsApi> =>
-    new Promise<GoogleMapsApi>((resolve, reject) => {
-      const cleanup = () => {
-        script.removeEventListener('load', handleLoad);
-        script.removeEventListener('error', handleError);
-      };
-
-      const handleLoad = () => {
-        cleanup();
-        if (window.google?.maps) {
-          resolve(window.google);
-          return;
-        }
-
-        if (removeOnError) {
-          script.remove();
-        }
-
-        reject(new Error('Google Maps script loaded without maps namespace.'));
-      };
-
-      const handleError = () => {
-        cleanup();
-        if (removeOnError) {
-          script.remove();
-        }
-
-        reject(new Error('Failed to load Google Maps script.'));
-      };
-
-      script.addEventListener('load', handleLoad, { once: true });
-      script.addEventListener('error', handleError, { once: true });
-    });
-
-  const existingScript = document.querySelector<HTMLScriptElement>('script[data-google-maps-loader="true"]');
-
-  const loaderPromise: Promise<GoogleMapsApi> = existingScript
-    ? waitForScript(existingScript, true)
-    : (() => {
-        const script = document.createElement('script');
-        script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(apiKey)}&v=weekly&libraries=routes`;
-        script.async = true;
-        script.defer = true;
-        script.dataset.googleMapsLoader = 'true';
-        const promise = waitForScript(script, true);
-        document.head.appendChild(script);
-        return promise;
-      })();
-
-  googleMapsPromise = (async (): Promise<GoogleMapsApi> => {
-    try {
-      return await loaderPromise;
-    } catch (error) {
-      googleMapsPromise = null;
-      throw error;
-    }
-  })();
-
-  return googleMapsPromise;
+function cancelInFlightRequests(): void {
+  latestRouteRequestId += 1;
 }
 
 function clearRoute(): void {
-  latestRouteRequestId += 1;
-  if (directionsRenderer) {
-    directionsRenderer.setDirections(null);
-  }
+  cancelInFlightRequests();
+  directionsRenderer?.setDirections(null);
   if (mapInstance) {
     mapInstance.setCenter(defaultCenter);
     mapInstance.setZoom(defaultZoom);
   }
 }
 
-async function ensureMap(): Promise<void> {
-  if (!props.active) {
-    status.value = MapStatus.Inactive;
-    clearRoute();
-    return;
-  }
+function teardownMap(): void {
+  clearRoute();
+  directionsRenderer?.setMap(null);
+  directionsRenderer = null;
+  directionsService = null;
+  mapInstance = null;
+}
 
-  if (!mapContainer.value) {
-    return;
-  }
-
-  if (!apiKey) {
-    status.value = MapStatus.NoKey;
-    return;
-  }
-
+async function ensureMap(container: HTMLDivElement, isCancelled: () => boolean): Promise<boolean> {
   if (mapInstance) {
     status.value = MapStatus.Ready;
-    return;
+    return true;
   }
 
   status.value = MapStatus.Loading;
 
   try {
-    const mapsApi = await loadGoogleMaps(apiKey);
+    const mapsApi = await mapsLoader.load();
 
-    if (!mapContainer.value) {
-      status.value = MapStatus.Error;
-      errorMessage.value = 'Unable to attach map container.';
-      return;
+    if (isCancelled() || !mapContainer.value) {
+      return false;
     }
 
-    mapInstance = new mapsApi.maps.Map(mapContainer.value, {
+    mapInstance = new mapsApi.maps.Map(container, {
       center: defaultCenter,
       zoom: defaultZoom,
       disableDefaultUI: true,
@@ -202,31 +124,22 @@ async function ensureMap(): Promise<void> {
     });
 
     status.value = MapStatus.Ready;
+    errorMessage.value = '';
+    return true;
   } catch (error) {
+    if (isCancelled()) {
+      return false;
+    }
+
     status.value = MapStatus.Error;
     errorMessage.value = error instanceof Error ? error.message : 'Failed to load map.';
+    teardownMap();
+    return false;
   }
 }
 
-async function updateRoute(): Promise<void> {
-  if (!props.active) {
-    return;
-  }
-
-  const service = directionsService;
-  const renderer = directionsRenderer;
-
-  if (!mapInstance || !service || !renderer) {
-    return;
-  }
-
-  const trimmedOrigin = props.origin.trim();
-  const trimmedDestination = props.destination.trim();
-
-  if (!trimmedOrigin || !trimmedDestination) {
-    status.value = MapStatus.Ready;
-    errorMessage.value = '';
-    clearRoute();
+async function renderRoute(origin: string, destination: string, isCancelled: () => boolean): Promise<void> {
+  if (!mapInstance || !directionsService || !directionsRenderer) {
     return;
   }
 
@@ -237,10 +150,10 @@ async function updateRoute(): Promise<void> {
 
   try {
     const result = await new Promise<google.maps.DirectionsResult>((resolve, reject) => {
-      service.route(
+      directionsService?.route(
         {
-          origin: trimmedOrigin,
-          destination: trimmedDestination,
+          origin,
+          destination,
           travelMode: google.maps.TravelMode.DRIVING,
           provideRouteAlternatives: false,
         },
@@ -266,14 +179,13 @@ async function updateRoute(): Promise<void> {
       );
     });
 
-    if (requestId !== latestRouteRequestId) {
+    if (isCancelled() || requestId !== latestRouteRequestId) {
       return;
     }
 
-    renderer.setDirections(result);
-    status.value = MapStatus.Ready;
+    directionsRenderer.setDirections(result);
   } catch (error) {
-    if (requestId !== latestRouteRequestId) {
+    if (isCancelled() || requestId !== latestRouteRequestId) {
       return;
     }
 
@@ -283,51 +195,55 @@ async function updateRoute(): Promise<void> {
   }
 }
 
-async function refreshMap(): Promise<void> {
-  await ensureMap();
-  await updateRoute();
-}
-
 watch(
-  () => props.active,
-  async (isActive: boolean) => {
-    if (isActive) {
-      await refreshMap();
-    } else {
-      clearRoute();
+  () => [props.active, props.origin, props.destination, props.lastUpdatedIso, mapContainer.value] as const,
+  async ([isActive, origin, destination, _lastUpdatedIso, container], _oldValue, onCleanup) => {
+    let cancelled = false;
+    onCleanup(() => {
+      cancelled = true;
+      cancelInFlightRequests();
+    });
+
+    if (!isActive) {
       status.value = MapStatus.Inactive;
+      clearRoute();
+      return;
     }
+
+    if (!container) {
+      return;
+    }
+
+    if (!apiKey) {
+      status.value = MapStatus.NoKey;
+      errorMessage.value = '';
+      clearRoute();
+      return;
+    }
+
+    const ready = await ensureMap(container, () => cancelled);
+    if (!ready || cancelled) {
+      return;
+    }
+
+    const trimmedOrigin = origin.trim();
+    const trimmedDestination = destination.trim();
+
+    if (!trimmedOrigin || !trimmedDestination) {
+      status.value = MapStatus.Ready;
+      errorMessage.value = '';
+      clearRoute();
+      return;
+    }
+
+    await renderRoute(trimmedOrigin, trimmedDestination, () => cancelled);
   },
   { immediate: true },
 );
 
-watch(
-  () => mapContainer.value,
-  async (container: HTMLDivElement | null) => {
-    if (container && props.active) {
-      await refreshMap();
-    }
-  },
-);
-
-watch(
-  () => [props.origin, props.destination],
-  async () => {
-    if (props.active) {
-      await refreshMap();
-    } else {
-      clearRoute();
-    }
-  },
-);
-
 onBeforeUnmount(() => {
-  mapInstance = null;
-  directionsService = null;
-  if (directionsRenderer) {
-    directionsRenderer.setMap(null);
-    directionsRenderer = null;
-  }
+  teardownMap();
+  status.value = MapStatus.Inactive;
 });
 </script>
 
