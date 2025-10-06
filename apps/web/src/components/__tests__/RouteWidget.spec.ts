@@ -154,6 +154,12 @@ describe('RouteWidget', () => {
   let clearIntervalSpy: MockInstance<Parameters<typeof window.clearInterval>, ReturnType<typeof window.clearInterval>>;
 
   beforeEach(() => {
+    vi.useFakeTimers();
+    const baseDate = new Date();
+    baseDate.setFullYear(2024, 5, 1);
+    baseDate.setHours(12, 0, 0, 0);
+    vi.setSystemTime(baseDate);
+
     routeTimeState = createRouteTimeState();
     alertThresholdState = createAlertThresholdState();
 
@@ -166,6 +172,7 @@ describe('RouteWidget', () => {
   afterEach(() => {
     setIntervalSpy.mockRestore();
     clearIntervalSpy.mockRestore();
+    vi.useRealTimers();
     vi.clearAllMocks();
   });
 
@@ -264,5 +271,37 @@ describe('RouteWidget', () => {
     wrapper.unmount();
 
     expect(getRouteTimeState().setFreshnessSeconds).toHaveBeenCalledWith(120);
+  });
+
+  it('automatically switches modes at 5pm and 8pm local time every day', async () => {
+    const wrapper = mountComponent();
+    await flushPendingUpdates();
+
+    const widget = wrapper.findComponent(RouteWidget);
+    const internal = widget.vm.$ as ComponentInternalInstance & { setupState: { mode: MonitoringMode } };
+
+    expect(internal.setupState.mode).toBe(MonitoringMode.Simple);
+
+    vi.advanceTimersByTime(5 * 60 * 60 * 1000);
+    await flushPendingUpdates();
+
+    expect(internal.setupState.mode).toBe(MonitoringMode.Nav);
+
+    vi.advanceTimersByTime(3 * 60 * 60 * 1000);
+    await flushPendingUpdates();
+
+    expect(internal.setupState.mode).toBe(MonitoringMode.Simple);
+
+    vi.advanceTimersByTime(21 * 60 * 60 * 1000);
+    await flushPendingUpdates();
+
+    expect(internal.setupState.mode).toBe(MonitoringMode.Nav);
+
+    vi.advanceTimersByTime(3 * 60 * 60 * 1000);
+    await flushPendingUpdates();
+
+    expect(internal.setupState.mode).toBe(MonitoringMode.Simple);
+
+    wrapper.unmount();
   });
 });

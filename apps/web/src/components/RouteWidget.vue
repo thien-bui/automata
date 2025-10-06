@@ -158,6 +158,36 @@ const DEFAULT_FROM = '443 Ramsay Way, Kent, WA 98032';
 const DEFAULT_TO = '35522 21st Ave SW ste B, Federal Way, WA 98023';
 const NAV_MODE_REFRESH_SECONDS = 300;
 
+const AUTO_NAV_START_HOUR = 17;
+const AUTO_NAV_END_HOUR = 20;
+
+function resolveModeForDate(date: Date): MonitoringMode {
+  const hour = date.getHours();
+  return hour >= AUTO_NAV_START_HOUR && hour < AUTO_NAV_END_HOUR
+    ? MonitoringMode.Nav
+    : MonitoringMode.Simple;
+}
+
+function nextAutoModeBoundary(from: Date): Date {
+  const navStartToday = new Date(from);
+  navStartToday.setHours(AUTO_NAV_START_HOUR, 0, 0, 0);
+
+  const navEndToday = new Date(from);
+  navEndToday.setHours(AUTO_NAV_END_HOUR, 0, 0, 0);
+
+  if (from < navStartToday) {
+    return navStartToday;
+  }
+
+  if (from < navEndToday) {
+    return navEndToday;
+  }
+
+  const navStartTomorrow = new Date(navStartToday);
+  navStartTomorrow.setDate(navStartTomorrow.getDate() + 1);
+  return navStartTomorrow;
+}
+
 const mode = ref<MonitoringMode>(MonitoringMode.Simple);
 const refreshInterval = ref(120);
 const drawerOpen = ref(false);
@@ -188,6 +218,7 @@ const { push: pushToast } = useToasts();
 
 const activeAlerts = ref<RouteAlert[]>([]);
 let intervalHandle: number | null = null;
+let autoSwitchHandle: number | null = null;
 let lastAlertKey: string | null = null;
 let acknowledgedAlertKey: string | null = null;
 let lastErrorMessage: string | null = null;
@@ -273,6 +304,31 @@ function clearIntervalHandle() {
   }
 }
 
+function clearAutoSwitchTimer() {
+  if (autoSwitchHandle) {
+    window.clearTimeout(autoSwitchHandle);
+    autoSwitchHandle = null;
+  }
+}
+
+function applyAutoMode(now = new Date()) {
+  const nextMode = resolveModeForDate(now);
+  if (mode.value !== nextMode) {
+    mode.value = nextMode;
+  }
+}
+
+function scheduleNextAutoMode(now = new Date()) {
+  clearAutoSwitchTimer();
+  const boundary = nextAutoModeBoundary(now);
+  const delay = Math.max(boundary.getTime() - now.getTime(), 0);
+  autoSwitchHandle = window.setTimeout(() => {
+    const current = new Date();
+    applyAutoMode(current);
+    scheduleNextAutoMode(current);
+  }, delay);
+}
+
 async function triggerPolling(reason: PollingReason, options: { forceRefresh?: boolean } = {}) {
   const background = reason === 'interval' || reason === 'mode-change';
   await refreshRoute({ background, reason, forceRefresh: options.forceRefresh });
@@ -315,11 +371,15 @@ function acknowledgeAlerts() {
 }
 
 onMounted(() => {
+  const now = new Date();
+  applyAutoMode(now);
+  scheduleNextAutoMode(now);
   void triggerPolling('initial');
 });
 
 onBeforeUnmount(() => {
   clearIntervalHandle();
+  clearAutoSwitchTimer();
 });
 
 watch(
