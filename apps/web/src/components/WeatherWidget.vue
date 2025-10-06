@@ -37,26 +37,63 @@
         </div>
       </v-sheet>
 
-      <v-sheet class="pa-4 mt-4" elevation="1" rounded>
+      <div class="mt-4">
         <div class="text-subtitle-1 font-weight-medium mb-3">Hourly Forecast</div>
-        <div class="hourly-forecast">
-          <div
+        <div class="hourly-forecast-cards">
+          <v-card
             v-for="hour in displayedHourlyData"
             :key="hour.timestamp"
-            class="hourly-item text-center"
+            class="hourly-weather-card"
+            elevation="2"
+            rounded
           >
-            <div class="text-caption text-medium-emphasis">
-              {{ formatHour(hour.timestamp) }}
+            <v-card-item>
+              <template v-slot:subtitle>
+                <div class="text-caption text-medium-emphasis">
+                  {{ formatHour(hour.timestamp) }}
+                </div>
+              </template>
+            </v-card-item>
+
+            <v-card-text class="py-2">
+              <v-row align="center" no-gutters>
+                <v-col class="text-center" cols="12">
+                  <div class="text-h5 font-weight-medium">
+                    {{ formatTemperature(hour.temperatureCelsius) }}
+                  </div>
+                  <div class="text-caption text-medium-emphasis mt-1">
+                    {{ hour.condition }}
+                  </div>
+                </v-col>
+              </v-row>
+            </v-card-text>
+
+            <div class="d-flex py-2 justify-space-around">
+              <v-list-item
+                density="compact"
+                prepend-icon="mdi-water-percent"
+              >
+                <v-list-item-subtitle>{{ hour.humidityPercent }}%</v-list-item-subtitle>
+              </v-list-item>
+
+              <v-list-item
+                density="compact"
+                prepend-icon="mdi-weather-windy"
+              >
+                <v-list-item-subtitle>{{ hour.windSpeedKph }} km/h</v-list-item-subtitle>
+              </v-list-item>
+
+              <v-list-item
+                v-if="hour.precipitationProbability !== undefined"
+                density="compact"
+                prepend-icon="mdi-weather-rainy"
+              >
+                <v-list-item-subtitle>{{ hour.precipitationProbability }}%</v-list-item-subtitle>
+              </v-list-item>
             </div>
-            <div class="text-body-2 font-weight-medium">
-              {{ formatTemperature(hour.temperatureCelsius) }}
-            </div>
-            <div class="text-caption text-medium-emphasis">
-              {{ hour.condition }}
-            </div>
-          </div>
+          </v-card>
         </div>
-      </v-sheet>
+      </div>
     </template>
 
     <template #settings-content>
@@ -341,16 +378,19 @@ watch(isStale, (value) => {
   min-width: 240px;
 }
 
-.hourly-forecast {
+.hourly-forecast-cards {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: 16px;
 }
 
-.hourly-item {
-  padding: 8px;
-  border-radius: 8px;
-  background-color: rgba(var(--v-theme-surface-variant), 0.3);
+.hourly-weather-card {
+  transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+}
+
+.hourly-weather-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
 @media (max-width: 960px) {
@@ -358,8 +398,15 @@ watch(isStale, (value) => {
     margin-inline: 16px;
   }
 
-  .hourly-forecast {
-    grid-template-columns: repeat(auto-fit, minmax(60px, 1fr));
+  .hourly-forecast-cards {
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 12px;
+  }
+}
+
+@media (max-width: 600px) {
+  .hourly-forecast-cards {
+    grid-template-columns: 1fr;
     gap: 8px;
   }
 }

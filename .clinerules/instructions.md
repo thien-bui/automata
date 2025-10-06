@@ -129,7 +129,8 @@ npm run test:ci --workspace=@automata/api
 3. Include error handling and validation
 4. Write tests alongside implementation
 5. Update documentation if needed
-6. Document complex code
+6. Document complex code or logic
+7. Dont run the application, only do a build test
 
 ### Before Shipping
 1. Run `npm run build --workspace=<pkg>` for affected packages

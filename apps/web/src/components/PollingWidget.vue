@@ -7,6 +7,9 @@
         <div class="text-body-2 text-medium-emphasis mt-1">
           {{ subtitle }}
         </div>
+        <div v-if="lastUpdateDisplay" class="text-caption text-medium-emphasis mt-1">
+          {{ lastUpdateDisplay }}
+        </div>
       </div>
 
       <div class="d-flex align-center gap-2">
@@ -23,27 +26,40 @@
     <v-divider />
 
     <v-card-text>
-      <div class="d-flex flex-column flex-md-row gap-6">
-        <div class="flex-grow-1">
-          <slot name="main-content" />
-          
-          <v-alert
-            v-if="error"
-            type="error"
-            variant="tonal"
-            class="mt-4"
-            elevation="1"
-            border="start"
-          >
-            <div class="text-subtitle-1 font-weight-medium">{{ errorTitle }}</div>
-            <div class="mt-2">{{ error }}</div>
-          </v-alert>
-        </div>
+      <div class="flex-grow-1">
+        <slot name="main-content" />
+        
+        <v-alert
+          v-if="error"
+          type="error"
+          variant="tonal"
+          class="mt-4"
+          elevation="1"
+          border="start"
+        >
+          <div class="text-subtitle-1 font-weight-medium">{{ errorTitle }}</div>
+          <div class="mt-2">{{ error }}</div>
+        </v-alert>
+      </div>
+    </v-card-text>
 
-        <div class="flex-grow-1 min-width-240">
+    <v-dialog v-model="drawerOpen" max-width="500">
+      <v-card>
+        <v-card-title class="d-flex align-center justify-space-between">
+          <span>{{ settingsTitle }}</span>
+          <v-btn icon="mdi-close" variant="text" @click="drawerOpen = false" />
+        </v-card-title>
+        <v-divider />
+        <v-card-text>
+          <div class="mb-6">
+            <slot name="settings-content" />
+          </div>
+
+          <v-divider class="my-4" />
+
+          <div class="text-subtitle-1 font-weight-medium mb-3">Status</div>
           <v-sheet class="pa-4" elevation="1" rounded>
-            <div class="text-subtitle-1 font-weight-medium mb-2">Status</div>
-            <div class="d-flex align-center justify-space-between">
+            <div class="d-flex align-center justify-space-between mb-3">
               <span aria-live="polite">{{ statusText }}</span>
               <v-progress-circular
                 :indeterminate="isPolling"
@@ -55,9 +71,9 @@
               />
             </div>
 
-            <v-divider class="my-4" />
+            <v-divider class="my-3" />
 
-            <div class="text-body-2 text-medium-emphasis mb-1">
+            <div class="text-body-2 text-medium-emphasis mb-3">
               Automatic refresh every {{ pollingSeconds }}s.
             </div>
             <slot name="status-extra" />
@@ -87,19 +103,6 @@
               </v-btn>
             </v-btn-group>
           </v-sheet>
-        </div>
-      </div>
-    </v-card-text>
-
-    <v-dialog v-model="drawerOpen" max-width="400">
-      <v-card>
-        <v-card-title class="d-flex align-center justify-space-between">
-          <span>{{ settingsTitle }}</span>
-          <v-btn icon="mdi-close" variant="text" @click="drawerOpen = false" />
-        </v-card-title>
-        <v-divider />
-        <v-card-text>
-          <slot name="settings-content" />
         </v-card-text>
         <v-divider />
         <v-card-actions>
@@ -243,6 +246,18 @@ const statusText = computed(() => {
   }
   const formatted = timestamp.toLocaleTimeString();
   return props.isStale ? `Showing cached data from ${formatted}.` : `Last updated ${formatted}.`;
+});
+
+const lastUpdateDisplay = computed(() => {
+  if (!props.lastUpdatedIso) {
+    return null;
+  }
+  const timestamp = new Date(props.lastUpdatedIso);
+  if (Number.isNaN(timestamp.getTime())) {
+    return null;
+  }
+  const formatted = timestamp.toLocaleTimeString();
+  return props.isStale ? `Cached from ${formatted}` : `Updated ${formatted}`;
 });
 
 const progressValue = computed(() => (props.isPolling ? undefined : 100));
