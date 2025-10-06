@@ -73,16 +73,50 @@
     </template>
 
     <template #settings-content>
-      <SettingsDrawer
-        v-model="drawerOpen"
-        :mode="mode"
-        :refresh-interval="refreshInterval"
-        :alert-threshold="thresholdMinutes"
-        @update:mode="onModeUpdate"
-        @update:refresh-interval="onRefreshIntervalUpdate"
-        @update:alert-threshold="onAlertThresholdUpdate"
-        @reset-alert-threshold="resetAlertThreshold"
-      />
+      <div class="route-settings">
+        <div class="mb-6">
+          <v-list-subheader>Mode</v-list-subheader>
+          <v-btn-toggle
+            v-model="mode"
+            color="primary"
+            mandatory
+            class="my-2"
+            aria-label="Toggle monitoring mode"
+          >
+            <v-btn :value="MonitoringMode.Simple">Simple</v-btn>
+            <v-btn :value="MonitoringMode.Nav">Nav</v-btn>
+          </v-btn-toggle>
+
+          <v-list-subheader class="mt-6">Refresh cadence</v-list-subheader>
+          <v-slider
+            v-model="refreshInterval"
+            :min="15"
+            :max="300"
+            :step="15"
+            thumb-label
+            color="secondary"
+            aria-label="Polling interval in seconds"
+          />
+          <div class="text-caption text-medium-emphasis px-2">
+            Polling every {{ refreshInterval }} seconds.
+          </div>
+
+          <v-list-subheader class="mt-6">Alert threshold</v-list-subheader>
+          <v-slider
+            v-model="thresholdMinutes"
+            :min="5"
+            :max="180"
+            :step="5"
+            thumb-label
+            color="secondary"
+            aria-label="Alert threshold in minutes"
+          />
+          <div class="text-caption text-medium-emphasis px-2 d-flex justify-space-between align-center">
+            <span>Alerts fire above {{ thresholdMinutes }} minutes.</span>
+            <v-btn size="small" variant="text" @click="resetAlertThreshold">Reset</v-btn>
+          </div>
+        </div>
+      </div>
     </template>
   </PollingWidget>
 </template>
@@ -92,7 +126,6 @@ import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 
 import PollingWidget from './PollingWidget.vue';
 import MapPreview from './MapPreview.vue';
-import SettingsDrawer from './SettingsDrawer.vue';
 import { useRouteTime, type RouteFetchReason } from '../composables/useRouteTime';
 import { useAlertThreshold } from '../composables/useAlertThreshold';
 import { useToasts } from '../composables/useToasts';
@@ -146,7 +179,6 @@ function nextAutoModeBoundary(from: Date): Date {
 
 const mode = ref<MonitoringMode>(MonitoringMode.Simple);
 const refreshInterval = ref(120);
-const drawerOpen = ref(false);
 
 const {
   data: routeData,
@@ -297,23 +329,6 @@ async function triggerPolling(reason: PollingReason, options: { forceRefresh?: b
   }
 }
 
-function onModeUpdate(nextMode: MonitoringMode) {
-  if (mode.value === nextMode) {
-    return;
-  }
-  mode.value = nextMode;
-}
-
-function onRefreshIntervalUpdate(nextInterval: number) {
-  if (refreshInterval.value === nextInterval) {
-    return;
-  }
-  refreshInterval.value = nextInterval;
-}
-
-function onAlertThresholdUpdate(nextThreshold: number) {
-  setThreshold(nextThreshold);
-}
 
 function resetAlertThreshold() {
   resetThreshold();
@@ -328,7 +343,7 @@ function handleHardRefresh() {
 }
 
 function handleSaveSettings() {
-  // Settings are handled by the SettingsDrawer component
+  // Settings are handled directly via v-model binding
   pushToast({
     text: 'Route settings saved.',
     variant: 'success',

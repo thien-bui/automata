@@ -124,25 +124,28 @@ const createSlotStub = (tag: string) =>
 const MapPreviewStub = defineComponent({
   name: 'MapPreviewStub',
   props: {
-    active: {
-      type: Boolean,
-      default: true,
+    mode: {
+      type: String,
+      default: 'Simple',
+    },
+    from: {
+      type: String,
+      default: '',
+    },
+    to: {
+      type: String,
+      default: '',
     },
   },
   setup(props) {
+    const showMap = () => (props.mode === 'Nav' || props.mode === 'nav') && props.from && props.to;
     return () =>
-      props.active
+      showMap()
         ? h('div', { 'data-test': 'map-preview' })
-        : h('div', { 'data-test': 'map-preview', 'data-hidden': 'true' });
+        : null; // Don't render anything when map shouldn't be shown
   },
 });
 
-const SettingsDrawerStub = defineComponent({
-  name: 'SettingsDrawerStub',
-  setup(_, { slots }) {
-    return () => h('div', { 'data-test': 'settings-drawer-stub' }, slots.default ? slots.default() : undefined);
-  },
-});
 
 const flushPendingUpdates = async (): Promise<void> => {
   await nextTick();
@@ -189,7 +192,6 @@ describe('RouteWidget', () => {
       global: {
         stubs: {
           MapPreview: MapPreviewStub,
-          SettingsDrawer: SettingsDrawerStub,
           'v-card': createSlotStub('div'),
           'v-card-title': createSlotStub('div'),
           'v-card-text': createSlotStub('div'),
@@ -239,20 +241,25 @@ describe('RouteWidget', () => {
     expect(wrapper.find('[data-test="map-preview"]').exists()).toBe(false);
   });
 
-  it('renders and removes MapPreview when switching modes via settings drawer', async () => {
+  it('renders and removes MapPreview when switching modes via direct mode change', async () => {
     const wrapper = mountComponent();
-    const settingsDrawer = wrapper.findComponent(SettingsDrawerStub);
+    const widget = wrapper.findComponent(RouteWidget);
+    const getInternalInstance = () =>
+      widget.vm.$ as ComponentInternalInstance & { setupState: { mode: MonitoringMode } };
+    const setMode = (value: MonitoringMode) => {
+      getInternalInstance().setupState.mode = value;
+    };
 
     const findMapPreview = () => wrapper.find('[data-test="map-preview"]');
 
     await flushPendingUpdates();
     expect(findMapPreview().exists()).toBe(false);
 
-    settingsDrawer.vm.$emit('update:mode', MonitoringMode.Nav);
+    setMode(MonitoringMode.Nav);
     await flushPendingUpdates();
     expect(findMapPreview().exists()).toBe(true);
 
-    settingsDrawer.vm.$emit('update:mode', MonitoringMode.Simple);
+    setMode(MonitoringMode.Simple);
     await flushPendingUpdates();
     expect(findMapPreview().exists()).toBe(false);
   });
