@@ -20,6 +20,13 @@
             @alerts-updated="onAlertsUpdated"
           />
         </section>
+
+        <section id="weather-widget" aria-labelledby="weather-widget-heading" class="mt-8">
+          <h1 class="sr-only" id="weather-widget-heading">
+            Weather widget
+          </h1>
+          <WeatherWidget />
+        </section>
       </v-container>
     </v-main>
 
@@ -33,6 +40,7 @@ import { ref } from 'vue';
 import AlertBell from './components/AlertBell.vue';
 import RouteWidget from './components/RouteWidget.vue';
 import ToastHost from './components/ToastHost.vue';
+import WeatherWidget from './components/WeatherWidget.vue';
 import { provideToasts } from './composables/useToasts';
 
 const pageTitle = 'Automata Commute Console';
