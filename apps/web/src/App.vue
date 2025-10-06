@@ -11,22 +11,28 @@
 
     <v-main>
       <v-container class="py-8" fluid>
-        <section id="route-widget" aria-labelledby="route-widget-heading">
-          <h1 class="sr-only" id="route-widget-heading">
-            {{ pageTitle }} widget
-          </h1>
-          <RouteWidget
-            @alerts-acknowledged="onAlertsAcknowledged"
-            @alerts-updated="onAlertsUpdated"
-          />
-        </section>
-
-        <section id="weather-widget" aria-labelledby="weather-widget-heading" class="mt-8">
-          <h1 class="sr-only" id="weather-widget-heading">
-            Weather widget
-          </h1>
-          <WeatherWidget />
-        </section>
+        <v-row>
+          <v-col cols="12" md="6">
+            <section id="route-widget" aria-labelledby="route-widget-heading">
+              <h1 class="sr-only" id="route-widget-heading">
+                {{ pageTitle }} widget
+              </h1>
+              <RouteWidget
+                @alerts-acknowledged="onAlertsAcknowledged"
+                @alerts-updated="onAlertsUpdated"
+              />
+            </section>
+          </v-col>
+          
+          <v-col cols="12" md="6">
+            <section id="weather-widget" aria-labelledby="weather-widget-heading">
+              <h1 class="sr-only" id="weather-widget-heading">
+                Weather widget
+              </h1>
+              <WeatherWidget />
+            </section>
+          </v-col>
+        </v-row>
       </v-container>
     </v-main>
 
