@@ -200,10 +200,9 @@ onBeforeUnmount(() => {
 - `.env.example`:
 ```
 GOOGLE_MAPS_API_KEY=
-GOOGLE_MAPS_BROWSER_KEY=
+VITE_GOOGLE_MAPS_BROWSER_KEY=
 API_PORT=4000
 WEB_PORT=5173
-ROUTE_CACHE_TTL_SECONDS=300
 ALLOWED_ORIGINS=http://192.168.1.0/24,http://localhost:5173
 REDIS_URL=redis://redis:6379
 ```
@@ -247,7 +246,7 @@ Quickstart
 ```
 npm install
 cp .env.example .env
-export GOOGLE_MAPS_API_KEY=... && export GOOGLE_MAPS_BROWSER_KEY=...
+export GOOGLE_MAPS_API_KEY=... && export VITE_GOOGLE_MAPS_BROWSER_KEY=...
 docker-compose build
 docker-compose up
 ```

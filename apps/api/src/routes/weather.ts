@@ -10,11 +10,10 @@ import type {
 import { z } from 'zod';
 
 import { fetchGoogleWeather } from '../adapters/googleWeather';
+import { cacheConfig } from '../config/cache';
 import { buildProviderError, buildValidationError } from '../utils/errors';
 
-const baseTtlSeconds = Number(process.env.WEATHER_CACHE_TTL_SECONDS ?? '1800'); // 30 minutes default
-const staleGraceSeconds = Number(process.env.WEATHER_CACHE_STALE_GRACE_SECONDS ?? '300'); // 5 minutes default
-const redisExpireSeconds = baseTtlSeconds + staleGraceSeconds;
+const weatherCacheConfig = cacheConfig.weather;
 
 const querySchema = z.object({
   location: z.string().min(1, 'location is required'),
@@ -98,8 +97,8 @@ export async function registerWeather(
       freshnessSeconds: freshnessOverride,
       forceRefresh = false,
     } = validation.data;
-    const freshnessSeconds = freshnessOverride ?? baseTtlSeconds;
-    const maxAcceptableAgeSeconds = freshnessSeconds + staleGraceSeconds;
+    const freshnessSeconds = freshnessOverride ?? weatherCacheConfig.baseTtlSeconds;
+    const maxAcceptableAgeSeconds = freshnessSeconds + weatherCacheConfig.staleGraceSeconds;
     const cacheKey = buildCacheKey({ location });
 
     const cachedRecord = coerceCachedRecord(await app.redis.get(cacheKey), (msg, meta) => {
@@ -144,7 +143,12 @@ export async function registerWeather(
         cachedAtIso: lastUpdatedIso,
       };
 
-      await app.redis.set(cacheKey, JSON.stringify(cacheValue), 'EX', redisExpireSeconds);
+      await app.redis.set(
+        cacheKey,
+        JSON.stringify(cacheValue),
+        'EX',
+        weatherCacheConfig.redisExpireSeconds,
+      );
 
       return response;
     } catch (error) {

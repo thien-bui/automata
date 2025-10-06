@@ -10,6 +10,7 @@ import type { RouteTimeResponse } from '@automata/types';
 import type Redis from 'ioredis';
 
 import { fetchGoogleDirections } from '../src/adapters/googleDirections';
+import { cacheConfig } from '../src/config/cache';
 import { registerRouteTime } from '../src/routes/routeTime';
 
 type MockRedis = {
@@ -93,8 +94,7 @@ describe('/api/route-time contract', () => {
     expect(redis.get).toHaveBeenCalledTimes(1);
     expect(redis.set).toHaveBeenCalledTimes(1);
 
-    const expireSeconds = Number(process.env.ROUTE_CACHE_TTL_SECONDS ?? '300') +
-      Number(process.env.ROUTE_CACHE_STALE_GRACE_SECONDS ?? '120');
+    const expireSeconds = cacheConfig.routes.redisExpireSeconds;
 
     const [cacheKey, storedValue, expiryMode, ttlSeconds] = redis.set.mock.calls[0];
 

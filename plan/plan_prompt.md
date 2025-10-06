@@ -64,7 +64,7 @@ DELIVERABLE SECTIONS
    - Vue `RouteWidget` component stub with mode toggle and polling hook.
 
 8) Configuration
-   - `.env.example` with `GOOGLE_MAPS_API_KEY`, `API_PORT`, `WEB_PORT`, `ROUTE_CACHE_TTL_SECONDS`, `ALLOWED_ORIGINS`, `REDIS_URL`.
+   - `.env.example` with `GOOGLE_MAPS_API_KEY`, `API_PORT`, `WEB_PORT`, `ALLOWED_ORIGINS`, `REDIS_URL`.
    - Explain server API key vs browser JS key, scope restrictions, storage locations.
 
 9) Dockerization

@@ -10,11 +10,10 @@ import type {
 import { z } from 'zod';
 
 import { fetchGoogleDirections } from '../adapters/googleDirections';
+import { cacheConfig } from '../config/cache';
 import { buildProviderError, buildValidationError } from '../utils/errors';
 
-const baseTtlSeconds = Number(process.env.ROUTE_CACHE_TTL_SECONDS ?? '300');
-const staleGraceSeconds = Number(process.env.ROUTE_CACHE_STALE_GRACE_SECONDS ?? '120');
-const redisExpireSeconds = baseTtlSeconds + staleGraceSeconds;
+const routeCacheConfig = cacheConfig.routes;
 
 const querySchema = z.object({
   from: z.string().min(1, 'from is required'),
@@ -102,8 +101,8 @@ export async function registerRouteTime(
       freshnessSeconds: freshnessOverride,
       forceRefresh = false,
     } = validation.data;
-    const freshnessSeconds = freshnessOverride ?? baseTtlSeconds;
-    const maxAcceptableAgeSeconds = freshnessSeconds + staleGraceSeconds;
+    const freshnessSeconds = freshnessOverride ?? routeCacheConfig.baseTtlSeconds;
+    const maxAcceptableAgeSeconds = freshnessSeconds + routeCacheConfig.staleGraceSeconds;
     const cacheKey = buildCacheKey({ from, to, mode });
 
     const cachedRecord = coerceCachedRecord(await app.redis.get(cacheKey), (msg, meta) => {
@@ -150,7 +149,12 @@ export async function registerRouteTime(
         cachedAtIso: lastUpdatedIso,
       };
 
-      await app.redis.set(cacheKey, JSON.stringify(cacheValue), 'EX', redisExpireSeconds);
+      await app.redis.set(
+        cacheKey,
+        JSON.stringify(cacheValue),
+        'EX',
+        routeCacheConfig.redisExpireSeconds,
+      );
 
       return response;
     } catch (error) {
