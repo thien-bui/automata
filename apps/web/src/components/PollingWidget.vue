@@ -1,5 +1,5 @@
 <template>
-  <v-card class="base-widget" elevation="4">
+  <v-card class="polling-widget" elevation="4">
     <v-card-title class="d-flex align-center justify-space-between">
       <div>
         <div class="text-overline text-medium-emphasis">{{ overlineText }}</div>
@@ -116,23 +116,102 @@
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { useToasts } from '../composables/useToasts';
 
+/**
+ * Props for the PollingWidget component
+ */
 interface Props {
+  /** 
+   * The overline text displayed in the header (typically a category label)
+   * @example 'Weather' or 'Monitoring'
+   */
   overlineText: string;
+  
+  /** 
+   * The main title displayed in the header
+   * @example 'Current Conditions' or 'Simple Mode'
+   */
   title: string;
+  
+  /** 
+   * The subtitle displayed in the header (typically location or route info)
+   * @example 'Seattle, WA' or '443 Ramsay Way → 35522 21st Ave SW'
+   */
   subtitle: string;
+  
+  /** 
+   * Title for error alerts displayed in the main content area
+   * @default 'Error'
+   * @example 'Weather Error' or 'Route Error'
+   */
   errorTitle?: string;
+  
+  /** 
+   * Title for the settings dialog
+   * @default 'Settings'
+   * @example 'Weather Settings' or 'Route Settings'
+   */
   settingsTitle?: string;
+  
+  /** 
+   * Current error message to display in the alert. If null, no error is shown
+   * @example 'Failed to fetch weather data from provider.'
+   */
   error: string | null;
+  
+  /** 
+   * Whether the widget is currently refreshing data (shows loading state)
+   * Controls the progress indicator and button disabled states
+   */
   isPolling: boolean;
+  
+  /** 
+   * ISO timestamp of the last successful data update
+   * Used to calculate and display the "Last updated" time
+   * @example '2023-12-07T10:30:00.000Z'
+   */
   lastUpdatedIso: string | null;
+  
+  /** 
+   * Whether the current data is stale (served from cache while provider recovers)
+   * Affects the status text display and shows stale data warnings
+   */
   isStale: boolean;
+  
+  /** 
+   * Current polling interval in seconds
+   * Displayed in the status panel and used for interval calculations
+   * @example 300 for 5 minutes
+   */
   pollingSeconds: number;
+  
+  /** 
+   * Description of cache status displayed in the main content area
+   * If empty, no cache description is shown
+   * @example 'Cache hit • age 45s' or 'Live provider data'
+   */
   cacheDescription?: string;
 }
 
+/**
+ * Events emitted by the PollingWidget component
+ */
 interface Emits {
+  /** 
+   * Emitted when the user clicks the "Refresh now" button
+   * Triggers a normal refresh operation
+   */
   (e: 'manual-refresh'): void;
+  
+  /** 
+   * Emitted when the user clicks the "Hard refresh" button
+   * Triggers a force refresh operation that bypasses cache
+   */
   (e: 'hard-refresh'): void;
+  
+  /** 
+   * Emitted when the user clicks the "Save" button in the settings dialog
+   * Indicates that settings should be applied and persisted
+   */
   (e: 'save-settings'): void;
 }
 
@@ -189,7 +268,7 @@ function handleSaveSettings() {
 </script>
 
 <style scoped>
-.base-widget {
+.polling-widget {
   max-width: 980px;
   margin: 0 auto;
 }
@@ -207,7 +286,7 @@ function handleSaveSettings() {
 }
 
 @media (max-width: 960px) {
-  .base-widget {
+  .polling-widget {
     margin-inline: 16px;
   }
 }

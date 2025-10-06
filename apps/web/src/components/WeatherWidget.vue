@@ -1,170 +1,91 @@
 <template>
-  <v-card class="weather-widget" elevation="4">
-    <v-card-title class="d-flex align-center justify-space-between">
-      <div>
-        <div class="text-overline text-medium-emphasis">Weather</div>
-        <div class="text-h6 font-weight-medium">Current Conditions</div>
-        <div class="text-body-2 text-medium-emphasis mt-1">
-          {{ locationLabel }}
+  <PollingWidget
+    overline-text="Weather"
+    title="Current Conditions"
+    :subtitle="locationLabel"
+    error-title="Weather Error"
+    settings-title="Weather Settings"
+    :error="weatherError"
+    :is-polling="isPolling"
+    :last-updated-iso="lastUpdatedIso"
+    :is-stale="isStale"
+    :polling-seconds="pollingSeconds"
+    :cache-description="cacheDescription"
+    @manual-refresh="handleManualRefresh"
+    @hard-refresh="handleHardRefresh"
+    @save-settings="handleSaveSettings"
+  >
+    <template #main-content>
+      <v-sheet class="pa-4" elevation="1" rounded>
+        <div class="d-flex align-center justify-space-between">
+          <div>
+            <div class="text-overline text-medium-emphasis">Current Temperature</div>
+            <div class="text-h4 font-weight-medium" aria-live="polite">
+              {{ currentTemperatureDisplay }}
+            </div>
+            <div class="text-body-1 text-medium-emphasis mt-1">
+              {{ currentConditionDisplay }}
+            </div>
+          </div>
+          <div class="text-end">
+            <div class="text-body-2 text-medium-emphasis">Humidity: {{ humidityDisplay }}</div>
+            <div class="text-body-2 text-medium-emphasis">Wind: {{ windDisplay }}</div>
+            <div v-if="cacheDescription" class="text-caption text-medium-emphasis mt-1">
+              {{ cacheDescription }}
+            </div>
+          </div>
         </div>
-      </div>
+      </v-sheet>
 
-      <div class="d-flex align-center gap-2">
-        <v-btn icon="mdi-cog" variant="text" :aria-label="settingsAria" @click="drawerOpen = true" />
-      </div>
-    </v-card-title>
-
-    <v-divider />
-
-    <v-card-text>
-      <div class="d-flex flex-column flex-md-row gap-6">
-        <div class="flex-grow-1">
-          <v-sheet class="pa-4" elevation="1" rounded>
-            <div class="d-flex align-center justify-space-between">
-              <div>
-                <div class="text-overline text-medium-emphasis">Current Temperature</div>
-                <div class="text-h4 font-weight-medium" aria-live="polite">
-                  {{ currentTemperatureDisplay }}
-                </div>
-                <div class="text-body-1 text-medium-emphasis mt-1">
-                  {{ currentConditionDisplay }}
-                </div>
-              </div>
-              <div class="text-end">
-                <div class="text-body-2 text-medium-emphasis">Humidity: {{ humidityDisplay }}</div>
-                <div class="text-body-2 text-medium-emphasis">Wind: {{ windDisplay }}</div>
-                <div v-if="cacheDescription" class="text-caption text-medium-emphasis mt-1">
-                  {{ cacheDescription }}
-                </div>
-              </div>
-            </div>
-          </v-sheet>
-
-          <v-sheet class="pa-4 mt-4" elevation="1" rounded>
-            <div class="text-subtitle-1 font-weight-medium mb-3">Hourly Forecast</div>
-            <div class="hourly-forecast">
-              <div
-                v-for="hour in displayedHourlyData"
-                :key="hour.timestamp"
-                class="hourly-item text-center"
-              >
-                <div class="text-caption text-medium-emphasis">
-                  {{ formatHour(hour.timestamp) }}
-                </div>
-                <div class="text-body-2 font-weight-medium">
-                  {{ formatTemperature(hour.temperatureCelsius) }}
-                </div>
-                <div class="text-caption text-medium-emphasis">
-                  {{ hour.condition }}
-                </div>
-              </div>
-            </div>
-          </v-sheet>
-
-          <v-alert
-            v-if="weatherError"
-            type="error"
-            variant="tonal"
-            class="mt-4"
-            elevation="1"
-            border="start"
+      <v-sheet class="pa-4 mt-4" elevation="1" rounded>
+        <div class="text-subtitle-1 font-weight-medium mb-3">Hourly Forecast</div>
+        <div class="hourly-forecast">
+          <div
+            v-for="hour in displayedHourlyData"
+            :key="hour.timestamp"
+            class="hourly-item text-center"
           >
-            <div class="text-subtitle-1 font-weight-medium">Weather Error</div>
-            <div class="mt-2">{{ weatherError }}</div>
-          </v-alert>
-        </div>
-
-        <div class="flex-grow-1 min-width-240">
-          <v-sheet class="pa-4" elevation="1" rounded>
-            <div class="text-subtitle-1 font-weight-medium mb-2">Status</div>
-            <div class="d-flex align-center justify-space-between">
-              <span aria-live="polite">{{ statusText }}</span>
-              <v-progress-circular
-                :indeterminate="isPolling"
-                :model-value="progressValue"
-                color="primary"
-                size="32"
-                width="3"
-                aria-hidden="true"
-              />
+            <div class="text-caption text-medium-emphasis">
+              {{ formatHour(hour.timestamp) }}
             </div>
-
-            <v-divider class="my-4" />
-
-            <div class="text-body-2 text-medium-emphasis mb-1">
-              Automatic refresh every {{ pollingSeconds }}s.
+            <div class="text-body-2 font-weight-medium">
+              {{ formatTemperature(hour.temperatureCelsius) }}
             </div>
-
-            <v-btn-group class="w-100 d-flex" divided>
-              <v-btn
-                class="flex-grow-1"
-                color="primary"
-                size="large"
-                prepend-icon="mdi-refresh"
-                :loading="isPolling"
-                :disabled="isPolling"
-                @click="triggerPolling('manual')"
-              >
-                Refresh now
-              </v-btn>
-              <v-btn
-                class="flex-grow-1"
-                color="secondary"
-                size="large"
-                prepend-icon="mdi-refresh-alert"
-                :loading="isPolling"
-                :disabled="isPolling"
-                @click="triggerPolling('hard-manual', { forceRefresh: true })"
-              >
-                Hard refresh
-              </v-btn>
-            </v-btn-group>
-          </v-sheet>
+            <div class="text-caption text-medium-emphasis">
+              {{ hour.condition }}
+            </div>
+          </div>
         </div>
-      </div>
-    </v-card-text>
+      </v-sheet>
+    </template>
 
-    <v-dialog v-model="drawerOpen" max-width="400">
-      <v-card>
-        <v-card-title class="d-flex align-center justify-space-between">
-          <span>Weather Settings</span>
-          <v-btn icon="mdi-close" variant="text" @click="drawerOpen = false" />
-        </v-card-title>
-        <v-divider />
-        <v-card-text>
-          <v-text-field
-            v-model="locationInput"
-            label="Location"
-            placeholder="Enter city or address"
-            variant="outlined"
-            density="compact"
-            @keyup.enter="updateLocation"
-          />
-          <v-text-field
-            v-model.number="refreshIntervalInput"
-            label="Refresh Interval (seconds)"
-            type="number"
-            min="60"
-            max="3600"
-            variant="outlined"
-            density="compact"
-            @keyup.enter="updateRefreshInterval"
-          />
-        </v-card-text>
-        <v-divider />
-        <v-card-actions>
-          <v-spacer />
-          <v-btn @click="drawerOpen = false">Cancel</v-btn>
-          <v-btn color="primary" @click="saveSettings">Save</v-btn>
-        </v-card-actions>
-      </v-card>
-    </v-dialog>
-  </v-card>
+    <template #settings-content>
+      <v-text-field
+        v-model="locationInput"
+        label="Location"
+        placeholder="Enter city or address"
+        variant="outlined"
+        density="compact"
+        @keyup.enter="updateLocation"
+      />
+      <v-text-field
+        v-model.number="refreshIntervalInput"
+        label="Refresh Interval (seconds)"
+        type="number"
+        min="60"
+        max="3600"
+        variant="outlined"
+        density="compact"
+        @keyup.enter="updateRefreshInterval"
+      />
+    </template>
+  </PollingWidget>
 </template>
 
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import type { HourlyWeatherData } from '@automata/types';
+import PollingWidget from './PollingWidget.vue';
 import { useWeather, type WeatherFetchReason } from '../composables/useWeather';
 import { useToasts } from '../composables/useToasts';
 
@@ -318,6 +239,23 @@ function updateLocation() {
 
 function updateRefreshInterval() {
   setFreshnessSeconds(refreshIntervalInput.value);
+}
+
+function handleManualRefresh() {
+  void triggerPolling('manual');
+}
+
+function handleHardRefresh() {
+  void triggerPolling('hard-manual', { forceRefresh: true });
+}
+
+function handleSaveSettings() {
+  updateLocation();
+  updateRefreshInterval();
+  pushToast({
+    text: 'Weather settings saved.',
+    variant: 'success',
+  });
 }
 
 function saveSettings() {

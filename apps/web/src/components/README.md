@@ -4,9 +4,9 @@ This directory contains shared components and composables that encapsulate commo
 
 ## Components
 
-### BaseWidget.vue
+### PollingWidget.vue
 
-A flexible base component that provides the common UI structure and behavior for data widgets.
+A flexible base component that provides the common UI structure and behavior for data widgets with polling functionality.
 
 #### Props
 
@@ -39,7 +39,7 @@ A flexible base component that provides the common UI structure and behavior for
 
 ```vue
 <template>
-  <BaseWidget
+  <PollingWidget
     overline-text="Weather"
     title="Current Conditions"
     :subtitle="locationLabel"
@@ -66,7 +66,7 @@ A flexible base component that provides the common UI structure and behavior for
         variant="outlined"
       />
     </template>
-  </BaseWidget>
+  </PollingWidget>
 </template>
 ```
 
@@ -148,7 +148,7 @@ function handleHardRefresh() {
 
 See `ExampleWidget.vue` for a complete example of how to use the shared components together. This example demonstrates:
 
-- Using BaseWidget with custom content
+- Using PollingWidget with custom content
 - Integrating useWidgetBase for polling and error handling
 - Implementing settings with form inputs
 - Handling refresh events
@@ -166,7 +166,7 @@ See `ExampleWidget.vue` for a complete example of how to use the shared componen
 
 To migrate existing widgets to use the shared components:
 
-1. Replace the common UI structure with BaseWidget
+1. Replace the common UI structure with PollingWidget
 2. Move widget-specific content into the appropriate slots
 3. Replace manual polling logic with useWidgetBase
 4. Update event handlers to use the composable's methods

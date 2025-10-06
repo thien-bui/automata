@@ -1,5 +1,5 @@
 <template>
-  <BaseWidget
+  <PollingWidget
     :overline-text="overlineText"
     :title="title"
     :subtitle="subtitle"
@@ -71,12 +71,12 @@
         @keyup.enter="updateThreshold"
       />
     </template>
-  </BaseWidget>
+  </PollingWidget>
 </template>
 
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue';
-import BaseWidget from './BaseWidget.vue';
+import PollingWidget from './PollingWidget.vue';
 import { useWidgetBase, type BaseFetchReason } from '../composables/useWidgetBase';
 
 // Mock data and functions for demonstration

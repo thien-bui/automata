@@ -1,140 +1,96 @@
 <template>
-  <v-card class="route-widget" elevation="4">
-    <v-card-title class="d-flex align-center justify-space-between">
-      <div>
-        <div class="text-overline text-medium-emphasis">Monitoring</div>
-        <div class="text-h6 font-weight-medium">{{ currentModeLabel }}</div>
-        <div class="text-body-2 text-medium-emphasis mt-1">
-          {{ originLabel }} → {{ destinationLabel }}
+  <PollingWidget
+    overline-text="Monitoring"
+    :title="currentModeLabel"
+    :subtitle="`${originLabel} → ${destinationLabel}`"
+    error-title="Route Error"
+    settings-title="Route Settings"
+    :error="routeError"
+    :is-polling="isPolling"
+    :last-updated-iso="lastUpdatedIso"
+    :is-stale="isStale"
+    :polling-seconds="pollingSeconds"
+    :cache-description="cacheDescription"
+    @manual-refresh="handleManualRefresh"
+    @hard-refresh="handleHardRefresh"
+    @save-settings="handleSaveSettings"
+  >
+    <template #title-actions>
+      <v-btn-toggle
+        v-model="mode"
+        mandatory
+        density="compact"
+        aria-label="Select monitoring mode"
+      >
+        <v-btn :value="MonitoringMode.Simple">Simple</v-btn>
+        <v-btn :value="MonitoringMode.Nav">Nav</v-btn>
+      </v-btn-toggle>
+    </template>
+
+    <template #main-content>
+      <v-sheet class="pa-4" elevation="1" rounded>
+        <div class="d-flex align-center justify-space-between">
+          <div>
+            <div class="text-overline text-medium-emphasis">Estimated duration</div>
+            <div class="text-h4 font-weight-medium" aria-live="polite">
+              {{ durationDisplay }}
+            </div>
+          </div>
+          <div class="text-end">
+            <div class="text-body-2 text-medium-emphasis">Distance: {{ distanceDisplay }}</div>
+            <div v-if="cacheDescription" class="text-caption text-medium-emphasis mt-1">
+              {{ cacheDescription }}
+            </div>
+          </div>
         </div>
+      </v-sheet>
+
+      <MapPreview :mode="mode" :from="origin" :to="destination"/>
+
+      <v-alert
+        v-if="activeAlerts.length > 0"
+        type="warning"
+        variant="tonal"
+        class="mt-4"
+        elevation="1"
+        dismissible
+        border="start"
+        @click:close="acknowledgeAlerts"
+      >
+        <div class="text-subtitle-1 font-weight-medium">Route Alerts</div>
+        <ul class="mt-2 mb-0 ps-4">
+          <li v-for="alert in activeAlerts" :key="alert.id">
+            {{ alert.message }}
+          </li>
+        </ul>
+      </v-alert>
+    </template>
+
+    <template #status-extra>
+      <div class="text-body-2 text-medium-emphasis mb-3">
+        Alert threshold {{ thresholdMinutes }} min.
       </div>
+    </template>
 
-      <div class="d-flex align-center gap-2">
-        <v-btn-toggle
-          v-model="mode"
-          mandatory
-          density="compact"
-          aria-label="Select monitoring mode"
-        >
-          <v-btn :value="MonitoringMode.Simple">Simple</v-btn>
-          <v-btn :value="MonitoringMode.Nav">Nav</v-btn>
-        </v-btn-toggle>
-        <v-btn icon="mdi-cog" variant="text" :aria-label="settingsAria" @click="drawerOpen = true" />
-      </div>
-    </v-card-title>
-
-    <v-divider />
-
-    <v-card-text>
-      <div class="d-flex flex-column flex-md-row gap-6">
-        <div class="flex-grow-1">
-          <v-sheet class="pa-4" elevation="1" rounded>
-            <div class="d-flex align-center justify-space-between">
-              <div>
-                <div class="text-overline text-medium-emphasis">Estimated duration</div>
-                <div class="text-h4 font-weight-medium" aria-live="polite">
-                  {{ durationDisplay }}
-                </div>
-              </div>
-              <div class="text-end">
-                <div class="text-body-2 text-medium-emphasis">Distance: {{ distanceDisplay }}</div>
-                <div v-if="cacheDescription" class="text-caption text-medium-emphasis mt-1">
-                  {{ cacheDescription }}
-                </div>
-              </div>
-            </div>
-          </v-sheet>
-
-          <MapPreview :mode="mode" :from="origin" :to="destination"/>
-
-          <v-alert
-            v-if="activeAlerts.length > 0"
-            type="warning"
-            variant="tonal"
-            class="mt-4"
-            elevation="1"
-            dismissible
-            border="start"
-            @click:close="acknowledgeAlerts"
-          >
-            <div class="text-subtitle-1 font-weight-medium">Route Alerts</div>
-            <ul class="mt-2 mb-0 ps-4">
-              <li v-for="alert in activeAlerts" :key="alert.id">
-                {{ alert.message }}
-              </li>
-            </ul>
-          </v-alert>
-        </div>
-
-        <div class="flex-grow-1 min-width-240">
-          <v-sheet class="pa-4" elevation="1" rounded>
-            <div class="text-subtitle-1 font-weight-medium mb-2">Status</div>
-            <div class="d-flex align-center justify-space-between">
-              <span aria-live="polite">{{ statusText }}</span>
-              <v-progress-circular
-                :indeterminate="isPolling"
-                :model-value="progressValue"
-                color="primary"
-                size="32"
-                width="3"
-                aria-hidden="true"
-              />
-            </div>
-
-            <v-divider class="my-4" />
-
-            <div class="text-body-2 text-medium-emphasis mb-1">
-              Automatic refresh every {{ pollingSeconds }}s.
-            </div>
-            <div class="text-body-2 text-medium-emphasis mb-3">
-              Alert threshold {{ thresholdMinutes }} min.
-            </div>
-
-            <v-btn-group class="w-100 d-flex" divided>
-              <v-btn
-                class="flex-grow-1"
-                color="primary"
-                size="large"
-                prepend-icon="mdi-refresh"
-                :loading="isPolling"
-                :disabled="isPolling"
-                @click="triggerPolling('manual')"
-              >
-                Refresh now
-              </v-btn>
-              <v-btn
-                class="flex-grow-1"
-                color="secondary"
-                size="large"
-                prepend-icon="mdi-refresh-alert"
-                :loading="isPolling"
-                :disabled="isPolling"
-                @click="triggerPolling('hard-manual', { forceRefresh: true })"
-              >
-                Hard refresh
-              </v-btn>
-            </v-btn-group>
-          </v-sheet>
-        </div>
-      </div>
-    </v-card-text>
-
-    <SettingsDrawer
-      v-model="drawerOpen"
-      :mode="mode"
-      :refresh-interval="refreshInterval"
-      :alert-threshold="thresholdMinutes"
-      @update:mode="onModeUpdate"
-      @update:refresh-interval="onRefreshIntervalUpdate"
-      @update:alert-threshold="onAlertThresholdUpdate"
-      @reset-alert-threshold="resetAlertThreshold"
-    />
-  </v-card>
+    <template #settings-content>
+      <SettingsDrawer
+        v-model="drawerOpen"
+        :mode="mode"
+        :refresh-interval="refreshInterval"
+        :alert-threshold="thresholdMinutes"
+        @update:mode="onModeUpdate"
+        @update:refresh-interval="onRefreshIntervalUpdate"
+        @update:alert-threshold="onAlertThresholdUpdate"
+        @reset-alert-threshold="resetAlertThreshold"
+      />
+    </template>
+  </PollingWidget>
 </template>
 
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 
+import PollingWidget from './PollingWidget.vue';
 import MapPreview from './MapPreview.vue';
 import SettingsDrawer from './SettingsDrawer.vue';
 import { useRouteTime, type RouteFetchReason } from '../composables/useRouteTime';
@@ -361,6 +317,22 @@ function onAlertThresholdUpdate(nextThreshold: number) {
 
 function resetAlertThreshold() {
   resetThreshold();
+}
+
+function handleManualRefresh() {
+  void triggerPolling('manual');
+}
+
+function handleHardRefresh() {
+  void triggerPolling('hard-manual', { forceRefresh: true });
+}
+
+function handleSaveSettings() {
+  // Settings are handled by the SettingsDrawer component
+  pushToast({
+    text: 'Route settings saved.',
+    variant: 'success',
+  });
 }
 
 function acknowledgeAlerts() {
