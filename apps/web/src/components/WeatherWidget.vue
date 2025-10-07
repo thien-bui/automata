@@ -190,13 +190,43 @@ const currentHourTimestamp = computed<string | null>(() => {
     if (!candidate) {
       continue;
     }
-    const hasMatch = weatherData.value.hourlyData.some((hour) => hour.timestamp === candidate);
-    if (hasMatch) {
+    const hasExactMatch = weatherData.value.hourlyData.some((hour) => hour.timestamp === candidate);
+    if (hasExactMatch) {
       return candidate;
+    }
+
+    const candidateDate = new Date(candidate);
+    if (Number.isNaN(candidateDate.getTime())) {
+      continue;
+    }
+
+    const floored = new Date(candidateDate.getTime());
+    floored.setUTCMinutes(0, 0, 0);
+    const candidateHourIso = floored.toISOString();
+    const hasHourMatch = weatherData.value.hourlyData.some((hour) => hour.timestamp === candidateHourIso);
+    if (hasHourMatch) {
+      return candidateHourIso;
     }
   }
 
-  return weatherData.value.hourlyData[0].timestamp;
+  let bestTimestamp = weatherData.value.hourlyData[0]?.timestamp ?? null;
+  let bestDistance = Number.POSITIVE_INFINITY;
+  const nowMs = Date.now();
+
+  for (const hour of weatherData.value.hourlyData) {
+    const timestamp = new Date(hour.timestamp);
+    if (Number.isNaN(timestamp.getTime())) {
+      continue;
+    }
+
+    const distance = Math.abs(timestamp.getTime() - nowMs);
+    if (distance < bestDistance) {
+      bestDistance = distance;
+      bestTimestamp = hour.timestamp;
+    }
+  }
+
+  return bestTimestamp;
 });
 
 const currentHourIndex = computed<number>(() => {
@@ -266,25 +296,38 @@ const displayedHourlyData = computed<HourlyWeatherData[]>(() => {
     return [];
   }
 
-  const startIndex = currentHourIndex.value;
-  const maxItems = Math.min(9, hourlyData.length);
-  const ordered: HourlyWeatherData[] = [];
+  const targetIndex = currentHourIndex.value;
+  const desiredPast = 3;
+  const desiredFuture = 7;
 
-  ordered.push(hourlyData[startIndex]);
+  let start = targetIndex - desiredPast;
+  let end = targetIndex + desiredFuture + 1; // exclusive upper bound
 
-  let forwardIndex = startIndex + 1;
-  while (ordered.length < maxItems && forwardIndex < hourlyData.length) {
-    ordered.push(hourlyData[forwardIndex]);
-    forwardIndex += 1;
+  if (start < 0) {
+    end += -start;
+    start = 0;
   }
 
-  let backwardIndex = startIndex - 1;
-  while (ordered.length < maxItems && backwardIndex >= 0) {
-    ordered.push(hourlyData[backwardIndex]);
-    backwardIndex -= 1;
+  if (end > hourlyData.length) {
+    const overshoot = end - hourlyData.length;
+    start = Math.max(0, start - overshoot);
+    end = hourlyData.length;
   }
 
-  return ordered;
+  const slice = hourlyData.slice(start, end);
+  const desiredTotal = Math.min(hourlyData.length, desiredPast + desiredFuture + 1);
+
+  if (slice.length === desiredTotal) {
+    return slice;
+  }
+
+  if (slice.length > desiredTotal) {
+    return slice.slice(slice.length - desiredTotal);
+  }
+
+  const deficit = desiredTotal - slice.length;
+  const adjustedStart = Math.max(0, start - deficit);
+  return hourlyData.slice(adjustedStart, end);
 });
 
 function formatTemperature(fahrenheit: number): string {

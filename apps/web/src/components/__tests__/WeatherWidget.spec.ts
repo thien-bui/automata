@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { mount } from '@vue/test-utils';
 import { defineComponent, h } from 'vue';
 import { ref, computed } from 'vue';
@@ -107,6 +107,15 @@ vi.mock('../../composables/useWeather', () => ({
           humidityPercent: 46,
           windSpeedKph: 2,
           precipitationProbability: 0
+        },
+        {
+          timestamp: '2025-10-07T03:00:00Z', // 7 hours after
+          temperatureCelsius: 13,
+          temperatureFahrenheit: 55,
+          condition: 'Clear',
+          humidityPercent: 45,
+          windSpeedKph: 2,
+          precipitationProbability: 0
         }
       ],
       provider: 'google-weather',
@@ -148,6 +157,15 @@ vi.mock('../PollingWidget.vue', () => ({
 }));
 
 describe('WeatherWidget', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2025-10-06T20:30:00Z'));
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   const mountComponent = () => {
     const Wrapper = defineComponent({
       name: 'WeatherWidgetTestWrapper',
@@ -187,18 +205,20 @@ describe('WeatherWidget', () => {
 
     // Check that hourly items are rendered (should show 9 hours)
     const hourlyItems = wrapper.findAll('.hourly-item');
-    expect(hourlyItems).toHaveLength(9);
+    expect(hourlyItems).toHaveLength(11);
 
-    // Check that the first item (index 0) has the current-hour class (current hour is first in displayed data)
-    expect(hourlyItems[0].classes()).toContain('current-hour');      // current hour
-    expect(hourlyItems[1].classes()).not.toContain('current-hour'); // 1 hour after
-    expect(hourlyItems[2].classes()).not.toContain('current-hour'); // 2 hours after
-    expect(hourlyItems[3].classes()).not.toContain('current-hour'); // 3 hours after
-    expect(hourlyItems[4].classes()).not.toContain('current-hour'); // 4 hours after
-    expect(hourlyItems[5].classes()).not.toContain('current-hour'); // 5 hours after
-    expect(hourlyItems[6].classes()).not.toContain('current-hour'); // 6 hours after
-    expect(hourlyItems[7].classes()).not.toContain('current-hour'); // 7 hours after
-    expect(hourlyItems[8].classes()).not.toContain('current-hour'); // 8 hours after
+    // Check that the current hour is centered after three prior hours
+    expect(hourlyItems[0].classes()).not.toContain('current-hour'); // 3 hours prior
+    expect(hourlyItems[1].classes()).not.toContain('current-hour'); // 2 hours prior
+    expect(hourlyItems[2].classes()).not.toContain('current-hour'); // 1 hour prior
+    expect(hourlyItems[3].classes()).toContain('current-hour');      // current hour
+    expect(hourlyItems[4].classes()).not.toContain('current-hour'); // 1 hour after
+    expect(hourlyItems[5].classes()).not.toContain('current-hour'); // 2 hours after
+    expect(hourlyItems[6].classes()).not.toContain('current-hour'); // 3 hours after
+    expect(hourlyItems[7].classes()).not.toContain('current-hour'); // 4 hours after
+    expect(hourlyItems[8].classes()).not.toContain('current-hour'); // 5 hours after
+    expect(hourlyItems[9].classes()).not.toContain('current-hour'); // 6 hours after
+    expect(hourlyItems[10].classes()).not.toContain('current-hour'); // 7 hours after
   });
 
   it('displays "Now" for the current hour and formatted time for other hours', () => {
@@ -208,22 +228,24 @@ describe('WeatherWidget', () => {
     const timeElements = wrapper.findAll('.hourly-time');
 
     // First item (index 0) should show "Now" (current hour is first in displayed data)
-    expect(timeElements[0].text()).toBe('Now');             // current hour
-    expect(timeElements[1].text()).toMatch(/\d+ (AM|PM)/); // 1 hour after
-    expect(timeElements[2].text()).toMatch(/\d+ (AM|PM)/); // 2 hours after
-    expect(timeElements[3].text()).toMatch(/\d+ (AM|PM)/); // 3 hours after
-    expect(timeElements[4].text()).toMatch(/\d+ (AM|PM)/); // 4 hours after
-    expect(timeElements[5].text()).toMatch(/\d+ (AM|PM)/); // 5 hours after
-    expect(timeElements[6].text()).toMatch(/\d+ (AM|PM)/); // 6 hours after
-    expect(timeElements[7].text()).toMatch(/\d+ (AM|PM)/); // 7 hours after
-    expect(timeElements[8].text()).toMatch(/\d+ (AM|PM)/); // 8 hours after
+    expect(timeElements[0].text()).toMatch(/\d+ (AM|PM)/); // 3 hours prior
+    expect(timeElements[1].text()).toMatch(/\d+ (AM|PM)/); // 2 hours prior
+    expect(timeElements[2].text()).toMatch(/\d+ (AM|PM)/); // 1 hour prior
+    expect(timeElements[3].text()).toBe('Now');             // current hour
+    expect(timeElements[4].text()).toMatch(/\d+ (AM|PM)/); // 1 hour after
+    expect(timeElements[5].text()).toMatch(/\d+ (AM|PM)/); // 2 hours after
+    expect(timeElements[6].text()).toMatch(/\d+ (AM|PM)/); // 3 hours after
+    expect(timeElements[7].text()).toMatch(/\d+ (AM|PM)/); // 4 hours after
+    expect(timeElements[8].text()).toMatch(/\d+ (AM|PM)/); // 5 hours after
+    expect(timeElements[9].text()).toMatch(/\d+ (AM|PM)/); // 6 hours after
+    expect(timeElements[10].text()).toMatch(/\d+ (AM|PM)/); // 7 hours after
   });
 
   it('displays weather icons with appropriate sizes and colors', () => {
     const wrapper = mountComponent();
 
     const iconContainers = wrapper.findAll('.hourly-icon');
-    expect(iconContainers).toHaveLength(9);
+    expect(iconContainers).toHaveLength(11);
 
     // Check that icons are rendered (we can't easily test props in this setup)
     // but we can verify the structure exists
@@ -239,29 +261,33 @@ describe('WeatherWidget', () => {
     const wrapper = mountComponent();
 
     const tempElements = wrapper.findAll('.hourly-temperature');
-    expect(tempElements).toHaveLength(9);
+    expect(tempElements).toHaveLength(11);
 
     // Check that temperatures are displayed correctly (formatTemperature is passed Fahrenheit values)
-    expect(tempElements[0].text()).toBe('72°'); // current hour (72°F)
-    expect(tempElements[1].text()).toBe('68°'); // 1 hour after (68°F)
-    expect(tempElements[2].text()).toBe('64°'); // 2 hours after (64°F)
-    expect(tempElements[3].text()).toBe('63°'); // 3 hours after (63°F)
-    expect(tempElements[4].text()).toBe('61°'); // 4 hours after (61°F)
-    expect(tempElements[5].text()).toBe('59°'); // 5 hours after (59°F)
-    expect(tempElements[6].text()).toBe('57°'); // 6 hours after (57°F)
-    expect(tempElements[7].text()).toBe('70°'); // fallback to the most recent prior hour
-    expect(tempElements[8].text()).toBe('66°'); // fallback to the second most recent prior hour
+    expect(tempElements[0].text()).toBe('64°'); // 3 hours prior (64°F)
+    expect(tempElements[1].text()).toBe('66°'); // 2 hours prior (66°F)
+    expect(tempElements[2].text()).toBe('70°'); // 1 hour prior (70°F)
+    expect(tempElements[3].text()).toBe('72°'); // current hour (72°F)
+    expect(tempElements[4].text()).toBe('68°'); // 1 hour after (68°F)
+    expect(tempElements[5].text()).toBe('64°'); // 2 hours after (64°F)
+    expect(tempElements[6].text()).toBe('63°'); // 3 hours after (63°F)
+    expect(tempElements[7].text()).toBe('61°'); // 4 hours after (61°F)
+    expect(tempElements[8].text()).toBe('59°'); // 5 hours after (59°F)
+    expect(tempElements[9].text()).toBe('57°'); // 6 hours after (57°F)
+    expect(tempElements[10].text()).toBe('55°'); // 7 hours after (55°F)
 
-    // Current hour temperature (index 0) should have the current-temp class
-    expect(tempElements[0].classes()).toContain('current-temp');
+    // Current hour temperature (index 3) should have the current-temp class
+    expect(tempElements[0].classes()).not.toContain('current-temp');
     expect(tempElements[1].classes()).not.toContain('current-temp');
     expect(tempElements[2].classes()).not.toContain('current-temp');
-    expect(tempElements[3].classes()).not.toContain('current-temp');
+    expect(tempElements[3].classes()).toContain('current-temp');
     expect(tempElements[4].classes()).not.toContain('current-temp');
     expect(tempElements[5].classes()).not.toContain('current-temp');
     expect(tempElements[6].classes()).not.toContain('current-temp');
     expect(tempElements[7].classes()).not.toContain('current-temp');
     expect(tempElements[8].classes()).not.toContain('current-temp');
+    expect(tempElements[9].classes()).not.toContain('current-temp');
+    expect(tempElements[10].classes()).not.toContain('current-temp');
   });
 
   it('shows additional details only for the current hour', () => {
@@ -270,17 +296,19 @@ describe('WeatherWidget', () => {
     const detailsElements = wrapper.findAll('.hourly-details');
     expect(detailsElements).toHaveLength(1);
 
-    // Details should only be present for the current hour (first displayed item)
+    // Details should only be present for the current hour (index 3)
     const hourlyItems = wrapper.findAll('.hourly-item');
-    expect(hourlyItems[0].find('.hourly-details').exists()).toBe(true);  // current hour
-    expect(hourlyItems[1].find('.hourly-details').exists()).toBe(false); // 1 hour after
-    expect(hourlyItems[2].find('.hourly-details').exists()).toBe(false); // 2 hours after
-    expect(hourlyItems[3].find('.hourly-details').exists()).toBe(false); // 3 hours after
-    expect(hourlyItems[4].find('.hourly-details').exists()).toBe(false); // 4 hours after
-    expect(hourlyItems[5].find('.hourly-details').exists()).toBe(false); // 5 hours after
-    expect(hourlyItems[6].find('.hourly-details').exists()).toBe(false); // 6 hours after
-    expect(hourlyItems[7].find('.hourly-details').exists()).toBe(false); // fallback hour (previous data)
-    expect(hourlyItems[8].find('.hourly-details').exists()).toBe(false); // fallback hour (previous data)
+    expect(hourlyItems[0].find('.hourly-details').exists()).toBe(false); // 3 hours prior
+    expect(hourlyItems[1].find('.hourly-details').exists()).toBe(false); // 2 hours prior
+    expect(hourlyItems[2].find('.hourly-details').exists()).toBe(false); // 1 hour prior
+    expect(hourlyItems[3].find('.hourly-details').exists()).toBe(true);  // current hour
+    expect(hourlyItems[4].find('.hourly-details').exists()).toBe(false); // 1 hour after
+    expect(hourlyItems[5].find('.hourly-details').exists()).toBe(false); // 2 hours after
+    expect(hourlyItems[6].find('.hourly-details').exists()).toBe(false); // 3 hours after
+    expect(hourlyItems[7].find('.hourly-details').exists()).toBe(false); // 4 hours after
+    expect(hourlyItems[8].find('.hourly-details').exists()).toBe(false); // 5 hours after
+    expect(hourlyItems[9].find('.hourly-details').exists()).toBe(false); // 6 hours after
+    expect(hourlyItems[10].find('.hourly-details').exists()).toBe(false); // 7 hours after
 
     const detailsText = detailsElements[0].text();
     expect(detailsText).toContain('Partly cloudy');
