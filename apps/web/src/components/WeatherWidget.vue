@@ -39,60 +39,36 @@
 
       <div class="mt-4">
         <div class="text-subtitle-1 font-weight-medium mb-3">Hourly Forecast</div>
-        <div class="hourly-forecast-cards">
-          <v-card
-            v-for="hour in displayedHourlyData"
-            :key="hour.timestamp"
-            class="hourly-weather-card"
-            elevation="2"
-            rounded
-          >
-            <v-card-item>
-              <template v-slot:subtitle>
+        <v-card elevation="2" rounded class="hourly-forecast-card">
+          <div class="hourly-forecast-container">
+            <div
+              v-for="(hour, index) in displayedHourlyData"
+              :key="hour.timestamp"
+              class="hourly-item"
+              :class="{ 'current-hour': isCurrentHour(hour.timestamp) }"
+            >
+              <div class="hourly-time">
+                {{ isCurrentHour(hour.timestamp) ? 'Now' : formatHour(hour.timestamp) }}
+              </div>
+              <div class="hourly-icon">
+                <v-icon
+                  :icon="getWeatherIcon(hour.condition)"
+                  :size="isCurrentHour(hour.timestamp) ? 32 : 24"
+                  :color="isCurrentHour(hour.timestamp) ? 'primary' : 'grey-darken-1'"
+                />
+              </div>
+              <div class="hourly-temperature" :class="{ 'current-temp': isCurrentHour(hour.timestamp) }">
+                {{ formatTemperature(hour.temperatureFahrenheit) }}
+              </div>
+              <div v-if="isCurrentHour(hour.timestamp)" class="hourly-details">
+                <div class="text-caption text-medium-emphasis">{{ hour.condition }}</div>
                 <div class="text-caption text-medium-emphasis">
-                  {{ formatHour(hour.timestamp) }}
+                  {{ hour.humidityPercent }}% • {{ hour.windSpeedKph }} km/h
                 </div>
-              </template>
-            </v-card-item>
-
-            <v-card-text class="py-2">
-              <v-row align="center" no-gutters>
-                <v-col class="text-center" cols="12">
-                  <div class="text-h5 font-weight-medium">
-                    {{ formatTemperature(hour.temperatureCelsius) }}
-                  </div>
-                  <div class="text-caption text-medium-emphasis mt-1">
-                    {{ hour.condition }}
-                  </div>
-                </v-col>
-              </v-row>
-            </v-card-text>
-
-            <div class="d-flex py-2 justify-space-around">
-              <v-list-item
-                density="compact"
-                prepend-icon="mdi-water-percent"
-              >
-                <v-list-item-subtitle>{{ hour.humidityPercent }}%</v-list-item-subtitle>
-              </v-list-item>
-
-              <v-list-item
-                density="compact"
-                prepend-icon="mdi-weather-windy"
-              >
-                <v-list-item-subtitle>{{ hour.windSpeedKph }} km/h</v-list-item-subtitle>
-              </v-list-item>
-
-              <v-list-item
-                v-if="hour.precipitationProbability !== undefined"
-                density="compact"
-                prepend-icon="mdi-weather-rainy"
-              >
-                <v-list-item-subtitle>{{ hour.precipitationProbability }}%</v-list-item-subtitle>
-              </v-list-item>
+              </div>
             </div>
-          </v-card>
-        </div>
+          </div>
+        </v-card>
       </div>
     </template>
 
@@ -200,47 +176,119 @@ const locationLabel = computed(() => location.value);
 
 const settingsAria = computed(() => `Open weather settings for ${location.value}.`);
 
-const currentTemperatureDisplay = computed(() => {
+const currentHourTimestamp = computed<string | null>(() => {
   if (!weatherData.value || weatherData.value.hourlyData.length === 0) {
+    return null;
+  }
+
+  const candidateOrder: Array<string | null> = [
+    weatherData.value.lastUpdatedIso ?? null,
+    lastUpdatedIso.value ?? null,
+  ];
+
+  for (const candidate of candidateOrder) {
+    if (!candidate) {
+      continue;
+    }
+    const hasMatch = weatherData.value.hourlyData.some((hour) => hour.timestamp === candidate);
+    if (hasMatch) {
+      return candidate;
+    }
+  }
+
+  return weatherData.value.hourlyData[0].timestamp;
+});
+
+const currentHourIndex = computed<number>(() => {
+  if (!weatherData.value || weatherData.value.hourlyData.length === 0) {
+    return 0;
+  }
+
+  const timestamp = currentHourTimestamp.value;
+  if (!timestamp) {
+    return 0;
+  }
+
+  const matchIndex = weatherData.value.hourlyData.findIndex((hour) => hour.timestamp === timestamp);
+  return matchIndex >= 0 ? matchIndex : 0;
+});
+
+const currentHourEntry = computed<HourlyWeatherData | null>(() => {
+  if (!weatherData.value || weatherData.value.hourlyData.length === 0) {
+    return null;
+  }
+
+  return weatherData.value.hourlyData[currentHourIndex.value] ?? null;
+});
+
+const currentTemperatureDisplay = computed(() => {
+  if (!currentHourEntry.value) {
     return isPolling.value ? 'Loading…' : '—';
   }
-  const current = weatherData.value.hourlyData[0];
-  return `${Math.round(current.temperatureCelsius)}°C / ${Math.round(current.temperatureFahrenheit)}°F`;
+
+  const { temperatureCelsius, temperatureFahrenheit } = currentHourEntry.value;
+  return `${Math.round(temperatureCelsius)}°C / ${Math.round(temperatureFahrenheit)}°F`;
 });
 
 const currentConditionDisplay = computed(() => {
-  if (!weatherData.value || weatherData.value.hourlyData.length === 0) {
+  if (!currentHourEntry.value) {
     return '—';
   }
-  return weatherData.value.hourlyData[0].condition;
+
+  return currentHourEntry.value.condition;
 });
 
 const humidityDisplay = computed(() => {
-  if (!weatherData.value || weatherData.value.hourlyData.length === 0) {
+  if (!currentHourEntry.value) {
     return '—';
   }
-  const current = weatherData.value.hourlyData[0];
-  return current.humidityPercent !== undefined ? `${current.humidityPercent}%` : '—';
+
+  const { humidityPercent } = currentHourEntry.value;
+  return humidityPercent !== undefined ? `${humidityPercent}%` : '—';
 });
 
 const windDisplay = computed(() => {
-  if (!weatherData.value || weatherData.value.hourlyData.length === 0) {
+  if (!currentHourEntry.value) {
     return '—';
   }
-  const current = weatherData.value.hourlyData[0];
-  return current.windSpeedKph !== undefined ? `${current.windSpeedKph} km/h` : '—';
+
+  const { windSpeedKph } = currentHourEntry.value;
+  return windSpeedKph !== undefined ? `${windSpeedKph} km/h` : '—';
 });
 
-const displayedHourlyData = computed(() => {
+const displayedHourlyData = computed<HourlyWeatherData[]>(() => {
   if (!weatherData.value) {
     return [];
   }
-  // Show next 12 hours or available hours, whichever is less
-  return weatherData.value.hourlyData.slice(0, 12);
+
+  const hourlyData = weatherData.value.hourlyData;
+  if (hourlyData.length === 0) {
+    return [];
+  }
+
+  const startIndex = currentHourIndex.value;
+  const maxItems = Math.min(9, hourlyData.length);
+  const ordered: HourlyWeatherData[] = [];
+
+  ordered.push(hourlyData[startIndex]);
+
+  let forwardIndex = startIndex + 1;
+  while (ordered.length < maxItems && forwardIndex < hourlyData.length) {
+    ordered.push(hourlyData[forwardIndex]);
+    forwardIndex += 1;
+  }
+
+  let backwardIndex = startIndex - 1;
+  while (ordered.length < maxItems && backwardIndex >= 0) {
+    ordered.push(hourlyData[backwardIndex]);
+    backwardIndex -= 1;
+  }
+
+  return ordered;
 });
 
-function formatTemperature(celsius: number): string {
-  return `${Math.round(celsius)}°`;
+function formatTemperature(fahrenheit: number): string {
+  return `${Math.round(fahrenheit)}°`;
 }
 
 function formatHour(timestamp: string): string {
@@ -249,6 +297,43 @@ function formatHour(timestamp: string): string {
     return '—';
   }
   return date.toLocaleTimeString('en-US', { hour: 'numeric', hour12: true });
+}
+
+function isCurrentHour(timestamp: string): boolean {
+  const target = currentHourTimestamp.value;
+  return Boolean(target && timestamp === target);
+}
+
+function getWeatherIcon(condition: string): string {
+  const normalizedCondition = condition.toLowerCase();
+  
+  if (normalizedCondition.includes('clear') || normalizedCondition.includes('sunny')) {
+    return 'mdi-weather-sunny';
+  }
+  if (normalizedCondition.includes('cloud') || normalizedCondition.includes('overcast')) {
+    return 'mdi-weather-cloudy';
+  }
+  if (normalizedCondition.includes('rain') || normalizedCondition.includes('shower')) {
+    return 'mdi-weather-rainy';
+  }
+  if (normalizedCondition.includes('snow') || normalizedCondition.includes('flurry')) {
+    return 'mdi-weather-snowy';
+  }
+  if (normalizedCondition.includes('storm') || normalizedCondition.includes('thunder')) {
+    return 'mdi-weather-lightning';
+  }
+  if (normalizedCondition.includes('fog') || normalizedCondition.includes('mist')) {
+    return 'mdi-weather-fog';
+  }
+  if (normalizedCondition.includes('wind')) {
+    return 'mdi-weather-windy';
+  }
+  if (normalizedCondition.includes('partly') || normalizedCondition.includes('partly cloudy')) {
+    return 'mdi-weather-partly-cloudy';
+  }
+  
+  // Default icon
+  return 'mdi-weather-sunny';
 }
 
 function clearIntervalHandle() {
@@ -358,6 +443,10 @@ watch(isStale, (value) => {
     });
   }
 });
+
+defineExpose({
+  getWeatherIcon,
+});
 </script>
 
 <style scoped>
@@ -378,19 +467,99 @@ watch(isStale, (value) => {
   min-width: 240px;
 }
 
-.hourly-forecast-cards {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+.hourly-forecast-card {
+  overflow: hidden;
+}
+
+.hourly-forecast-container {
+  display: flex;
   gap: 16px;
+  padding: 16px;
+  overflow-x: auto;
+  align-items: flex-start;
 }
 
-.hourly-weather-card {
-  transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+.hourly-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 80px;
+  padding: 12px 8px;
+  border-radius: 8px;
+  transition: all 0.2s ease-in-out;
+  opacity: 0.7;
+  background: transparent;
 }
 
-.hourly-weather-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+.hourly-item.current-hour {
+  opacity: 1;
+  background: rgba(var(--v-theme-primary), 0.1);
+  border: 2px solid rgb(var(--v-theme-primary));
+  transform: scale(1.05);
+  box-shadow: 0 4px 12px rgba(var(--v-theme-primary), 0.2);
+}
+
+.hourly-item:hover:not(.current-hour) {
+  opacity: 0.9;
+  background: rgba(var(--v-theme-surface-variant), 0.5);
+}
+
+.hourly-time {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: rgb(var(--v-theme-on-surface));
+  margin-bottom: 8px;
+  text-align: center;
+}
+
+.hourly-item.current-hour .hourly-time {
+  font-weight: 600;
+  color: rgb(var(--v-theme-primary));
+}
+
+.hourly-icon {
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.hourly-temperature {
+  font-size: 1.125rem;
+  font-weight: 500;
+  color: rgb(var(--v-theme-on-surface));
+  margin-bottom: 4px;
+}
+
+.hourly-item.current-hour .hourly-temperature {
+  font-size: 1.375rem;
+  font-weight: 600;
+  color: rgb(var(--v-theme-primary));
+}
+
+.hourly-details {
+  text-align: center;
+  margin-top: 8px;
+  max-width: 120px;
+}
+
+/* Scrollbar styling for horizontal scroll */
+.hourly-forecast-container::-webkit-scrollbar {
+  height: 4px;
+}
+
+.hourly-forecast-container::-webkit-scrollbar-track {
+  background: rgba(var(--v-theme-surface-variant), 0.3);
+  border-radius: 2px;
+}
+
+.hourly-forecast-container::-webkit-scrollbar-thumb {
+  background: rgba(var(--v-theme-on-surface-variant), 0.5);
+  border-radius: 2px;
+}
+
+.hourly-forecast-container::-webkit-scrollbar-thumb:hover {
+  background: rgba(var(--v-theme-on-surface-variant), 0.7);
 }
 
 @media (max-width: 960px) {
@@ -398,16 +567,42 @@ watch(isStale, (value) => {
     margin-inline: 16px;
   }
 
-  .hourly-forecast-cards {
-    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  .hourly-forecast-container {
     gap: 12px;
+    padding: 12px;
+  }
+
+  .hourly-item {
+    min-width: 70px;
+    padding: 10px 6px;
   }
 }
 
 @media (max-width: 600px) {
-  .hourly-forecast-cards {
-    grid-template-columns: 1fr;
+  .hourly-forecast-container {
     gap: 8px;
+    padding: 8px;
+  }
+
+  .hourly-item {
+    min-width: 60px;
+    padding: 8px 4px;
+  }
+
+  .hourly-time {
+    font-size: 0.75rem;
+  }
+
+  .hourly-temperature {
+    font-size: 1rem;
+  }
+
+  .hourly-item.current-hour .hourly-temperature {
+    font-size: 1.25rem;
+  }
+
+  .hourly-details {
+    max-width: 100px;
   }
 }
 </style>
