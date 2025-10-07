@@ -49,7 +49,7 @@ import ToastHost from './components/ToastHost.vue';
 import WeatherWidget from './components/WeatherWidget.vue';
 import { provideToasts } from './composables/useToasts';
 
-const pageTitle = 'Automata Commute Console';
+const pageTitle = 'Automata';
 const alertCount = ref(0);
 
 const { messages: toastMessages, dismiss: dismissToast, push: pushToast } = provideToasts([
