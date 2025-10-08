@@ -80,7 +80,7 @@ import PollingWidget from './PollingWidget.vue';
 import { useWidgetBase, type BaseFetchReason } from '../composables/useWidgetBase';
 
 // Mock data and functions for demonstration
-const DEFAULT_LOCATION = 'Seattle, WA';
+const DEFAULT_LOCATION = 'Kent, WA';
 const DEFAULT_REFRESH_SECONDS = 300;
 const DEFAULT_THRESHOLD_MINUTES = 30;
 

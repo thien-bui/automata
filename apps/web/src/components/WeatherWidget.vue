@@ -102,7 +102,7 @@ import PollingWidget from './PollingWidget.vue';
 import { useWeather, type WeatherFetchReason } from '../composables/useWeather';
 import { useToasts } from '../composables/useToasts';
 
-const DEFAULT_LOCATION = 'Seattle, WA';
+const DEFAULT_LOCATION = 'Kent, WA';
 const DEFAULT_REFRESH_SECONDS = 300;
 
 const drawerOpen = ref(false);

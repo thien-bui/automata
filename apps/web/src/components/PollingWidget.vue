@@ -137,7 +137,7 @@ interface Props {
   
   /** 
    * The subtitle displayed in the header (typically location or route info)
-   * @example 'Seattle, WA' or '443 Ramsay Way → 35522 21st Ave SW'
+   * @example 'Kent, WA' or '443 Ramsay Way → 35522 21st Ave SW'
    */
   subtitle: string;
   

@@ -130,7 +130,7 @@ vi.mock('../../composables/useWeather', () => ({
     cacheAgeSeconds: computed(() => 0),
     cacheHit: computed(() => false),
     freshnessSeconds: ref(300),
-    location: ref('Seattle, WA'),
+    location: ref('Kent, WA'),
     refresh: vi.fn(),
     setLocation: vi.fn(),
     setFreshnessSeconds: vi.fn()
