@@ -28,16 +28,16 @@
             </div>
           </div>
           <div class="text-end">
-            <div class="text-body-2 text-medium-emphasis">Humidity: {{ humidityDisplay }}</div>
-            <div class="text-body-2 text-medium-emphasis">Wind: {{ windDisplay }}</div>
-            <div v-if="cacheDescription" class="text-caption text-medium-emphasis mt-1">
+            <div v-if="displaySettings.showHumidity" class="text-body-2 text-medium-emphasis">Humidity: {{ humidityDisplay }}</div>
+            <div v-if="displaySettings.showWindSpeed" class="text-body-2 text-medium-emphasis">Wind: {{ windDisplay }}</div>
+            <div v-if="uiSettings.showCacheInfo && cacheDescription" class="text-caption text-medium-emphasis mt-1">
               {{ cacheDescription }}
             </div>
           </div>
         </div>
       </v-sheet>
 
-      <div class="mt-4">
+      <div v-if="displaySettings.showHourlyForecast" class="mt-4">
         <div class="text-subtitle-1 font-weight-medium mb-3">Hourly Forecast</div>
         <v-card elevation="2" rounded class="hourly-forecast-card">
           <div class="hourly-forecast-container">
@@ -45,25 +45,31 @@
               v-for="(hour, index) in displayedHourlyData"
               :key="hour.timestamp"
               class="hourly-item"
-              :class="{ 'current-hour': isCurrentHour(hour.timestamp) }"
+              :class="{ 
+                'current-hour': displaySettings.currentHourHighlight && isCurrentHour(hour.timestamp) 
+              }"
             >
               <div class="hourly-time">
-                {{ isCurrentHour(hour.timestamp) ? 'Now' : formatHour(hour.timestamp) }}
+                {{ displaySettings.currentHourHighlight && isCurrentHour(hour.timestamp) ? 'Now' : formatHour(hour.timestamp) }}
               </div>
               <div class="hourly-icon">
                 <v-icon
                   :icon="getWeatherIcon(hour.condition)"
-                  :size="isCurrentHour(hour.timestamp) ? 32 : 24"
-                  :color="isCurrentHour(hour.timestamp) ? 'primary' : 'grey-darken-1'"
+                  :size="displaySettings.currentHourHighlight && isCurrentHour(hour.timestamp) ? 32 : 24"
+                  :color="displaySettings.currentHourHighlight && isCurrentHour(hour.timestamp) ? 'primary' : 'grey-darken-1'"
                 />
               </div>
-              <div class="hourly-temperature" :class="{ 'current-temp': isCurrentHour(hour.timestamp) }">
+              <div class="hourly-temperature" :class="{ 
+                'current-temp': displaySettings.currentHourHighlight && isCurrentHour(hour.timestamp) 
+              }">
                 {{ formatTemperature(hour.temperatureFahrenheit) }}
               </div>
-              <div v-if="isCurrentHour(hour.timestamp)" class="hourly-details">
+              <div v-if="displaySettings.currentHourHighlight && isCurrentHour(hour.timestamp)" class="hourly-details">
                 <div class="text-caption text-medium-emphasis">{{ hour.condition }}</div>
                 <div class="text-caption text-medium-emphasis">
-                  {{ hour.humidityPercent }}% • {{ hour.windSpeedKph }} km/h
+                  <span v-if="displaySettings.showHumidity">{{ hour.humidityPercent }}%</span>
+                  <span v-if="displaySettings.showHumidity && displaySettings.showWindSpeed"> • </span>
+                  <span v-if="displaySettings.showWindSpeed">{{ hour.windSpeedKph }} km/h</span>
                 </div>
               </div>
             </div>
@@ -85,8 +91,8 @@
         v-model.number="refreshIntervalInput"
         label="Refresh Interval (seconds)"
         type="number"
-        min="60"
-        max="3600"
+        :min="minRefreshSeconds"
+        :max="maxRefreshSeconds"
         variant="outlined"
         density="compact"
         @keyup.enter="updateRefreshInterval"
@@ -101,13 +107,22 @@ import type { HourlyWeatherData } from '@automata/types';
 import PollingWidget from './PollingWidget.vue';
 import { useWeather, type WeatherFetchReason } from '../composables/useWeather';
 import { useToasts } from '../composables/useToasts';
+import { useWeatherConfig } from '../composables/useWeatherConfig';
 
-const DEFAULT_LOCATION = 'Kent, WA';
-const DEFAULT_REFRESH_SECONDS = 300;
+const {
+  defaultLocation,
+  defaultRefreshSeconds,
+  minRefreshSeconds,
+  maxRefreshSeconds,
+  displaySettings,
+  uiSettings,
+  isValidRefreshInterval,
+  clampRefreshInterval,
+} = useWeatherConfig();
 
 const drawerOpen = ref(false);
-const locationInput = ref(DEFAULT_LOCATION);
-const refreshIntervalInput = ref(DEFAULT_REFRESH_SECONDS);
+const locationInput = ref(defaultLocation.value);
+const refreshIntervalInput = ref(defaultRefreshSeconds.value);
 
 const {
   data: weatherData,
@@ -124,8 +139,8 @@ const {
   location,
   freshnessSeconds,
 } = useWeather({
-  location: DEFAULT_LOCATION,
-  freshnessSeconds: DEFAULT_REFRESH_SECONDS,
+  location: defaultLocation.value,
+  freshnessSeconds: defaultRefreshSeconds.value,
 });
 
 const { push: pushToast } = useToasts();
@@ -403,7 +418,9 @@ function updateLocation() {
 }
 
 function updateRefreshInterval() {
-  setFreshnessSeconds(refreshIntervalInput.value);
+  const clampedValue = clampRefreshInterval(refreshIntervalInput.value);
+  refreshIntervalInput.value = clampedValue;
+  setFreshnessSeconds(clampedValue);
 }
 
 function handleManualRefresh() {

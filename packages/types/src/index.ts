@@ -71,3 +71,28 @@ export interface AutoModeConfig {
   defaultMode: 'Simple' | 'Nav';
   navModeRefreshSeconds: number;
 }
+
+export interface WeatherDisplaySettings {
+  showHourlyForecast: boolean;
+  hourlyForecastHours: number;
+  currentHourHighlight: boolean;
+  showHumidity: boolean;
+  showWindSpeed: boolean;
+  showPrecipitation: boolean;
+  temperatureUnit: 'celsius' | 'fahrenheit' | 'both';
+}
+
+export interface WeatherUISettings {
+  compactMode: boolean;
+  showCacheInfo: boolean;
+  autoRefresh: boolean;
+}
+
+export interface WeatherConfig {
+  defaultLocation: string;
+  defaultRefreshSeconds: number;
+  minRefreshSeconds: number;
+  maxRefreshSeconds: number;
+  displaySettings: WeatherDisplaySettings;
+  uiSettings: WeatherUISettings;
+}

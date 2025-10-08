@@ -1,0 +1,22 @@
+{
+  "weather": {
+    "defaultLocation": "Kent, WA",
+    "defaultRefreshSeconds": 300,
+    "minRefreshSeconds": 60,
+    "maxRefreshSeconds": 3600,
+    "displaySettings": {
+      "showHourlyForecast": true,
+      "hourlyForecastHours": 24,
+      "currentHourHighlight": true,
+      "showHumidity": true,
+      "showWindSpeed": true,
+      "showPrecipitation": false,
+      "temperatureUnit": "both"
+    },
+    "uiSettings": {
+      "compactMode": false,
+      "showCacheInfo": true,
+      "autoRefresh": true
+    }
+  }
+}
