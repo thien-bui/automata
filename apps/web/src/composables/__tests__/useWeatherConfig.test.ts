@@ -53,3 +53,5 @@ describe('useWeatherConfig', () => {
     expect(clampRefreshInterval(30)).toBe(minRefreshSeconds.value);
     expect(clampRefreshInterval(4000)).toBe(maxRefreshSeconds.value);
     expect(clampRefreshInterval(0)).toBe(minRefreshSeconds.value);
+  });
+});
