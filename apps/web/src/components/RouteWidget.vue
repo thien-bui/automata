@@ -147,34 +147,66 @@ const DEFAULT_FROM = '443 Ramsay Way, Kent, WA 98032';
 const DEFAULT_TO = '35522 21st Ave SW ste B, Federal Way, WA 98023';
 const NAV_MODE_REFRESH_SECONDS = 300;
 
-const AUTO_NAV_START_HOUR = 17;
-const AUTO_NAV_END_HOUR = 20;
+const AUTO_MORNING_NAV_START_HOUR = 8;
+const AUTO_MORNING_NAV_START_MINUTE = 30;
+const AUTO_MORNING_NAV_END_HOUR = 9;
+const AUTO_MORNING_NAV_END_MINUTE = 30;
+
+const AUTO_EVENING_NAV_START_HOUR = 17;
+const AUTO_EVENING_NAV_END_HOUR = 20;
 
 function resolveModeForDate(date: Date): MonitoringMode {
   const hour = date.getHours();
-  return hour >= AUTO_NAV_START_HOUR && hour < AUTO_NAV_END_HOUR
+  const minute = date.getMinutes();
+  
+  // Check morning auto mode window (8:30 AM - 9:30 AM)
+  const isMorningNavWindow = 
+    (hour === AUTO_MORNING_NAV_START_HOUR && minute >= AUTO_MORNING_NAV_START_MINUTE) ||
+    (hour === AUTO_MORNING_NAV_END_HOUR && minute < AUTO_MORNING_NAV_END_MINUTE) ||
+    (hour > AUTO_MORNING_NAV_START_HOUR && hour < AUTO_MORNING_NAV_END_HOUR);
+  
+  // Check evening auto mode window (5:00 PM - 8:00 PM)
+  const isEveningNavWindow = hour >= AUTO_EVENING_NAV_START_HOUR && hour < AUTO_EVENING_NAV_END_HOUR;
+  
+  return isMorningNavWindow || isEveningNavWindow
     ? MonitoringMode.Nav
     : MonitoringMode.Simple;
 }
 
 function nextAutoModeBoundary(from: Date): Date {
-  const navStartToday = new Date(from);
-  navStartToday.setHours(AUTO_NAV_START_HOUR, 0, 0, 0);
+  const currentHour = from.getHours();
+  const currentMinute = from.getMinutes();
+  
+  // Morning boundaries
+  const morningStartToday = new Date(from);
+  morningStartToday.setHours(AUTO_MORNING_NAV_START_HOUR, AUTO_MORNING_NAV_START_MINUTE, 0, 0);
 
-  const navEndToday = new Date(from);
-  navEndToday.setHours(AUTO_NAV_END_HOUR, 0, 0, 0);
+  const morningEndToday = new Date(from);
+  morningEndToday.setHours(AUTO_MORNING_NAV_END_HOUR, AUTO_MORNING_NAV_END_MINUTE, 0, 0);
 
-  if (from < navStartToday) {
-    return navStartToday;
+  // Evening boundaries
+  const eveningStartToday = new Date(from);
+  eveningStartToday.setHours(AUTO_EVENING_NAV_START_HOUR, 0, 0, 0);
+
+  const eveningEndToday = new Date(from);
+  eveningEndToday.setHours(AUTO_EVENING_NAV_END_HOUR, 0, 0, 0);
+
+  // Create array of all boundaries for today
+  const todayBoundaries = [
+    morningStartToday,
+    morningEndToday,
+    eveningStartToday,
+    eveningEndToday,
+  ].filter(boundary => boundary.getTime() > from.getTime());
+
+  if (todayBoundaries.length > 0) {
+    return todayBoundaries[0];
   }
 
-  if (from < navEndToday) {
-    return navEndToday;
-  }
-
-  const navStartTomorrow = new Date(navStartToday);
-  navStartTomorrow.setDate(navStartTomorrow.getDate() + 1);
-  return navStartTomorrow;
+  // If no boundaries left today, return tomorrow's morning start
+  const morningStartTomorrow = new Date(morningStartToday);
+  morningStartTomorrow.setDate(morningStartTomorrow.getDate() + 1);
+  return morningStartTomorrow;
 }
 
 const mode = ref<MonitoringMode>(MonitoringMode.Simple);
