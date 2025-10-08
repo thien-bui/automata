@@ -50,3 +50,24 @@ export interface WeatherQuery {
   freshnessSeconds?: number;
   forceRefresh?: boolean;
 }
+
+export interface TimeConfig {
+  hour: number;
+  minute: number;
+}
+
+export interface AutoModeTimeWindow {
+  name: string;
+  mode: 'Simple' | 'Nav';
+  startTime: TimeConfig;
+  endTime: TimeConfig;
+  daysOfWeek: number[]; // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
+  description?: string;
+}
+
+export interface AutoModeConfig {
+  enabled: boolean;
+  timeWindows: AutoModeTimeWindow[];
+  defaultMode: 'Simple' | 'Nav';
+  navModeRefreshSeconds: number;
+}

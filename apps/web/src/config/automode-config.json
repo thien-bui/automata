@@ -1,0 +1,37 @@
+{
+  "autoMode": {
+    "enabled": true,
+    "timeWindows": [
+      {
+        "name": "morning-commute",
+        "mode": "Nav",
+        "startTime": {
+          "hour": 8,
+          "minute": 30
+        },
+        "endTime": {
+          "hour": 9,
+          "minute": 30
+        },
+        "daysOfWeek": [1, 2, 3, 4, 5],
+        "description": "Morning commute window"
+      },
+      {
+        "name": "evening-commute",
+        "mode": "Nav",
+        "startTime": {
+          "hour": 17,
+          "minute": 0
+        },
+        "endTime": {
+          "hour": 20,
+          "minute": 0
+        },
+        "daysOfWeek": [1, 2, 3, 4, 5],
+        "description": "Evening commute window"
+      }
+    ],
+    "defaultMode": "Simple",
+    "navModeRefreshSeconds": 300
+  }
+}

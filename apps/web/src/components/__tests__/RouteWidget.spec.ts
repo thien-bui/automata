@@ -280,12 +280,12 @@ describe('RouteWidget', () => {
     expect(getRouteTimeState().setFreshnessSeconds).toHaveBeenCalledWith(120);
   });
 
-  it('automatically switches modes at 8:30am, 9:30am, 5pm and 8pm local time every day', async () => {
+  it('automatically switches modes at 8:30am, 9:30am, 5pm and 8pm local time on weekdays', async () => {
     // Test the auto mode logic by testing the time boundaries directly
     // This tests the core logic without relying on timer complexities
     
-    // Test 8:30 AM - should be Nav mode (morning window start)
-    const morningStart = new Date(2024, 5, 1, 8, 30, 0, 0);
+    // Test Monday 8:30 AM - should be Nav mode (morning window start)
+    const morningStart = new Date(2024, 5, 3, 8, 30, 0, 0); // Monday
     vi.setSystemTime(morningStart);
     
     const wrapper1 = mountComponent();
@@ -294,8 +294,8 @@ describe('RouteWidget', () => {
     expect(internal1.setupState.mode).toBe(MonitoringMode.Nav);
     wrapper1.unmount();
 
-    // Test 9:30 AM - should be Simple mode (morning window end)
-    const morningEnd = new Date(2024, 5, 1, 9, 30, 0, 0);
+    // Test Monday 9:30 AM - should be Simple mode (morning window end)
+    const morningEnd = new Date(2024, 5, 3, 9, 30, 0, 0); // Monday
     vi.setSystemTime(morningEnd);
     
     const wrapper2 = mountComponent();
@@ -304,8 +304,8 @@ describe('RouteWidget', () => {
     expect(internal2.setupState.mode).toBe(MonitoringMode.Simple);
     wrapper2.unmount();
 
-    // Test 5:00 PM - should be Nav mode (evening window start)
-    const eveningStart = new Date(2024, 5, 1, 17, 0, 0, 0);
+    // Test Monday 5:00 PM - should be Nav mode (evening window start)
+    const eveningStart = new Date(2024, 5, 3, 17, 0, 0, 0); // Monday
     vi.setSystemTime(eveningStart);
     
     const wrapper3 = mountComponent();
@@ -314,8 +314,8 @@ describe('RouteWidget', () => {
     expect(internal3.setupState.mode).toBe(MonitoringMode.Nav);
     wrapper3.unmount();
 
-    // Test 8:00 PM - should be Simple mode (evening window end)
-    const eveningEnd = new Date(2024, 5, 1, 20, 0, 0, 0);
+    // Test Monday 8:00 PM - should be Simple mode (evening window end)
+    const eveningEnd = new Date(2024, 5, 3, 20, 0, 0, 0); // Monday
     vi.setSystemTime(eveningEnd);
     
     const wrapper4 = mountComponent();
@@ -324,8 +324,8 @@ describe('RouteWidget', () => {
     expect(internal4.setupState.mode).toBe(MonitoringMode.Simple);
     wrapper4.unmount();
 
-    // Test next day 8:30 AM - should be Nav mode again
-    const nextDayMorning = new Date(2024, 5, 2, 8, 30, 0, 0);
+    // Test Tuesday 8:30 AM - should be Nav mode again
+    const nextDayMorning = new Date(2024, 5, 4, 8, 30, 0, 0); // Tuesday
     vi.setSystemTime(nextDayMorning);
     
     const wrapper5 = mountComponent();

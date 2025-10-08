@@ -129,6 +129,7 @@ import MapPreview from './MapPreview.vue';
 import { useRouteTime, type RouteFetchReason } from '../composables/useRouteTime';
 import { useAlertThreshold } from '../composables/useAlertThreshold';
 import { useToasts } from '../composables/useToasts';
+import { useAutoMode } from '../composables/useAutoMode';
 import { MonitoringMode } from './monitoringMode';
 
 const emit = defineEmits<{
@@ -145,68 +146,20 @@ type RouteAlert = {
 
 const DEFAULT_FROM = '443 Ramsay Way, Kent, WA 98032';
 const DEFAULT_TO = '35522 21st Ave SW ste B, Federal Way, WA 98023';
-const NAV_MODE_REFRESH_SECONDS = 300;
 
-const AUTO_MORNING_NAV_START_HOUR = 8;
-const AUTO_MORNING_NAV_START_MINUTE = 30;
-const AUTO_MORNING_NAV_END_HOUR = 9;
-const AUTO_MORNING_NAV_END_MINUTE = 30;
-
-const AUTO_EVENING_NAV_START_HOUR = 17;
-const AUTO_EVENING_NAV_END_HOUR = 20;
+const {
+  resolveModeForDate: resolveAutoModeForDate,
+  getNextBoundary: getNextAutoModeBoundary,
+  getNavModeRefreshSeconds,
+} = useAutoMode();
 
 function resolveModeForDate(date: Date): MonitoringMode {
-  const hour = date.getHours();
-  const minute = date.getMinutes();
-  
-  // Check morning auto mode window (8:30 AM - 9:30 AM)
-  const isMorningNavWindow = 
-    (hour === AUTO_MORNING_NAV_START_HOUR && minute >= AUTO_MORNING_NAV_START_MINUTE) ||
-    (hour === AUTO_MORNING_NAV_END_HOUR && minute < AUTO_MORNING_NAV_END_MINUTE) ||
-    (hour > AUTO_MORNING_NAV_START_HOUR && hour < AUTO_MORNING_NAV_END_HOUR);
-  
-  // Check evening auto mode window (5:00 PM - 8:00 PM)
-  const isEveningNavWindow = hour >= AUTO_EVENING_NAV_START_HOUR && hour < AUTO_EVENING_NAV_END_HOUR;
-  
-  return isMorningNavWindow || isEveningNavWindow
-    ? MonitoringMode.Nav
-    : MonitoringMode.Simple;
+  const autoMode = resolveAutoModeForDate(date);
+  return autoMode === 'Nav' ? MonitoringMode.Nav : MonitoringMode.Simple;
 }
 
 function nextAutoModeBoundary(from: Date): Date {
-  const currentHour = from.getHours();
-  const currentMinute = from.getMinutes();
-  
-  // Morning boundaries
-  const morningStartToday = new Date(from);
-  morningStartToday.setHours(AUTO_MORNING_NAV_START_HOUR, AUTO_MORNING_NAV_START_MINUTE, 0, 0);
-
-  const morningEndToday = new Date(from);
-  morningEndToday.setHours(AUTO_MORNING_NAV_END_HOUR, AUTO_MORNING_NAV_END_MINUTE, 0, 0);
-
-  // Evening boundaries
-  const eveningStartToday = new Date(from);
-  eveningStartToday.setHours(AUTO_EVENING_NAV_START_HOUR, 0, 0, 0);
-
-  const eveningEndToday = new Date(from);
-  eveningEndToday.setHours(AUTO_EVENING_NAV_END_HOUR, 0, 0, 0);
-
-  // Create array of all boundaries for today
-  const todayBoundaries = [
-    morningStartToday,
-    morningEndToday,
-    eveningStartToday,
-    eveningEndToday,
-  ].filter(boundary => boundary.getTime() > from.getTime());
-
-  if (todayBoundaries.length > 0) {
-    return todayBoundaries[0];
-  }
-
-  // If no boundaries left today, return tomorrow's morning start
-  const morningStartTomorrow = new Date(morningStartToday);
-  morningStartTomorrow.setDate(morningStartTomorrow.getDate() + 1);
-  return morningStartTomorrow;
+  return getNextAutoModeBoundary(from);
 }
 
 const mode = ref<MonitoringMode>(MonitoringMode.Simple);
@@ -247,7 +200,7 @@ let lastEmittedAlertCount = 0;
 
 const isNavMode = computed(() => mode.value === MonitoringMode.Nav);
 
-const pollingSeconds = computed(() => (isNavMode.value ? NAV_MODE_REFRESH_SECONDS : refreshInterval.value));
+const pollingSeconds = computed(() => (isNavMode.value ? getNavModeRefreshSeconds() : refreshInterval.value));
 
 const isPolling = computed(() => isLoading.value || isRefreshing.value);
 
