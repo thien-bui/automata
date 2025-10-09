@@ -33,6 +33,17 @@
             </section>
           </v-col>
         </v-row>
+        
+        <v-row class="mt-6">
+          <v-col cols="12" md="6">
+            <section id="member-status-widget" aria-labelledby="member-status-widget-heading">
+              <h1 class="sr-only" id="member-status-widget-heading">
+                Discord Member Status widget
+              </h1>
+              <MemberStatusWidget />
+            </section>
+          </v-col>
+        </v-row>
       </v-container>
     </v-main>
 
@@ -44,6 +55,7 @@
 import { ref } from 'vue';
 
 import AlertBell from './components/AlertBell.vue';
+import MemberStatusWidget from './components/MemberStatusWidget.vue';
 import RouteWidget from './components/RouteWidget.vue';
 import ToastHost from './components/ToastHost.vue';
 import WeatherWidget from './components/WeatherWidget.vue';

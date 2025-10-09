@@ -96,3 +96,59 @@ export interface WeatherConfig {
   displaySettings: WeatherDisplaySettings;
   uiSettings: WeatherUISettings;
 }
+
+export interface DiscordMemberStatus {
+  id: string;
+  username: string;
+  displayName: string;
+  status: 'online' | 'idle' | 'dnd' | 'offline';
+  avatarUrl: string | null;
+  bot: boolean;
+}
+
+export interface DiscordGuildStatus {
+  guildId: string;
+  guildName: string;
+  totalMembers: number;
+  onlineMembers: number;
+  members: DiscordMemberStatus[];
+  lastUpdatedIso: string;
+}
+
+export interface DiscordCacheMetadata {
+  hit: boolean;
+  ageSeconds: number;
+  staleWhileRevalidate: boolean;
+}
+
+export interface DiscordResponse extends DiscordGuildStatus {
+  cache: DiscordCacheMetadata;
+}
+
+export interface DiscordQuery {
+  forceRefresh?: boolean;
+}
+
+export interface DiscordDisplaySettings {
+  showBots: boolean;
+  showOfflineMembers: boolean;
+  sortBy: 'status' | 'username' | 'displayName';
+  groupByStatus: boolean;
+  maxMembersToShow: number;
+  showAvatars: boolean;
+  compactMode: boolean;
+}
+
+export interface DiscordUISettings {
+  compactMode: boolean;
+  showCacheInfo: boolean;
+  autoRefresh: boolean;
+}
+
+export interface DiscordConfig {
+  defaultRefreshSeconds: number;
+  minRefreshSeconds: number;
+  maxRefreshSeconds: number;
+  displaySettings: DiscordDisplaySettings;
+  uiSettings: DiscordUISettings;
+}
