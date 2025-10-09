@@ -1,11 +1,11 @@
 import { computed, ref } from 'vue';
 import type { DiscordConfig, DiscordDisplaySettings, DiscordUISettings } from '@automata/types';
 
-const defaultRefreshSeconds = Number(import.meta.env.VITE_DEFAULT_DISCORD_REFRESH ?? '300');
-const minRefreshSeconds = Number(import.meta.env.VITE_MIN_DISCORD_REFRESH ?? '60');
-const maxRefreshSeconds = Number(import.meta.env.VITE_MAX_DISCORD_REFRESH ?? '3600');
+const DEFAULT_REFRESH_SECONDS = Number(import.meta.env.VITE_DEFAULT_DISCORD_REFRESH ?? '300');
+const MIN_REFRESH_SECONDS = Number(import.meta.env.VITE_MIN_DISCORD_REFRESH ?? '60');
+const MAX_REFRESH_SECONDS = Number(import.meta.env.VITE_MAX_DISCORD_REFRESH ?? '3600');
 
-const defaultDisplaySettings: DiscordDisplaySettings = {
+const BASE_DISPLAY_SETTINGS: DiscordDisplaySettings = {
   showBots: false,
   showOfflineMembers: true,
   sortBy: 'status',
@@ -15,22 +15,32 @@ const defaultDisplaySettings: DiscordDisplaySettings = {
   compactMode: false,
 };
 
-const defaultUISettings: DiscordUISettings = {
+const BASE_UI_SETTINGS: DiscordUISettings = {
   compactMode: false,
   showCacheInfo: true,
   autoRefresh: true,
 };
 
-const defaultConfig: DiscordConfig = {
-  defaultRefreshSeconds,
-  minRefreshSeconds,
-  maxRefreshSeconds,
-  displaySettings: defaultDisplaySettings,
-  uiSettings: defaultUISettings,
-};
+function createDefaultDisplaySettings(): DiscordDisplaySettings {
+  return { ...BASE_DISPLAY_SETTINGS };
+}
+
+function createDefaultUISettings(): DiscordUISettings {
+  return { ...BASE_UI_SETTINGS };
+}
+
+function createDefaultConfig(): DiscordConfig {
+  return {
+    defaultRefreshSeconds: DEFAULT_REFRESH_SECONDS,
+    minRefreshSeconds: MIN_REFRESH_SECONDS,
+    maxRefreshSeconds: MAX_REFRESH_SECONDS,
+    displaySettings: createDefaultDisplaySettings(),
+    uiSettings: createDefaultUISettings(),
+  };
+}
 
 export function useDiscordConfig() {
-  const config = ref<DiscordConfig>(defaultConfig);
+  const config = ref<DiscordConfig>(createDefaultConfig());
 
   const defaultRefreshSeconds = computed(() => config.value.defaultRefreshSeconds);
   const minRefreshSeconds = computed(() => config.value.minRefreshSeconds);
@@ -61,7 +71,7 @@ export function useDiscordConfig() {
   }
 
   function resetToDefaults(): void {
-    config.value = { ...defaultConfig };
+    config.value = createDefaultConfig();
   }
 
   return {
