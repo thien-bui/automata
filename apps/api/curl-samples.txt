@@ -33,3 +33,38 @@ curl -G "http://localhost:4000/api/weather" \
   -H "accept: application/json" \
   --data-urlencode "location=London, UK" \
   --data-urlencode "forceRefresh=true"
+
+### Discord Guild Status
+
+# Basic Discord guild status request
+curl -G "http://localhost:4000/api/discord-status" \
+  -H "accept: application/json"
+
+# Discord status request forcing refresh (bypass cache)
+curl -G "http://localhost:4000/api/discord-status" \
+  -H "accept: application/json" \
+  --data-urlencode "forceRefresh=true"
+
+# Expected Discord status response format:
+# {
+#   "guildId": "123456789012345678",
+#   "guildName": "Your Server Name",
+#   "totalMembers": 150,
+#   "onlineMembers": 42,
+#   "members": [
+#     {
+#       "id": "123456789012345678",
+#       "username": "username",
+#       "displayName": "Display Name",
+#       "status": "online",
+#       "avatarUrl": "https://cdn.discordapp.com/avatars/...",
+#       "bot": false
+#     }
+#   ],
+#   "lastUpdatedIso": "2024-01-01T12:00:00.000Z",
+#   "cache": {
+#     "hit": true,
+#     "ageSeconds": 30,
+#     "staleWhileRevalidate": false
+#   }
+# }

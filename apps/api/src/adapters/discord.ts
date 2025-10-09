@@ -63,10 +63,10 @@ function mapMemberStatus(member: GuildMember): DiscordMemberStatus {
 
 export async function fetchDiscordGuildStatus(): Promise<DiscordGuildStatus> {
   const client = getDiscordClient();
-  const guildId = process.env.DISCORD_GUILD_ID;
+  const guildId = process.env.DISCORD_SERVER_ID;
 
   if (!guildId) {
-    throw new Error('DISCORD_GUILD_ID environment variable is required');
+    throw new Error('DISCORD_SERVER_ID environment variable is required');
   }
 
   // Wait for client to be ready if needed
