@@ -5,6 +5,15 @@
         {{ pageTitle }}
       </v-app-bar-title>
       <template #append>
+        <v-btn
+          icon
+          color="secondary"
+          variant="text"
+          :aria-label="themeButtonLabel"
+          @click="toggleTheme"
+        >
+          <v-icon :icon="themeIcon" />
+        </v-btn>
         <AlertBell :unread-count="alertCount" @open-alerts="openAlertsPanel" />
       </template>
     </v-app-bar>
@@ -52,7 +61,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue';
+import { computed, ref } from 'vue';
 
 import AlertBell from './components/AlertBell.vue';
 import MemberStatusWidget from './components/MemberStatusWidget.vue';
@@ -60,6 +69,7 @@ import RouteWidget from './components/RouteWidget.vue';
 import ToastHost from './components/ToastHost.vue';
 import WeatherWidget from './components/WeatherWidget.vue';
 import { provideToasts } from './composables/useToasts';
+import { useColorTheme } from './composables/useColorTheme';
 
 const pageTitle = 'Automata';
 const alertCount = ref(0);
@@ -71,6 +81,10 @@ const { messages: toastMessages, dismiss: dismissToast, push: pushToast } = prov
     timeout: 4000,
   },
 ]);
+
+const { isDark, toggleTheme } = useColorTheme();
+const themeIcon = computed(() => (isDark.value ? 'mdi-weather-sunny' : 'mdi-weather-night'));
+const themeButtonLabel = computed(() => (isDark.value ? 'Switch to light theme' : 'Switch to dark theme'));
 
 const onAlertsAcknowledged = () => {
   alertCount.value = 0;

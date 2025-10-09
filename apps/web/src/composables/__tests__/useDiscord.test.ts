@@ -175,8 +175,8 @@ describe('useDiscord', () => {
       const abortSpy = vi.spyOn(AbortController.prototype, 'abort');
       
       // Create a promise that never resolves to simulate a pending request
-      let resolveFirstRequest: () => void;
-      const firstRequestPromise = new Promise<void>((resolve) => {
+      let resolveFirstRequest: (response: Response) => void;
+      const firstRequestPromise = new Promise<Response>((resolve) => {
         resolveFirstRequest = resolve;
       });
       
@@ -194,7 +194,7 @@ describe('useDiscord', () => {
       expect(abortSpy).toHaveBeenCalled();
       
       // Resolve the first request to clean up
-      resolveFirstRequest!();
+      resolveFirstRequest!(new Response(null, { status: 204 }));
       
       // Wait for both to settle
       await Promise.allSettled([firstRefresh, secondRefresh]);

@@ -22,6 +22,16 @@ export const vuetify = createVuetify({
           primary: '#1e88e5',
           secondary: '#ffb300',
           surface: '#fafafa',
+          background: '#f5f5f5',
+        },
+      },
+      dark: {
+        dark: true,
+        colors: {
+          primary: '#90caf9',
+          secondary: '#ffb74d',
+          surface: '#121212',
+          background: '#0f172a',
         },
       },
     },
