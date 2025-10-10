@@ -47,11 +47,11 @@
             <WeatherWidget />
           </section>
 
-          <section class="widget-stack__item" id="member-status-widget" aria-labelledby="member-status-widget-heading">
-            <h1 class="sr-only" id="member-status-widget-heading">
-              Discord Member Status widget
+          <section class="widget-stack__item" id="discord-widget" aria-labelledby="discord-widget-heading">
+            <h1 class="sr-only" id="discord-widget-heading">
+              Discord widget
             </h1>
-            <MemberStatusWidget />
+            <DiscordWidget />
           </section>
         </div>
       </v-container>
@@ -65,7 +65,7 @@
 import { computed, ref } from 'vue';
 
 import AlertBell from './components/AlertBell.vue';
-import MemberStatusWidget from './components/MemberStatusWidget.vue';
+import DiscordWidget from './components/DiscordWidget.vue';
 import RouteWidget from './components/RouteWidget.vue';
 import ToastHost from './components/ToastHost.vue';
 import WeatherWidget from './components/WeatherWidget.vue';

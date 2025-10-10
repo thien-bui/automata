@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import type { Mock } from 'vitest';
 import { mount } from '@vue/test-utils';
 import { defineComponent, h, ref, computed } from 'vue';
-import MemberStatusWidget from '../MemberStatusWidget.vue';
+import DiscordWidget from '../DiscordWidget.vue';
 import { provideToasts } from '../../composables/useToasts';
 import type { DiscordResponse, DiscordMemberStatus } from '@automata/types';
 
@@ -149,7 +149,7 @@ vi.mock('../PollingWidget.vue', () => ({
   }
 }));
 
-describe('MemberStatusWidget', () => {
+describe('DiscordWidget', () => {
   let mockUseDiscordConfig: Mock;
   
   beforeEach(async () => {
@@ -193,10 +193,10 @@ describe('MemberStatusWidget', () => {
 
   const mountComponent = () => {
     const Wrapper = defineComponent({
-      name: 'MemberStatusWidgetTestWrapper',
+      name: 'DiscordWidgetTestWrapper',
       setup() {
         provideToasts();
-        return () => h(MemberStatusWidget);
+        return () => h(DiscordWidget);
       },
     });
 
@@ -504,7 +504,7 @@ describe('MemberStatusWidget', () => {
   describe('status helper functions', () => {
     it('returns correct status icons', () => {
       const wrapper = mountComponent();
-      const vm = wrapper.findComponent(MemberStatusWidget).vm as any;
+      const vm = wrapper.findComponent(DiscordWidget).vm as any;
 
       expect(vm.getStatusIcon('online')).toBe('mdi-circle');
       expect(vm.getStatusIcon('idle')).toBe('mdi-minus-circle');
@@ -514,7 +514,7 @@ describe('MemberStatusWidget', () => {
 
     it('returns correct status colors', () => {
       const wrapper = mountComponent();
-      const vm = wrapper.findComponent(MemberStatusWidget).vm as any;
+      const vm = wrapper.findComponent(DiscordWidget).vm as any;
 
       expect(vm.getStatusColor('online')).toBe('success');
       expect(vm.getStatusColor('idle')).toBe('warning');
@@ -524,7 +524,7 @@ describe('MemberStatusWidget', () => {
 
     it('calculates status counts correctly', () => {
       const wrapper = mountComponent();
-      const vm = wrapper.findComponent(MemberStatusWidget).vm as any;
+      const vm = wrapper.findComponent(DiscordWidget).vm as any;
 
       expect(vm.getStatusCount('online')).toBe(2);
       expect(vm.getStatusCount('idle')).toBe(1);
@@ -643,7 +643,7 @@ describe('MemberStatusWidget', () => {
       const wrapper = mountComponent();
 
       // Should have compact CSS classes
-      expect(wrapper.find('.member-status-widget--compact').exists()).toBe(true);
+      expect(wrapper.find('.discord-widget--compact').exists()).toBe(true);
       // Widget summary is completely hidden in compact mode, so no compact class needed
       expect(wrapper.find('.widget-summary--compact').exists()).toBe(false);
       expect(wrapper.find('.member-list-card--compact').exists()).toBe(true);
@@ -656,7 +656,7 @@ describe('MemberStatusWidget', () => {
       const wrapper = mountComponent();
 
       // Should not have compact CSS classes
-      expect(wrapper.find('.member-status-widget--compact').exists()).toBe(false);
+      expect(wrapper.find('.discord-widget--compact').exists()).toBe(false);
       expect(wrapper.find('.widget-summary--compact').exists()).toBe(false);
       expect(wrapper.find('.member-list-card--compact').exists()).toBe(false);
       expect(wrapper.find('.member-list-container--compact').exists()).toBe(false);

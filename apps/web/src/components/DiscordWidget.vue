@@ -18,8 +18,8 @@
   >
     <template #main-content>
       <v-sheet 
-        class="member-status-widget" 
-        :class="{ 'member-status-widget--compact': isCompact }"
+        class="discord-widget" 
+        :class="{ 'discord-widget--compact': isCompact }"
         elevation="1" 
         rounded
       >
@@ -220,7 +220,7 @@
       />
       
       <v-divider class="my-4" />
-      <CompactModeControl widget-name="member-status-widget" />
+      <CompactModeControl widget-name="discord-widget" />
       
       <v-divider class="my-4" />
       
@@ -292,7 +292,7 @@ const {
 const { push: pushToast } = useToasts();
 const { isWidgetCompact } = useUiPreferences();
 
-const isCompact = computed(() => isWidgetCompact('member-status-widget'));
+const isCompact = computed(() => isWidgetCompact('discord-widget'));
 
 let intervalHandle: number | null = null;
 let lastErrorMessage: string | null = null;
@@ -514,11 +514,11 @@ watch(isStale, (value) => {
 </script>
 
 <style scoped>
-.member-status-widget {
+.discord-widget {
   padding: 16px;
 }
 
-.member-status-widget--compact {
+.discord-widget--compact {
   padding: 0px;
 }
 
