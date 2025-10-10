@@ -20,39 +20,31 @@
 
     <v-main>
       <v-container class="py-8" fluid>
-        <v-row>
-          <v-col cols="12" md="6">
-            <section id="route-widget" aria-labelledby="route-widget-heading">
-              <h1 class="sr-only" id="route-widget-heading">
-                {{ pageTitle }} widget
-              </h1>
-              <RouteWidget
-                @alerts-acknowledged="onAlertsAcknowledged"
-                @alerts-updated="onAlertsUpdated"
-              />
-            </section>
-          </v-col>
-          
-          <v-col cols="12" md="6">
-            <section id="weather-widget" aria-labelledby="weather-widget-heading">
-              <h1 class="sr-only" id="weather-widget-heading">
-                Weather widget
-              </h1>
-              <WeatherWidget />
-            </section>
-          </v-col>
-        </v-row>
-        
-        <v-row class="mt-6">
-          <v-col cols="12" md="6">
-            <section id="member-status-widget" aria-labelledby="member-status-widget-heading">
-              <h1 class="sr-only" id="member-status-widget-heading">
-                Discord Member Status widget
-              </h1>
-              <MemberStatusWidget />
-            </section>
-          </v-col>
-        </v-row>
+        <div class="widget-stack">
+          <section class="widget-stack__item" id="route-widget" aria-labelledby="route-widget-heading">
+            <h1 class="sr-only" id="route-widget-heading">
+              {{ pageTitle }} widget
+            </h1>
+            <RouteWidget
+              @alerts-acknowledged="onAlertsAcknowledged"
+              @alerts-updated="onAlertsUpdated"
+            />
+          </section>
+
+          <section class="widget-stack__item" id="weather-widget" aria-labelledby="weather-widget-heading">
+            <h1 class="sr-only" id="weather-widget-heading">
+              Weather widget
+            </h1>
+            <WeatherWidget />
+          </section>
+
+          <section class="widget-stack__item" id="member-status-widget" aria-labelledby="member-status-widget-heading">
+            <h1 class="sr-only" id="member-status-widget-heading">
+              Discord Member Status widget
+            </h1>
+            <MemberStatusWidget />
+          </section>
+        </div>
       </v-container>
     </v-main>
 
@@ -122,5 +114,27 @@ const onAlertsUpdated = (count: number) => {
   overflow: hidden;
   clip: rect(0, 0, 0, 0);
   border: 0;
+}
+
+.widget-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.widget-stack__item {
+  flex: 1 1 100%;
+  min-width: 0;
+}
+
+@media (min-width: 960px) {
+  .widget-stack {
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+
+  .widget-stack__item {
+    flex: 1 1 420px;
+  }
 }
 </style>
