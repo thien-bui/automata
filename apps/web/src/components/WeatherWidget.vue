@@ -83,7 +83,6 @@ const {
   minRefreshSeconds,
   maxRefreshSeconds,
   displaySettings,
-  uiSettings,
   isValidRefreshInterval,
   clampRefreshInterval,
   updateUISettings,
@@ -96,7 +95,6 @@ const isCompact = computed(() => isWidgetCompact('weather-widget'));
 const DEFAULT_HOURLY_PAST_HOURS = 3;
 const DEFAULT_HOURLY_FUTURE_HOURS = 7;
 
-const drawerOpen = ref(false);
 const locationInput = ref(defaultLocation.value);
 const refreshIntervalInput = ref(defaultRefreshSeconds.value);
 
@@ -128,25 +126,6 @@ const isPolling = computed(() => isLoading.value || isRefreshing.value);
 
 const pollingSeconds = computed(() => freshnessSeconds.value);
 
-const statusText = computed(() => {
-  if (isPolling.value) {
-    return 'Refreshing weather data…';
-  }
-  if (weatherError.value) {
-    return weatherError.value;
-  }
-  if (!lastUpdatedIso.value) {
-    return 'Awaiting first update.';
-  }
-  const timestamp = new Date(lastUpdatedIso.value);
-  if (Number.isNaN(timestamp.getTime())) {
-    return 'Awaiting first update.';
-  }
-  const formatted = timestamp.toLocaleTimeString();
-  return isStale.value ? `Showing cached data from ${formatted}.` : `Last updated ${formatted}.`;
-});
-
-const progressValue = computed(() => (isPolling.value ? undefined : 100));
 
 const cacheDescription = computed(() => {
   if (!weatherData.value) {
@@ -164,8 +143,6 @@ const cacheDescription = computed(() => {
 });
 
 const locationLabel = computed(() => location.value);
-
-const settingsAria = computed(() => `Open weather settings for ${location.value}.`);
 
 const currentHourTimestamp = computed<string | null>(() => {
   if (!weatherData.value || weatherData.value.hourlyData.length === 0) {
@@ -259,23 +236,6 @@ const currentConditionDisplay = computed(() => {
   return currentHourEntry.value.condition;
 });
 
-const humidityDisplay = computed(() => {
-  if (!currentHourEntry.value) {
-    return '—';
-  }
-
-  const { humidityPercent } = currentHourEntry.value;
-  return humidityPercent !== undefined ? `${humidityPercent}%` : '—';
-});
-
-const windDisplay = computed(() => {
-  if (!currentHourEntry.value) {
-    return '—';
-  }
-
-  const { windSpeedKph } = currentHourEntry.value;
-  return windSpeedKph !== undefined ? `${windSpeedKph} km/h` : '—';
-});
 
 const displayedHourlyData = computed<HourlyWeatherData[]>(() => {
   if (!weatherData.value) {
@@ -340,54 +300,6 @@ const displayedHourlyData = computed<HourlyWeatherData[]>(() => {
   return hourlyData.slice(adjustedStart, end);
 });
 
-function formatTemperature(fahrenheit: number): string {
-  return `${Math.round(fahrenheit)}°`;
-}
-
-function formatHour(timestamp: string): string {
-  const date = new Date(timestamp);
-  if (Number.isNaN(date.getTime())) {
-    return '—';
-  }
-  return date.toLocaleTimeString('en-US', { hour: 'numeric', hour12: true });
-}
-
-function isCurrentHour(timestamp: string): boolean {
-  const target = currentHourTimestamp.value;
-  return Boolean(target && timestamp === target);
-}
-
-function getWeatherIcon(condition: string): string {
-  const normalizedCondition = condition.toLowerCase();
-  
-  if (normalizedCondition.includes('clear') || normalizedCondition.includes('sunny')) {
-    return 'mdi-weather-sunny';
-  }
-  if (normalizedCondition.includes('cloud') || normalizedCondition.includes('overcast')) {
-    return 'mdi-weather-cloudy';
-  }
-  if (normalizedCondition.includes('rain') || normalizedCondition.includes('shower')) {
-    return 'mdi-weather-rainy';
-  }
-  if (normalizedCondition.includes('snow') || normalizedCondition.includes('flurry')) {
-    return 'mdi-weather-snowy';
-  }
-  if (normalizedCondition.includes('storm') || normalizedCondition.includes('thunder')) {
-    return 'mdi-weather-lightning';
-  }
-  if (normalizedCondition.includes('fog') || normalizedCondition.includes('mist')) {
-    return 'mdi-weather-fog';
-  }
-  if (normalizedCondition.includes('wind')) {
-    return 'mdi-weather-windy';
-  }
-  if (normalizedCondition.includes('partly') || normalizedCondition.includes('partly cloudy')) {
-    return 'mdi-weather-partly-cloudy';
-  }
-  
-  // Default icon
-  return 'mdi-weather-sunny';
-}
 
 function clearIntervalHandle() {
   if (intervalHandle) {
@@ -436,15 +348,6 @@ function handleSaveSettings() {
   });
 }
 
-function saveSettings() {
-  updateLocation();
-  updateRefreshInterval();
-  drawerOpen.value = false;
-  pushToast({
-    text: 'Weather settings saved.',
-    variant: 'success',
-  });
-}
 
 onMounted(() => {
   locationInput.value = location.value;
@@ -500,181 +403,4 @@ watch(isStale, (value) => {
   }
 });
 
-defineExpose({
-  getWeatherIcon,
-});
 </script>
-
-<style scoped>
-.weather-widget {
-  max-width: 980px;
-  margin: 0 auto;
-}
-
-.weather-summary-card {
-  padding: 16px;
-  transition: padding 0.2s ease;
-}
-
-.weather-summary-card--compact {
-  padding: 12px;
-}
-
-.weather-summary__metrics {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.gap-6 {
-  gap: 24px;
-}
-
-.gap-2 {
-  gap: 8px;
-}
-
-.min-width-240 {
-  min-width: 240px;
-}
-
-.hourly-forecast-card {
-  overflow: hidden;
-}
-
-.hourly-forecast-container {
-  display: flex;
-  gap: 16px;
-  padding: 16px;
-  overflow-x: auto;
-  align-items: flex-start;
-}
-
-.hourly-item {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  min-width: 80px;
-  padding: 12px 8px;
-  border-radius: 8px;
-  transition: all 0.2s ease-in-out;
-  opacity: 0.7;
-  background: transparent;
-}
-
-.hourly-item.current-hour {
-  opacity: 1;
-  background: rgba(var(--v-theme-primary), 0.1);
-  border: 2px solid rgb(var(--v-theme-primary));
-  transform: scale(1.05);
-  box-shadow: 0 4px 12px rgba(var(--v-theme-primary), 0.2);
-}
-
-.hourly-item:hover:not(.current-hour) {
-  opacity: 0.9;
-  background: rgba(var(--v-theme-surface-variant), 0.5);
-}
-
-.hourly-time {
-  font-size: 0.875rem;
-  font-weight: 500;
-  color: rgb(var(--v-theme-on-surface));
-  margin-bottom: 8px;
-  text-align: center;
-}
-
-.hourly-item.current-hour .hourly-time {
-  font-weight: 600;
-  color: rgb(var(--v-theme-primary));
-}
-
-.hourly-icon {
-  margin-bottom: 8px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.hourly-temperature {
-  font-size: 1.125rem;
-  font-weight: 500;
-  color: rgb(var(--v-theme-on-surface));
-  margin-bottom: 4px;
-}
-
-.hourly-item.current-hour .hourly-temperature {
-  font-size: 1.375rem;
-  font-weight: 600;
-  color: rgb(var(--v-theme-primary));
-}
-
-.hourly-details {
-  text-align: center;
-  margin-top: 8px;
-  max-width: 120px;
-}
-
-/* Scrollbar styling for horizontal scroll */
-.hourly-forecast-container::-webkit-scrollbar {
-  height: 4px;
-}
-
-.hourly-forecast-container::-webkit-scrollbar-track {
-  background: rgba(var(--v-theme-surface-variant), 0.3);
-  border-radius: 2px;
-}
-
-.hourly-forecast-container::-webkit-scrollbar-thumb {
-  background: rgba(var(--v-theme-on-surface-variant), 0.5);
-  border-radius: 2px;
-}
-
-.hourly-forecast-container::-webkit-scrollbar-thumb:hover {
-  background: rgba(var(--v-theme-on-surface-variant), 0.7);
-}
-
-@media (max-width: 960px) {
-  .weather-widget {
-    margin-inline: 16px;
-  }
-
-  .hourly-forecast-container {
-    gap: 12px;
-    padding: 12px;
-  }
-
-  .hourly-item {
-    min-width: 70px;
-    padding: 10px 6px;
-  }
-}
-
-@media (max-width: 600px) {
-  .hourly-forecast-container {
-    gap: 8px;
-    padding: 8px;
-  }
-
-  .hourly-item {
-    min-width: 60px;
-    padding: 8px 4px;
-  }
-
-  .hourly-time {
-    font-size: 0.75rem;
-  }
-
-  .hourly-temperature {
-    font-size: 1rem;
-  }
-
-  .hourly-item.current-hour .hourly-temperature {
-    font-size: 1.25rem;
-  }
-
-  .hourly-details {
-    max-width: 100px;
-  }
-}
-</style>
