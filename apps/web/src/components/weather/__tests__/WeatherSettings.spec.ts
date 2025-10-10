@@ -3,13 +3,135 @@ import { mount } from '@vue/test-utils';
 import { defineComponent, h } from 'vue';
 import WeatherSettings from '../WeatherSettings.vue';
 
-const createSlotStub = (tag: string) =>
-  defineComponent({
-    name: `${tag}-slot-stub`,
-    setup(_, { slots }) {
-      return () => h(tag, slots.default ? slots.default() : undefined);
+const TextFieldStub = defineComponent({
+  name: 'v-text-field-stub',
+  props: {
+    modelValue: {
+      type: [String, Number],
+      default: '',
     },
-  });
+    label: {
+      type: String,
+      default: '',
+    },
+    type: {
+      type: String,
+      default: 'text',
+    },
+    min: {
+      type: [String, Number],
+      default: undefined,
+    },
+    max: {
+      type: [String, Number],
+      default: undefined,
+    },
+    placeholder: {
+      type: String,
+      default: undefined,
+    },
+    density: {
+      type: String,
+      default: undefined,
+    },
+    variant: {
+      type: String,
+      default: undefined,
+    },
+  },
+  emits: ['update:modelValue'],
+  setup(props, { emit, attrs }) {
+    const attrsRecord = attrs as Record<string, unknown>;
+    const { onInput, ...restAttrs } = attrsRecord;
+
+    return () =>
+      h('input', {
+        ...restAttrs,
+        label: props.label,
+        type: props.type ?? 'text',
+        min: props.min,
+        max: props.max,
+        placeholder: props.placeholder,
+        density: props.density,
+        variant: props.variant,
+        value: props.modelValue ?? '',
+        onInput: (event: Event) => {
+          if (typeof onInput === 'function') {
+            (onInput as (payload: Event) => void)(event);
+          }
+          const target = event.target as HTMLInputElement;
+          const rawValue = target.value;
+          const nextValue = props.type === 'number' ? Number(rawValue) : rawValue;
+          emit('update:modelValue', nextValue);
+        },
+      });
+  },
+});
+
+const SwitchStub = defineComponent({
+  name: 'v-switch-stub',
+  props: {
+    modelValue: {
+      type: [Boolean, String, Number, null],
+      default: false,
+    },
+    label: {
+      type: String,
+      default: '',
+    },
+    color: {
+      type: String,
+      default: undefined,
+    },
+    disabled: {
+      type: Boolean,
+      default: false,
+    },
+    density: {
+      type: String,
+      default: undefined,
+    },
+    hideDetails: {
+      type: Boolean,
+      default: false,
+    },
+  },
+  emits: ['update:modelValue'],
+  setup(props, { emit, attrs }) {
+    const attrsRecord = attrs as Record<string, unknown>;
+    const { onChange, ...restAttrs } = attrsRecord;
+
+    return () =>
+      h('input', {
+        ...restAttrs,
+        type: 'checkbox',
+        label: props.label,
+        color: props.color,
+        density: props.density,
+        'hide-details': props.hideDetails ? '' : undefined,
+        disabled: props.disabled ? '' : undefined,
+        checked: Boolean(props.modelValue),
+        onChange: (event: Event) => {
+          if (typeof onChange === 'function') {
+            (onChange as (payload: Event) => void)(event);
+          }
+          const target = event.target as HTMLInputElement;
+          emit('update:modelValue', target.checked);
+        },
+        onInput: (event: Event) => {
+          const target = event.target as HTMLInputElement;
+          emit('update:modelValue', target.checked);
+        },
+      });
+  },
+});
+
+const DividerStub = defineComponent({
+  name: 'v-divider-stub',
+  setup(_, { slots }) {
+    return () => h('hr', slots.default ? slots.default() : undefined);
+  },
+});
 
 describe('WeatherSettings', () => {
   let onSaveMock: ReturnType<typeof vi.fn>;
@@ -33,9 +155,9 @@ describe('WeatherSettings', () => {
       props: { ...defaultProps, ...props },
       global: {
         stubs: {
-          'v-text-field': createSlotStub('input'),
-          'v-divider': createSlotStub('hr'),
-          'v-switch': createSlotStub('input'),
+          'v-text-field': TextFieldStub,
+          'v-divider': DividerStub,
+          'v-switch': SwitchStub,
         },
       },
     });

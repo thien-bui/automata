@@ -78,6 +78,14 @@ watch(
   { immediate: true },
 );
 
+watch(
+  () => props.compactMode,
+  (value) => {
+    compactModeInput.value = value;
+  },
+  { immediate: true },
+);
+
 function updateLocation() {
   props.onSave({
     location: locationInput.value,

@@ -136,7 +136,7 @@ describe('WeatherSummary', () => {
       windSpeed: 25,
       precipitation: 10,
       showHumidity: true,
-      showWindSpeed: false,
+      showWindSpeed: true,
       showPrecipitation: true,
       isCompact: true,
     };

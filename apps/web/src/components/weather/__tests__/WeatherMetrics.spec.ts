@@ -63,6 +63,8 @@ describe('WeatherMetrics', () => {
     const wrapper = mount(WeatherMetrics, {
       props: {
         humidity: 65,
+        windSpeed: 15,
+        precipitation: 20,
         showHumidity: false,
         showWindSpeed: true,
         showPrecipitation: true,
@@ -77,7 +79,9 @@ describe('WeatherMetrics', () => {
   it('does not display wind speed when showWindSpeed is false', () => {
     const wrapper = mount(WeatherMetrics, {
       props: {
+        humidity: 65,
         windSpeed: 15,
+        precipitation: 20,
         showHumidity: true,
         showWindSpeed: false,
         showPrecipitation: true,
@@ -92,6 +96,8 @@ describe('WeatherMetrics', () => {
   it('does not display precipitation when showPrecipitation is false', () => {
     const wrapper = mount(WeatherMetrics, {
       props: {
+        humidity: 65,
+        windSpeed: 15,
         precipitation: 20,
         showHumidity: true,
         showWindSpeed: true,

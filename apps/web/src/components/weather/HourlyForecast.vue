@@ -21,12 +21,16 @@
               :color="currentHourHighlight && isCurrentHour(hour.timestamp) ? 'primary' : 'grey-darken-1'"
             />
           </div>
-          <div class="hourly-temperature" :class="{ 
-            'current-temp': currentHourHighlight && isCurrentHour(hour.timestamp) 
-            }">
-              {{ formatTemperature(hour.temperatureFahrenheit) }}
-            </div>
-            <div v-if="currentHourHighlight && isCurrentHour(hour.timestamp)" class="hourly-details">
+          <div
+            class="hourly-temperature"
+            :class="{ 'current-temp': currentHourHighlight && isCurrentHour(hour.timestamp) }"
+          >
+            {{ formatTemperature(hour.temperatureFahrenheit) }}
+          </div>
+          <div
+            v-if="currentHourHighlight && isCurrentHour(hour.timestamp)"
+            class="hourly-details"
+          >
             <div class="text-caption text-medium-emphasis">{{ hour.condition }}</div>
             <div class="text-caption text-medium-emphasis">
               <span v-if="showHumidity">{{ hour.humidityPercent }}%</span>
@@ -63,12 +67,19 @@ function formatHour(timestamp: string): string {
   if (Number.isNaN(date.getTime())) {
     return '—';
   }
-  return date.toLocaleTimeString('en-US', { hour: 'numeric', hour12: true });
+  return new Intl.DateTimeFormat('en-US', {
+    hour: 'numeric',
+    hour12: true,
+    timeZone: 'UTC',
+  }).format(date);
 }
 
 function getWeatherIcon(condition: string): string {
   const normalizedCondition = condition.toLowerCase();
-  
+
+  if (normalizedCondition.includes('partly')) {
+    return 'mdi-weather-partly-cloudy';
+  }
   if (normalizedCondition.includes('clear') || normalizedCondition.includes('sunny')) {
     return 'mdi-weather-sunny';
   }
@@ -90,10 +101,7 @@ function getWeatherIcon(condition: string): string {
   if (normalizedCondition.includes('wind')) {
     return 'mdi-weather-windy';
   }
-  if (normalizedCondition.includes('partly') || normalizedCondition.includes('partly cloudy')) {
-    return 'mdi-weather-partly-cloudy';
-  }
-  
+
   // Default icon
   return 'mdi-weather-sunny';
 }

@@ -12,20 +12,31 @@ const createSlotStub = (tag: string) =>
     },
   });
 
-// Mock v-icon component
-vi.mock('vuetify/components', () => ({
-  VIcon: defineComponent({
-    name: 'VIcon',
-    props: ['icon', 'size', 'color'],
-    setup(props) {
-      return () => h('i', {
+const IconStub = defineComponent({
+  name: 'v-icon-stub',
+  props: {
+    icon: {
+      type: String,
+      default: undefined,
+    },
+    size: {
+      type: [Number, String],
+      default: undefined,
+    },
+    color: {
+      type: String,
+      default: undefined,
+    },
+  },
+  setup(props) {
+    return () =>
+      h('i', {
         'data-icon': props.icon,
-        'data-size': props.size,
+        'data-size': props.size?.toString(),
         'data-color': props.color,
       });
-    },
-  }),
-}));
+  },
+});
 
 describe('HourlyForecast', () => {
   const mockHourlyData: HourlyWeatherData[] = [
@@ -82,6 +93,7 @@ describe('HourlyForecast', () => {
       global: {
         stubs: {
           'v-card': createSlotStub('div'),
+          'v-icon': IconStub,
         },
       },
     });

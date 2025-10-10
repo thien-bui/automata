@@ -16,8 +16,7 @@
         </div>
         <WeatherMetrics
           v-if="isCompact && showMetrics"
-          :humidity="humidity"
-          :wind-speed="windSpeed"
+          v-bind="sanitizedMetrics"
           :show-humidity="showHumidity"
           :show-wind-speed="showWindSpeed"
           :show-precipitation="showPrecipitation"
@@ -29,12 +28,11 @@
         class="widget-summary__section widget-summary__section--end"
       >
         <WeatherMetrics
-          :humidity="humidity"
-          :wind-speed="windSpeed"
+          v-bind="sanitizedMetrics"
           :show-humidity="showHumidity"
-        :show-wind-speed="showWindSpeed"
-        :show-precipitation="showPrecipitation"
-        :is-compact="isCompact"
+          :show-wind-speed="showWindSpeed"
+          :show-precipitation="showPrecipitation"
+          :is-compact="isCompact"
         />
       </div>
     </div>
@@ -42,6 +40,7 @@
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue';
 import WeatherMetrics from './WeatherMetrics.vue';
 
 interface Props {
@@ -57,7 +56,13 @@ interface Props {
   showPrecipitation: boolean;
 }
 
-defineProps<Props>();
+const props = defineProps<Props>();
+
+const sanitizedMetrics = computed(() => ({
+  humidity: props.showHumidity ? props.humidity : undefined,
+  windSpeed: props.showWindSpeed ? props.windSpeed : undefined,
+  precipitation: props.showPrecipitation ? props.precipitation : undefined,
+}));
 </script>
 
 <style scoped>

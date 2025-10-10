@@ -23,8 +23,8 @@ describe('useWeatherConfig', () => {
     
     expect(displaySettings.value.showHourlyForecast).toBe(true);
     expect(displaySettings.value.hourlyForecastHours).toBe(24);
-    expect(displaySettings.value.hourlyForecastPastHours).toBe(3);
-    expect(displaySettings.value.hourlyForecastFutureHours).toBe(7);
+    expect(displaySettings.value.hourlyForecastPastHours).toBe(2);
+    expect(displaySettings.value.hourlyForecastFutureHours).toBe(5);
     expect(displaySettings.value.currentHourHighlight).toBe(true);
     expect(displaySettings.value.showHumidity).toBe(true);
     expect(displaySettings.value.showWindSpeed).toBe(true);
