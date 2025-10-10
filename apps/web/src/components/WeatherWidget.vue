@@ -17,87 +17,27 @@
     @save-settings="handleSaveSettings"
   >
     <template #main-content>
-      <v-sheet
-        class="weather-summary-card"
-        :class="{ 'weather-summary-card--compact': isCompact }"
-        elevation="1"
-        rounded
-      >
-        <div class="widget-summary">
-          <div class="widget-summary__section">
-            <div class="text-overline text-medium-emphasis">Current Temperature</div>
-            <div class="text-h4 font-weight-medium" aria-live="polite">
-              {{ currentTemperatureDisplay }}
-            </div>
-            <div class="text-body-1 text-medium-emphasis mt-1">
-              {{ currentConditionDisplay }}
-            </div>
-            <div
-              v-if="isCompact && (displaySettings.showHumidity || displaySettings.showWindSpeed)"
-              class="weather-summary__metrics text-body-2 text-medium-emphasis mt-2"
-            >
-              <span v-if="displaySettings.showHumidity">Humidity: {{ humidityDisplay }}</span>
-              <span
-                v-if="displaySettings.showHumidity && displaySettings.showWindSpeed"
-                aria-hidden="true"
-              >
-                •
-              </span>
-              <span v-if="displaySettings.showWindSpeed">Wind: {{ windDisplay }}</span>
-            </div>
-          </div>
-          <div
-            v-if="!isCompact"
-            class="widget-summary__section widget-summary__section--end"
-          >
-            <div v-if="displaySettings.showHumidity" class="text-body-2 text-medium-emphasis">Humidity: {{ humidityDisplay }}</div>
-            <div v-if="displaySettings.showWindSpeed" class="text-body-2 text-medium-emphasis">Wind: {{ windDisplay }}</div>
-            <div v-if="uiSettings.showCacheInfo && cacheDescription" class="text-caption text-medium-emphasis mt-1">
-              {{ cacheDescription }}
-            </div>
-          </div>
-        </div>
-      </v-sheet>
-
-      <div v-if="!isCompact && displaySettings.showHourlyForecast" class="mt-4">
-        <div class="text-subtitle-1 font-weight-medium mb-3">Hourly Forecast</div>
-        <v-card elevation="2" rounded class="hourly-forecast-card">
-          <div class="hourly-forecast-container">
-            <div
-              v-for="(hour, index) in displayedHourlyData"
-              :key="hour.timestamp"
-              class="hourly-item"
-              :class="{ 
-                'current-hour': displaySettings.currentHourHighlight && isCurrentHour(hour.timestamp) 
-              }"
-            >
-              <div class="hourly-time">
-                {{ displaySettings.currentHourHighlight && isCurrentHour(hour.timestamp) ? 'Now' : formatHour(hour.timestamp) }}
-              </div>
-              <div class="hourly-icon">
-                <v-icon
-                  :icon="getWeatherIcon(hour.condition)"
-                  :size="displaySettings.currentHourHighlight && isCurrentHour(hour.timestamp) ? 32 : 24"
-                  :color="displaySettings.currentHourHighlight && isCurrentHour(hour.timestamp) ? 'primary' : 'grey-darken-1'"
-                />
-              </div>
-              <div class="hourly-temperature" :class="{ 
-                'current-temp': displaySettings.currentHourHighlight && isCurrentHour(hour.timestamp) 
-              }">
-                {{ formatTemperature(hour.temperatureFahrenheit) }}
-              </div>
-              <div v-if="displaySettings.currentHourHighlight && isCurrentHour(hour.timestamp)" class="hourly-details">
-                <div class="text-caption text-medium-emphasis">{{ hour.condition }}</div>
-                <div class="text-caption text-medium-emphasis">
-                  <span v-if="displaySettings.showHumidity">{{ hour.humidityPercent }}%</span>
-                  <span v-if="displaySettings.showHumidity && displaySettings.showWindSpeed"> • </span>
-                  <span v-if="displaySettings.showWindSpeed">{{ hour.windSpeedKph }} km/h</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </v-card>
-      </div>
+      <WeatherSummary
+        :temperature="currentTemperatureDisplay"
+        :condition="currentConditionDisplay"
+        :humidity="currentHourEntry?.humidityPercent"
+    :wind-speed="currentHourEntry?.windSpeedKph"
+    :is-compact="isCompact"
+    :show-metrics="displaySettings.showHumidity || displaySettings.showWindSpeed"
+        :show-humidity="displaySettings.showHumidity"
+        :show-wind-speed="displaySettings.showWindSpeed"
+        :show-precipitation="displaySettings.showPrecipitation"
+      />
+      
+      <HourlyForecast
+        v-if="!isCompact && displaySettings.showHourlyForecast"
+        :data="displayedHourlyData"
+        :is-compact="isCompact"
+    :show-hourly-forecast="displaySettings.showHourlyForecast"
+        :current-hour-highlight="displaySettings.currentHourHighlight"
+        :show-humidity="displaySettings.showHumidity"
+        :show-wind-speed="displaySettings.showWindSpeed"
+      />
     </template>
 
     <template #settings-content>
@@ -145,6 +85,8 @@
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import type { HourlyWeatherData } from '@automata/types';
 import PollingWidget from './PollingWidget.vue';
+import WeatherSummary from './weather/WeatherSummary.vue';
+import HourlyForecast from './weather/HourlyForecast.vue';
 import { useWeather, type WeatherFetchReason } from '../composables/useWeather';
 import { useToasts } from '../composables/useToasts';
 import { useWeatherConfig } from '../composables/useWeatherConfig';
