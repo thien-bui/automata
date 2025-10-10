@@ -17,8 +17,8 @@
   >
     <template #main-content>
       <v-sheet class="pa-4" elevation="1" rounded>
-        <div class="d-flex align-center justify-space-between">
-          <div>
+        <div class="widget-summary">
+          <div class="widget-summary__section">
             <div class="text-overline text-medium-emphasis">Current Temperature</div>
             <div class="text-h4 font-weight-medium" aria-live="polite">
               {{ currentTemperatureDisplay }}
@@ -27,7 +27,7 @@
               {{ currentConditionDisplay }}
             </div>
           </div>
-          <div class="text-end">
+          <div class="widget-summary__section widget-summary__section--end">
             <div v-if="displaySettings.showHumidity" class="text-body-2 text-medium-emphasis">Humidity: {{ humidityDisplay }}</div>
             <div v-if="displaySettings.showWindSpeed" class="text-body-2 text-medium-emphasis">Wind: {{ windDisplay }}</div>
             <div v-if="uiSettings.showCacheInfo && cacheDescription" class="text-caption text-medium-emphasis mt-1">

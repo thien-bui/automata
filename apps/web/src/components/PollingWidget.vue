@@ -1,7 +1,7 @@
 <template>
   <v-card class="polling-widget" elevation="4">
-    <v-card-title class="d-flex align-center justify-space-between">
-      <div>
+    <v-card-title class="widget-header">
+      <div class="widget-header__titles">
         <div class="text-overline text-medium-emphasis">{{ overlineText }}</div>
         <div class="text-h6 font-weight-medium">{{ title }}</div>
         <div class="text-body-2 text-medium-emphasis mt-1">
@@ -12,7 +12,7 @@
         </div>
       </div>
 
-      <div class="d-flex align-center gap-2">
+      <div class="widget-header__actions">
         <slot name="title-actions" />
         <v-btn 
           icon="mdi-cog" 
@@ -59,16 +59,20 @@
 
           <div class="text-subtitle-1 font-weight-medium mb-3">Status</div>
           <v-sheet class="pa-4" elevation="1" rounded>
-            <div class="d-flex align-center justify-space-between mb-3">
-              <span aria-live="polite">{{ statusText }}</span>
-              <v-progress-circular
-                :indeterminate="isPolling"
-                :model-value="progressValue"
-                color="primary"
-                size="32"
-                width="3"
-                aria-hidden="true"
-              />
+            <div class="widget-summary mb-3">
+              <div class="widget-summary__section">
+                <span aria-live="polite">{{ statusText }}</span>
+              </div>
+              <div class="widget-summary__section widget-summary__section--end status-indicator">
+                <v-progress-circular
+                  :indeterminate="isPolling"
+                  :model-value="progressValue"
+                  color="primary"
+                  size="32"
+                  width="3"
+                  aria-hidden="true"
+                />
+              </div>
             </div>
 
             <v-divider class="my-3" />
@@ -288,21 +292,83 @@ function handleSaveSettings() {
   margin: 0 auto;
 }
 
-.gap-6 {
-  gap: 24px;
+.widget-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
 }
 
-.gap-2 {
+.widget-header__titles {
+  min-width: 0;
+}
+
+.widget-header__actions {
+  display: flex;
+  align-items: center;
   gap: 8px;
+  margin-left: auto;
 }
 
-.min-width-240 {
-  min-width: 240px;
+:deep(.widget-summary__section.status-indicator) {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+}
+
+:deep(.widget-summary) {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+:deep(.widget-summary__section) {
+  flex: 1 1 240px;
+}
+
+:deep(.widget-summary__section--end) {
+  text-align: end;
 }
 
 @media (max-width: 960px) {
   .polling-widget {
     margin-inline: 16px;
+  }
+
+  .widget-header {
+    align-items: flex-start;
+  }
+}
+
+@media (max-width: 640px) {
+  .widget-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .widget-header__actions {
+    width: 100%;
+    justify-content: flex-end;
+  }
+
+  :deep(.widget-summary) {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  :deep(.widget-summary__section) {
+    width: 100%;
+  }
+
+  :deep(.widget-summary__section--end) {
+    text-align: start;
+  }
+
+  :deep(.widget-summary__section.status-indicator) {
+    justify-content: flex-start;
   }
 }
 </style>

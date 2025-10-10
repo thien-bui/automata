@@ -17,8 +17,8 @@
   >
     <template #main-content>
       <v-sheet class="pa-4" elevation="1" rounded>
-        <div class="d-flex align-center justify-space-between mb-4">
-          <div>
+        <div class="widget-summary mb-4">
+          <div class="widget-summary__section">
             <div class="text-overline text-medium-emphasis">Guild Overview</div>
             <div class="text-h4 font-weight-medium" aria-live="polite">
               {{ onlineCount }} / {{ totalCount }}
@@ -27,7 +27,7 @@
               Members Online
             </div>
           </div>
-          <div class="text-end">
+          <div class="widget-summary__section widget-summary__section--end">
             <div class="text-body-2 text-medium-emphasis">Total Members: {{ totalCount }}</div>
             <div class="text-body-2 text-medium-emphasis">Online: {{ onlineCount }}</div>
             <div v-if="uiSettings.showCacheInfo && cacheDescription" class="text-caption text-medium-emphasis mt-1">
@@ -36,7 +36,7 @@
           </div>
         </div>
 
-        <v-chip-group v-if="!displaySettings.compactMode" class="mb-3">
+        <v-chip-group v-if="!displaySettings.compactMode" class="status-chip-group mb-3">
           <v-chip
             size="small"
             :color="getStatusColor('online')"
@@ -480,6 +480,24 @@ watch(isStale, (value) => {
   overflow: hidden;
 }
 
+.status-chip-group {
+  display: flex;
+}
+
+:deep(.status-chip-group .v-slide-group__container) {
+  width: 100%;
+}
+
+:deep(.status-chip-group .v-slide-group__content) {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+:deep(.status-chip-group .v-slide-group__content > *) {
+  margin: 0;
+}
+
 .member-list-container {
   max-height: 400px;
   overflow-y: auto;
@@ -570,6 +588,22 @@ watch(isStale, (value) => {
 
   .member-username {
     font-size: 0.7rem;
+  }
+}
+
+@media (max-width: 640px) {
+  .member-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .member-avatar {
+    margin-right: 0;
+  }
+
+  .member-status {
+    margin-left: 0;
   }
 }
 </style>

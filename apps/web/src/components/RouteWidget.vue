@@ -29,14 +29,14 @@
 
     <template #main-content>
       <v-sheet class="pa-4" elevation="1" rounded>
-        <div class="d-flex align-center justify-space-between">
-          <div>
+        <div class="widget-summary">
+          <div class="widget-summary__section">
             <div class="text-overline text-medium-emphasis">Estimated duration</div>
             <div class="text-h4 font-weight-medium" aria-live="polite">
               {{ durationDisplay }}
             </div>
           </div>
-          <div class="text-end">
+          <div class="widget-summary__section widget-summary__section--end">
             <div class="text-body-2 text-medium-emphasis">Distance: {{ distanceDisplay }}</div>
             <div v-if="cacheDescription" class="text-caption text-medium-emphasis mt-1">
               {{ cacheDescription }}
@@ -467,28 +467,3 @@ watch(
   { immediate: true },
 );
 </script>
-
-<style scoped>
-.route-widget {
-  max-width: 980px;
-  margin: 0 auto;
-}
-
-.gap-6 {
-  gap: 24px;
-}
-
-.gap-2 {
-  gap: 8px;
-}
-
-.min-width-240 {
-  min-width: 240px;
-}
-
-@media (max-width: 960px) {
-  .route-widget {
-    margin-inline: 16px;
-  }
-}
-</style>
