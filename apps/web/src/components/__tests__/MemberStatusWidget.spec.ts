@@ -263,6 +263,18 @@ describe('MemberStatusWidget', () => {
       expect(wrapper.text()).toContain('Online: 25');
     });
 
+    it('hides guild overview in compact mode', () => {
+      mockIsWidgetCompact.mockReturnValue(true);
+      const wrapper = mountComponent();
+
+      // Guild overview should be hidden in compact mode
+      expect(wrapper.text()).not.toContain('Guild Overview');
+      expect(wrapper.text()).not.toContain('25 / 100');
+      expect(wrapper.text()).not.toContain('Members Online');
+      expect(wrapper.text()).not.toContain('Total: 100');
+      expect(wrapper.text()).not.toContain('Online: 25');
+    });
+
     it('renders status chips with correct counts', () => {
       const wrapper = mountComponent();
 
@@ -632,7 +644,8 @@ describe('MemberStatusWidget', () => {
 
       // Should have compact CSS classes
       expect(wrapper.find('.member-status-widget--compact').exists()).toBe(true);
-      expect(wrapper.find('.widget-summary--compact').exists()).toBe(true);
+      // Widget summary is completely hidden in compact mode, so no compact class needed
+      expect(wrapper.find('.widget-summary--compact').exists()).toBe(false);
       expect(wrapper.find('.member-list-card--compact').exists()).toBe(true);
       expect(wrapper.find('.member-list-container--compact').exists()).toBe(true);
       expect(wrapper.find('.member-item--compact').exists()).toBe(true);

@@ -23,21 +23,22 @@
         elevation="1" 
         rounded
       >
-        <div class="widget-summary" :class="{ 'widget-summary--compact': isCompact }">
+        <!-- Guild overview - hidden in compact mode -->
+        <div v-if="!isCompact" class="widget-summary">
           <div class="widget-summary__section">
             <div class="text-overline text-medium-emphasis">Guild Overview</div>
-            <div class="text-h4 font-weight-medium" :class="{ 'text-h6': isCompact }" aria-live="polite">
+            <div class="text-h4 font-weight-medium" aria-live="polite">
               {{ onlineCount }} / {{ totalCount }}
             </div>
-            <div class="text-body-1 text-medium-emphasis mt-1" :class="{ 'text-caption': isCompact }">
+            <div class="text-body-1 text-medium-emphasis mt-1">
               Members Online
             </div>
           </div>
           <div class="widget-summary__section widget-summary__section--end">
-            <div class="text-body-2 text-medium-emphasis" :class="{ 'text-caption': isCompact }">
+            <div class="text-body-2 text-medium-emphasis">
               Total: {{ totalCount }}
             </div>
-            <div class="text-body-2 text-medium-emphasis" :class="{ 'text-caption': isCompact }">
+            <div class="text-body-2 text-medium-emphasis">
               Online: {{ onlineCount }}
             </div>
             <div v-if="uiSettings.showCacheInfo && cacheDescription" class="text-caption text-medium-emphasis mt-1">
@@ -518,7 +519,7 @@ watch(isStale, (value) => {
 }
 
 .member-status-widget--compact {
-  padding: 12px;
+  padding: 0px;
 }
 
 .member-list-card {
