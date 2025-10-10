@@ -99,8 +99,21 @@ function getWeatherIcon(condition: string): string {
 }
 
 function isCurrentHour(timestamp: string): boolean {
-  // This would need to be implemented based on current hour logic
-  return false;
+  const hourDate = new Date(timestamp);
+  if (Number.isNaN(hourDate.getTime())) {
+    return false;
+  }
+  
+  const now = new Date();
+  
+  // Check if the timestamp is within the current hour
+  // We compare the year, month, date, and hour to ensure it's the same hour
+  return (
+    hourDate.getFullYear() === now.getFullYear() &&
+    hourDate.getMonth() === now.getMonth() &&
+    hourDate.getDate() === now.getDate() &&
+    hourDate.getHours() === now.getHours()
+  );
 }
 </script>
 
