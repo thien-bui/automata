@@ -120,6 +120,9 @@ const {
   clampRefreshInterval,
 } = useWeatherConfig();
 
+const DEFAULT_HOURLY_PAST_HOURS = 3;
+const DEFAULT_HOURLY_FUTURE_HOURS = 7;
+
 const drawerOpen = ref(false);
 const locationInput = ref(defaultLocation.value);
 const refreshIntervalInput = ref(defaultRefreshSeconds.value);
@@ -311,9 +314,24 @@ const displayedHourlyData = computed<HourlyWeatherData[]>(() => {
     return [];
   }
 
+  const settings = displaySettings.value;
+  const normalizeWindowValue = (value: number | undefined, fallback: number): number => {
+    if (typeof value !== 'number' || Number.isNaN(value)) {
+      return fallback;
+    }
+    return Math.max(0, Math.floor(value));
+  };
+
+  const desiredPast = normalizeWindowValue(
+    settings.hourlyForecastPastHours,
+    DEFAULT_HOURLY_PAST_HOURS,
+  );
+  const desiredFuture = normalizeWindowValue(
+    settings.hourlyForecastFutureHours,
+    DEFAULT_HOURLY_FUTURE_HOURS,
+  );
+
   const targetIndex = currentHourIndex.value;
-  const desiredPast = 3;
-  const desiredFuture = 7;
 
   let start = targetIndex - desiredPast;
   let end = targetIndex + desiredFuture + 1; // exclusive upper bound

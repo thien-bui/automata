@@ -12,6 +12,8 @@ const DEFAULT_CONFIG: WeatherConfig = {
   displaySettings: {
     showHourlyForecast: true,
     hourlyForecastHours: 24,
+    hourlyForecastPastHours: 3,
+    hourlyForecastFutureHours: 7,
     currentHourHighlight: true,
     showHumidity: true,
     showWindSpeed: true,

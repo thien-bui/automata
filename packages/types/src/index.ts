@@ -75,6 +75,8 @@ export interface AutoModeConfig {
 export interface WeatherDisplaySettings {
   showHourlyForecast: boolean;
   hourlyForecastHours: number;
+  hourlyForecastPastHours: number;
+  hourlyForecastFutureHours: number;
   currentHourHighlight: boolean;
   showHumidity: boolean;
   showWindSpeed: boolean;
