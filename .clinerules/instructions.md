@@ -85,6 +85,12 @@ This is a TypeScript monorepo with:
 - Monitor UX health with Web Vitals sampling in production
 - Feed signals back into Fastify logs/metrics for correlation
 
+## Timezone Handling
+- Persist backend timestamps as UTC ISO-8601 strings and only localize at the presentation layer
+- Require explicit timezone offsets from external inputs; validate with Zod before converting to native `Date`
+- Use a single datetime utility (`Intl` or a vetted library) per module to avoid mixed rounding rules
+- Pass timezone context through function parameters instead of reading globals so tests can fix deterministic expectations
+
 ## Testing Strategy
 
 ### Unit Tests (Vitest)
