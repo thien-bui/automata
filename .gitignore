@@ -1,11 +1,59 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
+tmp/
+temp/
+
+# Node modules & caches
 node_modules
+.pnpm-store/
+.npm/
+.yarn/
+.cache/
+.parcel-cache
+.eslintcache
 
-.env
-
+# Build output
+build/
+dist/
+dist-ssr/
+storybook-static/
 **/dist
+**/build
 **/coverage
 **/test-results
+**/.vite
+**/.output
 
+# TypeScript
+*.tsbuildinfo
+
+# Testing artifacts
+.nyc_output
+cypress/screenshots/
+cypress/videos/
+playwright-report/
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# IDE files
+.idea/
+.vscode/
+
+# Deployment artifacts
 deploy/ollama/*
 !deploy/ollama/.gitkeep
 !deploy/ollama/Dockerfile
