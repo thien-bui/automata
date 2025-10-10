@@ -155,6 +155,13 @@ export interface DiscordConfig {
   uiSettings: DiscordUISettings;
 }
 
+export type WidgetCompactMode = 'use-global' | 'force-compact' | 'force-full';
+
+export type WidgetCompactStates = {
+  [widgetName: string]: WidgetCompactMode;
+};
+
 export type UiPreferencesState = {
   compactMode: boolean;
+  widgetCompactModes: WidgetCompactStates;
 };

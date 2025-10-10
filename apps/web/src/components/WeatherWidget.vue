@@ -60,23 +60,7 @@
         @keyup.enter="updateRefreshInterval"
       />
       <v-divider class="my-4" />
-      <v-switch
-        :model-value="compactModeInput"
-        :disabled="globalCompactEnabled"
-        label="Compact mode (weather widget)"
-        color="primary"
-        density="compact"
-        hide-details
-        @update:model-value="handleCompactSwitch"
-      />
-      <div class="text-caption text-medium-emphasis">
-        <span v-if="globalCompactEnabled">
-          Controlled by global compact mode from the toolbar.
-        </span>
-        <span v-else>
-          Applies only to the Weather widget layout.
-        </span>
-      </div>
+      <CompactModeControl widget-name="weather-widget" />
     </template>
   </PollingWidget>
 </template>
@@ -91,6 +75,7 @@ import { useWeather, type WeatherFetchReason } from '../composables/useWeather';
 import { useToasts } from '../composables/useToasts';
 import { useWeatherConfig } from '../composables/useWeatherConfig';
 import { useUiPreferences } from '../composables/useUiPreferences';
+import CompactModeControl from './CompactModeControl.vue';
 
 const {
   defaultLocation,
@@ -104,19 +89,9 @@ const {
   updateUISettings,
 } = useWeatherConfig();
 
-const { isCompact: globalCompactEnabled } = useUiPreferences();
+const { isWidgetCompact } = useUiPreferences();
 
-const compactModeInput = ref(uiSettings.value.compactMode);
-
-watch(
-  () => uiSettings.value.compactMode,
-  (value) => {
-    compactModeInput.value = value;
-  },
-  { immediate: true },
-);
-
-const isCompact = computed(() => globalCompactEnabled.value || uiSettings.value.compactMode);
+const isCompact = computed(() => isWidgetCompact('weather-widget'));
 
 const DEFAULT_HOURLY_PAST_HOURS = 3;
 const DEFAULT_HOURLY_FUTURE_HOURS = 7;
@@ -443,11 +418,6 @@ function updateRefreshInterval() {
   setFreshnessSeconds(clampedValue);
 }
 
-function handleCompactSwitch(value: boolean | null) {
-  const nextValue = Boolean(value);
-  compactModeInput.value = nextValue;
-  updateUISettings({ compactMode: nextValue });
-}
 
 function handleManualRefresh() {
   void triggerPolling('manual');
@@ -460,7 +430,6 @@ function handleHardRefresh() {
 function handleSaveSettings() {
   updateLocation();
   updateRefreshInterval();
-  updateUISettings({ compactMode: compactModeInput.value });
   pushToast({
     text: 'Weather settings saved.',
     variant: 'success',
@@ -470,7 +439,6 @@ function handleSaveSettings() {
 function saveSettings() {
   updateLocation();
   updateRefreshInterval();
-  updateUISettings({ compactMode: compactModeInput.value });
   drawerOpen.value = false;
   pushToast({
     text: 'Weather settings saved.',

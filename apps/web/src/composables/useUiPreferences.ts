@@ -1,9 +1,10 @@
 import { computed, readonly, ref, watch } from 'vue';
-import type { UiPreferencesState } from '@automata/types';
+import type { UiPreferencesState, WidgetCompactMode } from '@automata/types';
 
 const STORAGE_KEY = 'automata:ui-preferences';
 const DEFAULT_STATE: UiPreferencesState = {
-  compactMode: false,
+  compactMode: true, // Default to compact as specified in the plan
+  widgetCompactModes: {},
 };
 
 const state = ref<UiPreferencesState>({ ...DEFAULT_STATE });
@@ -24,6 +25,7 @@ function hydrateFromStorage(): void {
     if (parsed && typeof parsed.compactMode === 'boolean') {
       state.value = {
         compactMode: parsed.compactMode,
+        widgetCompactModes: parsed.widgetCompactModes || {},
       };
       hydratedFromStorage.value = true;
     }
@@ -69,6 +71,39 @@ function resetPreferences(): void {
   state.value = { ...DEFAULT_STATE };
 }
 
+function getWidgetCompactMode(widgetName: string): WidgetCompactMode {
+  return state.value.widgetCompactModes[widgetName] || 'use-global';
+}
+
+function setWidgetCompactMode(widgetName: string, mode: WidgetCompactMode): void {
+  const currentMode = state.value.widgetCompactModes[widgetName];
+  if (currentMode === mode) {
+    return;
+  }
+  
+  state.value = {
+    ...state.value,
+    widgetCompactModes: {
+      ...state.value.widgetCompactModes,
+      [widgetName]: mode,
+    },
+  };
+}
+
+function isWidgetCompact(widgetName: string): boolean {
+  const widgetMode = getWidgetCompactMode(widgetName);
+  
+  switch (widgetMode) {
+    case 'force-compact':
+      return true;
+    case 'force-full':
+      return false;
+    case 'use-global':
+    default:
+      return state.value.compactMode;
+  }
+}
+
 export function useUiPreferences() {
   return {
     state: readonly(state),
@@ -76,6 +111,9 @@ export function useUiPreferences() {
     setCompactMode,
     toggleCompactMode,
     resetPreferences,
+    getWidgetCompactMode,
+    setWidgetCompactMode,
+    isWidgetCompact,
     didHydrateFromStorage: computed(() => hydratedFromStorage.value),
   };
 }

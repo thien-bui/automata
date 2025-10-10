@@ -11,6 +11,7 @@
     :is-stale="isStale"
     :polling-seconds="pollingSeconds"
     :cache-description="cacheDescription"
+    :compact="isCompact"
     @manual-refresh="handleManualRefresh"
     @hard-refresh="handleHardRefresh"
     @save-settings="handleSaveSettings"
@@ -115,6 +116,9 @@
             <span>Alerts fire above {{ thresholdMinutes }} minutes.</span>
             <v-btn size="small" variant="text" @click="resetAlertThreshold">Reset</v-btn>
           </div>
+
+          <v-divider class="my-4" />
+          <CompactModeControl widget-name="route-widget" />
         </div>
       </div>
     </template>
@@ -130,7 +134,9 @@ import { useRouteTime, type RouteFetchReason } from '../composables/useRouteTime
 import { useAlertThreshold } from '../composables/useAlertThreshold';
 import { useToasts } from '../composables/useToasts';
 import { useAutoMode } from '../composables/useAutoMode';
+import { useUiPreferences } from '../composables/useUiPreferences';
 import { MonitoringMode } from './monitoringMode';
+import CompactModeControl from './CompactModeControl.vue';
 
 const emit = defineEmits<{
   (e: 'alerts-acknowledged'): void;
@@ -188,6 +194,9 @@ const {
 
 const { thresholdMinutes, setThreshold, resetThreshold } = useAlertThreshold();
 const { push: pushToast } = useToasts();
+const { isWidgetCompact } = useUiPreferences();
+
+const isCompact = computed(() => isWidgetCompact('route-widget'));
 
 const activeAlerts = ref<RouteAlert[]>([]);
 let intervalHandle: number | null = null;

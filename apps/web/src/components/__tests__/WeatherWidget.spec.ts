@@ -146,6 +146,42 @@ vi.mock('../../composables/useToasts', () => ({
   provideToasts: vi.fn()
 }));
 
+// Mock the useUiPreferences composable
+vi.mock('../../composables/useUiPreferences', () => ({
+  useUiPreferences: () => ({
+    isWidgetCompact: vi.fn(() => false) // Default to non-compact for tests
+  })
+}));
+
+// Mock the useWeatherConfig composable
+vi.mock('../../composables/useWeatherConfig', () => ({
+  useWeatherConfig: () => ({
+    defaultLocation: ref('Kent, WA'),
+    defaultRefreshSeconds: ref(300),
+    minRefreshSeconds: ref(15),
+    maxRefreshSeconds: ref(3600),
+    displaySettings: ref({
+      showHourlyForecast: true,
+      hourlyForecastHours: 8,
+      hourlyForecastPastHours: 3,
+      hourlyForecastFutureHours: 7,
+      currentHourHighlight: true,
+      showHumidity: true,
+      showWindSpeed: true,
+      showPrecipitation: false,
+      temperatureUnit: 'celsius'
+    }),
+    uiSettings: ref({
+      compactMode: false,
+      showCacheInfo: false,
+      autoRefresh: true
+    }),
+    isValidRefreshInterval: vi.fn(() => true),
+    clampRefreshInterval: vi.fn((val) => val),
+    updateUISettings: vi.fn()
+  })
+}));
+
 // Mock PollingWidget component
 vi.mock('../PollingWidget.vue', () => ({
   default: {
@@ -189,6 +225,7 @@ describe('WeatherWidget', () => {
           'v-text-field': createSlotStub('input'),
           'v-divider': createSlotStub('hr'),
           'v-switch': createSlotStub('input'),
+          'CompactModeControl': createSlotStub('div'),
         },
       },
     });
@@ -252,7 +289,7 @@ describe('WeatherWidget', () => {
     const wrapper = mountComponent();
     const hourlyForecast = wrapper.findComponent({ name: 'HourlyForecast' });
 
-    expect(hourlyForecast.props('data')).toHaveLength(8); // Actual filtered data length
+    expect(hourlyForecast.props('data')).toHaveLength(11); // Actual filtered data length
     expect(hourlyForecast.props('isCompact')).toBe(false);
     expect(hourlyForecast.props('showHourlyForecast')).toBe(true);
     expect(hourlyForecast.props('currentHourHighlight')).toBe(true);
@@ -270,8 +307,8 @@ describe('WeatherWidget', () => {
     const refreshInput = wrapper.find('input[label="Refresh Interval (seconds)"]');
     expect(refreshInput.exists()).toBe(true);
     
-    const compactSwitch = wrapper.find('input[label="Compact mode (weather widget)"]');
-    expect(compactSwitch.exists()).toBe(true);
+    // Check that CompactModeControl is rendered (it's stubbed as a div with widget-name attribute)
+    expect(wrapper.html()).toContain('widget-name="weather-widget"');
   });
 
   it('has correct structure and styling', () => {

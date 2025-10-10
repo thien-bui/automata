@@ -113,6 +113,13 @@ vi.mock('../../composables/useToasts', () => ({
   provideToasts: vi.fn()
 }));
 
+// Mock the useUiPreferences composable
+vi.mock('../../composables/useUiPreferences', () => ({
+  useUiPreferences: () => ({
+    isWidgetCompact: vi.fn(() => false) // Default to non-compact for tests
+  })
+}));
+
 // Mock PollingWidget component
 vi.mock('../PollingWidget.vue', () => ({
   default: {
@@ -236,6 +243,7 @@ describe('MemberStatusWidget', () => {
               return () => h('button', { ...attrs }, slots.default ? slots.default() : undefined);
             },
           }),
+          'CompactModeControl': createSlotStub('div'),
         },
       },
     });

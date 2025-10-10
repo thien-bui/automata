@@ -11,6 +11,7 @@
     :is-stale="isStale"
     :polling-seconds="pollingSeconds"
     :cache-description="cacheDescription"
+    :compact="isCompact"
     @manual-refresh="handleManualRefresh"
     @hard-refresh="handleHardRefresh"
     @save-settings="handleSaveSettings"
@@ -36,7 +37,7 @@
           </div>
         </div>
 
-        <v-chip-group v-if="!displaySettings.compactMode" class="status-chip-group mb-3">
+        <v-chip-group v-if="!isCompact" class="status-chip-group mb-3">
           <v-chip
             size="small"
             :color="getStatusColor('online')"
@@ -86,7 +87,7 @@
               <div class="member-avatar" v-if="displaySettings.showAvatars">
                 <v-avatar
                   :image="member.avatarUrl || undefined"
-                  :size="displaySettings.compactMode ? 24 : 32"
+                  :size="isCompact ? 24 : 32"
                 >
                   <v-icon v-if="!member.avatarUrl">mdi-account</v-icon>
                 </v-avatar>
@@ -112,7 +113,7 @@
                 <v-icon
                   :icon="getStatusIcon(member.status)"
                   :color="getStatusColor(member.status)"
-                  :size="displaySettings.compactMode ? 16 : 20"
+                  :size="isCompact ? 16 : 20"
                 />
                 <span class="ml-1 text-caption">{{ member.status }}</span>
               </div>
@@ -184,12 +185,10 @@
         density="compact"
       />
       
-      <v-checkbox
-        v-model="compactModeInput"
-        label="Compact mode"
-        density="compact"
-        hide-details
-      />
+      <v-divider class="my-4" />
+      <CompactModeControl widget-name="member-status-widget" />
+      
+      <v-divider class="my-4" />
       
       <v-text-field
         v-model.number="maxMembersToShowInput"
@@ -211,6 +210,8 @@ import PollingWidget from './PollingWidget.vue';
 import { useDiscord, type DiscordFetchReason } from '../composables/useDiscord';
 import { useToasts } from '../composables/useToasts';
 import { useDiscordConfig } from '../composables/useDiscordConfig';
+import { useUiPreferences } from '../composables/useUiPreferences';
+import CompactModeControl from './CompactModeControl.vue';
 
 const {
   defaultRefreshSeconds,
@@ -255,6 +256,9 @@ const {
 });
 
 const { push: pushToast } = useToasts();
+const { isWidgetCompact } = useUiPreferences();
+
+const isCompact = computed(() => isWidgetCompact('member-status-widget'));
 
 let intervalHandle: number | null = null;
 let lastErrorMessage: string | null = null;
