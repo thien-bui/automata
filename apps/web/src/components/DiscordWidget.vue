@@ -14,224 +14,40 @@
     :compact="isCompact"
     @manual-refresh="handleManualRefresh"
     @hard-refresh="handleHardRefresh"
-    @save-settings="handleSaveSettings"
+  @save-settings="handleSaveSettings"
   >
     <template #main-content>
-      <v-sheet 
-        class="discord-widget" 
-        :class="{ 'discord-widget--compact': isCompact }"
-        elevation="1" 
-        rounded
-      >
-        <!-- Guild overview - hidden in compact mode -->
-        <div v-if="!isCompact" class="widget-summary">
-          <div class="widget-summary__section">
-            <div class="text-overline text-medium-emphasis">Guild Overview</div>
-            <div class="text-h4 font-weight-medium" aria-live="polite">
-              {{ onlineCount }} / {{ totalCount }}
-            </div>
-            <div class="text-body-1 text-medium-emphasis mt-1">
-              Members Online
-            </div>
-          </div>
-          <div class="widget-summary__section widget-summary__section--end">
-            <div class="text-body-2 text-medium-emphasis">
-              Total: {{ totalCount }}
-            </div>
-            <div class="text-body-2 text-medium-emphasis">
-              Online: {{ onlineCount }}
-            </div>
-            <div v-if="uiSettings.showCacheInfo && cacheDescription" class="text-caption text-medium-emphasis mt-1">
-              {{ cacheDescription }}
-            </div>
-          </div>
-        </div>
+      <DiscordWidgetHeader
+        :total-count="totalCount"
+        :online-count="onlineCount"
+        :cache-description="cacheDescription"
+        :show-cache-info="uiSettings.showCacheInfo"
+        :status-counts="statusCounts"
+        :show-offline-members="showOfflineMembersInput"
+        :is-compact="isCompact"
+      />
 
-        <!-- Status chips - hidden in compact mode -->
-        <v-chip-group v-if="!isCompact" class="status-chip-group mb-3">
-          <v-chip
-            size="small"
-            :color="getStatusColor('online')"
-            variant="tonal"
-            prepend-icon="mdi-circle"
-          >
-            Online: {{ getStatusCount('online') }}
-          </v-chip>
-          <v-chip
-            size="small"
-            :color="getStatusColor('idle')"
-            variant="tonal"
-            prepend-icon="mdi-minus-circle"
-          >
-            Idle: {{ getStatusCount('idle') }}
-          </v-chip>
-          <v-chip
-            size="small"
-            :color="getStatusColor('dnd')"
-            variant="tonal"
-            prepend-icon="mdi-do-not-disturb"
-          >
-            DND: {{ getStatusCount('dnd') }}
-          </v-chip>
-          <v-chip
-            v-if="displaySettings.showOfflineMembers"
-            size="small"
-            :color="getStatusColor('offline')"
-            variant="tonal"
-            prepend-icon="mdi-circle-outline"
-          >
-            Offline: {{ getStatusCount('offline') }}
-          </v-chip>
-        </v-chip-group>
-      </v-sheet>
-
-      <!-- Member List - shown in both modes but with different styling -->
-      <div class="mt-4">
-        <div class="text-subtitle-1 font-weight-medium mb-3" :class="{ 'text-body-2': isCompact }">
-          Member List
-        </div>
-        <v-card 
-          elevation="2" 
-          rounded 
-          class="member-list-card"
-          :class="{ 'member-list-card--compact': isCompact }"
-        >
-          <div 
-            class="member-list-container"
-            :class="{ 'member-list-container--compact': isCompact }"
-          >
-            <div
-              v-for="member in displayedMembers"
-              :key="member.id"
-              class="member-item"
-              :class="{ 
-                'member-bot': member.bot,
-                'member-item--compact': isCompact 
-              }"
-            >
-              <div class="member-avatar" v-if="displaySettings.showAvatars">
-                <v-avatar
-                  :image="member.avatarUrl || undefined"
-                  :size="isCompact ? 20 : 32"
-                >
-                  <v-icon v-if="!member.avatarUrl">mdi-account</v-icon>
-                </v-avatar>
-              </div>
-              <div class="member-info">
-                <div class="member-name" :class="{ 'member-name--compact': isCompact }">
-                  {{ member.displayName }}
-                  <v-chip
-                    v-if="member.bot"
-                    size="x-small"
-                    color="purple"
-                    variant="tonal"
-                    class="ml-2"
-                  >
-                    BOT
-                  </v-chip>
-                </div>
-                <div 
-                  class="member-username text-caption text-medium-emphasis"
-                  :class="{ 'd-none': isCompact }"
-                >
-                  @{{ member.username }}
-                </div>
-              </div>
-              <div class="member-status">
-                <v-icon
-                  :icon="getStatusIcon(member.status)"
-                  :color="getStatusColor(member.status)"
-                  :size="isCompact ? 14 : 20"
-                />
-                <span 
-                  class="ml-1 text-caption"
-                  :class="{ 'd-none': isCompact }"
-                >
-                  {{ member.status }}
-                </span>
-              </div>
-            </div>
-          </div>
-          
-          <!-- Show More/Less button - hidden in compact mode -->
-          <div v-if="hasMoreMembers && !isCompact" class="pa-3 text-center">
-            <v-btn
-              variant="text"
-              size="small"
-              @click="showAllMembers = !showAllMembers"
-            >
-              {{ showAllMembers ? 'Show Less' : `Show ${remainingMembersCount} More` }}
-            </v-btn>
-          </div>
-        </v-card>
-      </div>
+      <DiscordMemberList
+        :members="filteredMembers"
+        :max-members-to-show="maxMembersToShowInput"
+        :show-avatars="showAvatarsInput"
+        :is-compact="isCompact"
+      />
     </template>
 
     <template #settings-content>
-      <v-text-field
-        v-model.number="refreshIntervalInput"
-        label="Refresh Interval (seconds)"
-        type="number"
-        :min="minRefreshSeconds"
-        :max="maxRefreshSeconds"
-        variant="outlined"
-        density="compact"
-        @keyup.enter="updateRefreshInterval"
-      />
-      
-      <v-divider class="my-4" />
-      
-      <div class="text-subtitle-1 font-weight-medium mb-3">Display Settings</div>
-      
-      <v-checkbox
-        v-model="showBotsInput"
-        label="Show bots"
-        density="compact"
-        hide-details
-      />
-      
-      <v-checkbox
-        v-model="showOfflineMembersInput"
-        label="Show offline members"
-        density="compact"
-        hide-details
-      />
-      
-      <v-checkbox
-        v-model="showAvatarsInput"
-        label="Show avatars"
-        density="compact"
-        hide-details
-      />
-      
-      <v-checkbox
-        v-model="groupByStatusInput"
-        label="Group by status"
-        density="compact"
-        hide-details
-      />
-      
-      <v-select
-        v-model="sortByInput"
-        label="Sort by"
-        :items="sortOptions"
-        variant="outlined"
-        density="compact"
-      />
-      
-      <v-divider class="my-4" />
-      <CompactModeControl widget-name="discord-widget" />
-      
-      <v-divider class="my-4" />
-      
-      <v-text-field
-        v-model.number="maxMembersToShowInput"
-        label="Max members to show"
-        type="number"
-        :min="5"
-        :max="200"
-        variant="outlined"
-        density="compact"
+      <DiscordWidgetSettings
+        v-model:refresh-interval="refreshIntervalInput"
+        v-model:show-bots="showBotsInput"
+        v-model:show-offline-members="showOfflineMembersInput"
+        v-model:show-avatars="showAvatarsInput"
+        v-model:group-by-status="groupByStatusInput"
+        v-model:sort-by="sortByInput"
+        v-model:max-members-to-show="maxMembersToShowInput"
+        :min-refresh-seconds="minRefreshSeconds"
+        :max-refresh-seconds="maxRefreshSeconds"
+        :sort-options="sortOptions"
+        @submit="updateRefreshInterval"
       />
     </template>
   </PollingWidget>
@@ -239,13 +55,16 @@
 
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
-import type { DiscordMemberStatus } from '@automata/types';
+import type { DiscordDisplaySettings, DiscordMemberStatus } from '@automata/types';
 import PollingWidget from './PollingWidget.vue';
 import { useDiscord, type DiscordFetchReason } from '../composables/useDiscord';
 import { useToasts } from '../composables/useToasts';
 import { useDiscordConfig } from '../composables/useDiscordConfig';
 import { useUiPreferences } from '../composables/useUiPreferences';
-import CompactModeControl from './CompactModeControl.vue';
+import DiscordWidgetHeader from './discord/DiscordWidgetHeader.vue';
+import DiscordMemberList from './discord/DiscordMemberList.vue';
+import DiscordWidgetSettings from './discord/DiscordWidgetSettings.vue';
+import { compareStatus } from './discord/status';
 
 const {
   defaultRefreshSeconds,
@@ -267,7 +86,12 @@ const sortByInput = ref(displaySettings.value.sortBy);
 const maxMembersToShowInput = ref(displaySettings.value.maxMembersToShow);
 const compactModeInput = ref(displaySettings.value.compactMode);
 
-const sortOptions = [
+type SortOption = {
+  readonly title: string;
+  readonly value: DiscordDisplaySettings['sortBy'];
+};
+
+const sortOptions: ReadonlyArray<SortOption> = [
   { title: 'Status', value: 'status' },
   { title: 'Username', value: 'username' },
   { title: 'Display Name', value: 'displayName' },
@@ -294,9 +118,10 @@ const { isWidgetCompact } = useUiPreferences();
 
 const isCompact = computed(() => isWidgetCompact('discord-widget'));
 
+type DiscordPresenceStatus = DiscordMemberStatus['status'];
+
 let intervalHandle: number | null = null;
 let lastErrorMessage: string | null = null;
-const showAllMembers = ref(false);
 
 const isPolling = computed(() => isLoading.value || isRefreshing.value);
 
@@ -323,24 +148,21 @@ const totalCount = computed(() => discordData.value?.totalMembers ?? 0);
 
 const onlineCount = computed(() => discordData.value?.onlineMembers ?? 0);
 
-const filteredMembers = computed(() => {
+const filteredMembers = computed<DiscordMemberStatus[]>(() => {
   if (!discordData.value) {
     return [];
   }
 
-  let members = discordData.value.members;
+  let members = [...discordData.value.members];
 
-  // Filter bots if disabled
   if (!showBotsInput.value) {
     members = members.filter(member => !member.bot);
   }
 
-  // Filter offline members if disabled
   if (!showOfflineMembersInput.value) {
     members = members.filter(member => member.status !== 'offline');
   }
 
-  // Sort members
   members.sort((a, b) => {
     switch (sortByInput.value) {
       case 'username':
@@ -349,65 +171,31 @@ const filteredMembers = computed(() => {
         return a.displayName.localeCompare(b.displayName);
       case 'status':
       default:
-        const statusOrder = { online: 0, idle: 1, dnd: 2, offline: 3 };
-        return statusOrder[a.status] - statusOrder[b.status];
+        return compareStatus(a.status, b.status);
     }
   });
 
-  // Group by status if enabled
   if (groupByStatusInput.value) {
-    const statusOrder = { online: 0, idle: 1, dnd: 2, offline: 3 };
-    members.sort((a, b) => statusOrder[a.status] - statusOrder[b.status]);
+    members.sort((a, b) => compareStatus(a.status, b.status));
   }
 
   return members;
 });
 
-const displayedMembers = computed(() => {
-  const members = filteredMembers.value;
-  const maxToShow = showAllMembers.value ? members.length : maxMembersToShowInput.value;
-  return members.slice(0, maxToShow);
-});
+const statusCounts = computed<Record<DiscordPresenceStatus, number>>(() => {
+  const counts: Record<DiscordPresenceStatus, number> = {
+    online: 0,
+    idle: 0,
+    dnd: 0,
+    offline: 0,
+  };
 
-const hasMoreMembers = computed(() => {
-  return filteredMembers.value.length > maxMembersToShowInput.value;
-});
-
-const remainingMembersCount = computed(() => {
-  return filteredMembers.value.length - maxMembersToShowInput.value;
-});
-
-function getStatusCount(status: string): number {
-  return filteredMembers.value.filter(member => member.status === status).length;
-}
-
-function getStatusIcon(status: string): string {
-  switch (status) {
-    case 'online':
-      return 'mdi-circle';
-    case 'idle':
-      return 'mdi-minus-circle';
-    case 'dnd':
-      return 'mdi-do-not-disturb';
-    case 'offline':
-    default:
-      return 'mdi-circle-outline';
+  for (const member of filteredMembers.value) {
+    counts[member.status] += 1;
   }
-}
 
-function getStatusColor(status: string): string {
-  switch (status) {
-    case 'online':
-      return 'success';
-    case 'idle':
-      return 'warning';
-    case 'dnd':
-      return 'error';
-    case 'offline':
-    default:
-      return 'grey';
-  }
-}
+  return counts;
+});
 
 function clearIntervalHandle() {
   if (intervalHandle) {
@@ -512,181 +300,3 @@ watch(isStale, (value) => {
   }
 });
 </script>
-
-<style scoped>
-.discord-widget {
-  padding: 16px;
-}
-
-.discord-widget--compact {
-  padding: 0px;
-}
-
-.member-list-card {
-  overflow: hidden;
-}
-
-.member-list-card--compact {
-  overflow: visible;
-}
-
-.status-chip-group {
-  display: flex;
-}
-
-:deep(.status-chip-group .v-slide-group__container) {
-  width: 100%;
-}
-
-:deep(.status-chip-group .v-slide-group__content) {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-:deep(.status-chip-group .v-slide-group__content > *) {
-  margin: 0;
-}
-
-.member-list-container {
-  max-height: 400px;
-  overflow-y: auto;
-}
-
-.member-list-container--compact {
-  max-height: 300px;
-}
-
-.member-item {
-  display: flex;
-  align-items: center;
-  padding: 12px 16px;
-  border-bottom: 1px solid rgba(var(--v-theme-surface-variant), 0.12);
-  transition: background-color 0.2s ease-in-out;
-}
-
-.member-item--compact {
-  padding: 8px 12px;
-}
-
-.member-item:hover {
-  background-color: rgba(var(--v-theme-surface-variant), 0.04);
-}
-
-.member-item:last-child {
-  border-bottom: none;
-}
-
-.member-item.member-bot {
-  background-color: rgba(var(--v-theme-purple), 0.04);
-}
-
-.member-avatar {
-  margin-right: 12px;
-  flex-shrink: 0;
-}
-
-.member-item--compact .member-avatar {
-  margin-right: 8px;
-}
-
-.member-info {
-  flex-grow: 1;
-  min-width: 0;
-}
-
-.member-name {
-  font-weight: 500;
-  font-size: 0.875rem;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.member-name--compact {
-  font-size: 0.8rem;
-}
-
-.member-username {
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.member-status {
-  display: flex;
-  align-items: center;
-  flex-shrink: 0;
-  margin-left: 12px;
-}
-
-.member-item--compact .member-status {
-  margin-left: 8px;
-}
-
-/* Compact mode specific adjustments */
-.widget-summary--compact {
-  gap: 8px;
-}
-
-.widget-summary--compact .widget-summary__section {
-  flex: 1 1 auto;
-}
-
-/* Scrollbar styling */
-.member-list-container::-webkit-scrollbar,
-.member-list-container--compact::-webkit-scrollbar {
-  width: 6px;
-}
-
-.member-list-container::-webkit-scrollbar-track,
-.member-list-container--compact::-webkit-scrollbar-track {
-  background: rgba(var(--v-theme-surface-variant), 0.1);
-  border-radius: 3px;
-}
-
-.member-list-container::-webkit-scrollbar-thumb,
-.member-list-container--compact::-webkit-scrollbar-thumb {
-  background: rgba(var(--v-theme-on-surface-variant), 0.3);
-  border-radius: 3px;
-}
-
-.member-list-container::-webkit-scrollbar-thumb:hover,
-.member-list-container--compact::-webkit-scrollbar-thumb:hover {
-  background: rgba(var(--v-theme-on-surface-variant), 0.5);
-}
-
-@media (max-width: 960px) {
-  .member-item {
-    padding: 8px 12px;
-  }
-
-  .member-avatar {
-    margin-right: 8px;
-  }
-
-  .member-name {
-    font-size: 0.8rem;
-  }
-
-  .member-username {
-    font-size: 0.7rem;
-  }
-}
-
-@media (max-width: 640px) {
-  .member-item {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 8px;
-  }
-
-  .member-avatar {
-    margin-right: 0;
-  }
-
-  .member-status {
-    margin-left: 0;
-  }
-}
-</style>

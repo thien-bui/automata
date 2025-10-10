@@ -4,7 +4,7 @@ import { mount } from '@vue/test-utils';
 import { defineComponent, h, ref, computed } from 'vue';
 import DiscordWidget from '../DiscordWidget.vue';
 import { provideToasts } from '../../composables/useToasts';
-import type { DiscordResponse, DiscordMemberStatus } from '@automata/types';
+import type { DiscordResponse } from '@automata/types';
 
 const createSlotStub = (tag: string) =>
   defineComponent({
@@ -501,37 +501,6 @@ describe('DiscordWidget', () => {
     });
   });
 
-  describe('status helper functions', () => {
-    it('returns correct status icons', () => {
-      const wrapper = mountComponent();
-      const vm = wrapper.findComponent(DiscordWidget).vm as any;
-
-      expect(vm.getStatusIcon('online')).toBe('mdi-circle');
-      expect(vm.getStatusIcon('idle')).toBe('mdi-minus-circle');
-      expect(vm.getStatusIcon('dnd')).toBe('mdi-do-not-disturb');
-      expect(vm.getStatusIcon('offline')).toBe('mdi-circle-outline');
-    });
-
-    it('returns correct status colors', () => {
-      const wrapper = mountComponent();
-      const vm = wrapper.findComponent(DiscordWidget).vm as any;
-
-      expect(vm.getStatusColor('online')).toBe('success');
-      expect(vm.getStatusColor('idle')).toBe('warning');
-      expect(vm.getStatusColor('dnd')).toBe('error');
-      expect(vm.getStatusColor('offline')).toBe('grey');
-    });
-
-    it('calculates status counts correctly', () => {
-      const wrapper = mountComponent();
-      const vm = wrapper.findComponent(DiscordWidget).vm as any;
-
-      expect(vm.getStatusCount('online')).toBe(2);
-      expect(vm.getStatusCount('idle')).toBe(1);
-      expect(vm.getStatusCount('dnd')).toBe(1);
-      expect(vm.getStatusCount('offline')).toBe(1);
-    });
-  });
 
   describe('compact mode', () => {
     beforeEach(() => {
