@@ -11,12 +11,18 @@
     :is-stale="isStale"
     :polling-seconds="pollingSeconds"
     :cache-description="cacheDescription"
+    :compact="isCompact"
     @manual-refresh="handleManualRefresh"
     @hard-refresh="handleHardRefresh"
     @save-settings="handleSaveSettings"
   >
     <template #main-content>
-      <v-sheet class="pa-4" elevation="1" rounded>
+      <v-sheet
+        class="weather-summary-card"
+        :class="{ 'weather-summary-card--compact': isCompact }"
+        elevation="1"
+        rounded
+      >
         <div class="widget-summary">
           <div class="widget-summary__section">
             <div class="text-overline text-medium-emphasis">Current Temperature</div>
@@ -26,8 +32,24 @@
             <div class="text-body-1 text-medium-emphasis mt-1">
               {{ currentConditionDisplay }}
             </div>
+            <div
+              v-if="isCompact && (displaySettings.showHumidity || displaySettings.showWindSpeed)"
+              class="weather-summary__metrics text-body-2 text-medium-emphasis mt-2"
+            >
+              <span v-if="displaySettings.showHumidity">Humidity: {{ humidityDisplay }}</span>
+              <span
+                v-if="displaySettings.showHumidity && displaySettings.showWindSpeed"
+                aria-hidden="true"
+              >
+                •
+              </span>
+              <span v-if="displaySettings.showWindSpeed">Wind: {{ windDisplay }}</span>
+            </div>
           </div>
-          <div class="widget-summary__section widget-summary__section--end">
+          <div
+            v-if="!isCompact"
+            class="widget-summary__section widget-summary__section--end"
+          >
             <div v-if="displaySettings.showHumidity" class="text-body-2 text-medium-emphasis">Humidity: {{ humidityDisplay }}</div>
             <div v-if="displaySettings.showWindSpeed" class="text-body-2 text-medium-emphasis">Wind: {{ windDisplay }}</div>
             <div v-if="uiSettings.showCacheInfo && cacheDescription" class="text-caption text-medium-emphasis mt-1">
@@ -37,7 +59,7 @@
         </div>
       </v-sheet>
 
-      <div v-if="displaySettings.showHourlyForecast" class="mt-4">
+      <div v-if="!isCompact && displaySettings.showHourlyForecast" class="mt-4">
         <div class="text-subtitle-1 font-weight-medium mb-3">Hourly Forecast</div>
         <v-card elevation="2" rounded class="hourly-forecast-card">
           <div class="hourly-forecast-container">
@@ -97,6 +119,18 @@
         density="compact"
         @keyup.enter="updateRefreshInterval"
       />
+      <v-divider class="my-4" />
+      <v-switch
+        :model-value="isCompact"
+        label="Compact mode (all widgets)"
+        color="primary"
+        density="compact"
+        hide-details
+        @update:model-value="handleCompactSwitch"
+      />
+      <div class="text-caption text-medium-emphasis">
+        Applies the compact layout across every polling widget.
+      </div>
     </template>
   </PollingWidget>
 </template>
@@ -108,6 +142,7 @@ import PollingWidget from './PollingWidget.vue';
 import { useWeather, type WeatherFetchReason } from '../composables/useWeather';
 import { useToasts } from '../composables/useToasts';
 import { useWeatherConfig } from '../composables/useWeatherConfig';
+import { useUiPreferences } from '../composables/useUiPreferences';
 
 const {
   defaultLocation,
@@ -118,7 +153,43 @@ const {
   uiSettings,
   isValidRefreshInterval,
   clampRefreshInterval,
+  updateUISettings,
 } = useWeatherConfig();
+
+const {
+  isCompact: globalCompact,
+  setCompactMode,
+  didHydrateFromStorage,
+} = useUiPreferences();
+
+const isCompact = computed(() => globalCompact.value);
+const shouldSyncFromUiSettings = ref(!didHydrateFromStorage.value);
+
+watch(
+  () => uiSettings.value.compactMode,
+  (value) => {
+    if (!shouldSyncFromUiSettings.value) {
+      return;
+    }
+    if (value !== globalCompact.value) {
+      setCompactMode(value);
+    }
+  },
+  { immediate: true },
+);
+
+watch(
+  globalCompact,
+  (value) => {
+    if (uiSettings.value.compactMode !== value) {
+      updateUISettings({ compactMode: value });
+    }
+    if (!shouldSyncFromUiSettings.value) {
+      shouldSyncFromUiSettings.value = true;
+    }
+  },
+  { immediate: true },
+);
 
 const DEFAULT_HOURLY_PAST_HOURS = 3;
 const DEFAULT_HOURLY_FUTURE_HOURS = 7;
@@ -309,12 +380,16 @@ const displayedHourlyData = computed<HourlyWeatherData[]>(() => {
     return [];
   }
 
+  const settings = displaySettings.value;
+  if (isCompact.value || !settings.showHourlyForecast) {
+    return [];
+  }
+
   const hourlyData = weatherData.value.hourlyData;
   if (hourlyData.length === 0) {
     return [];
   }
 
-  const settings = displaySettings.value;
   const normalizeWindowValue = (value: number | undefined, fallback: number): number => {
     if (typeof value !== 'number' || Number.isNaN(value)) {
       return fallback;
@@ -441,6 +516,10 @@ function updateRefreshInterval() {
   setFreshnessSeconds(clampedValue);
 }
 
+function handleCompactSwitch(value: boolean | null) {
+  setCompactMode(Boolean(value));
+}
+
 function handleManualRefresh() {
   void triggerPolling('manual');
 }
@@ -531,6 +610,22 @@ defineExpose({
 .weather-widget {
   max-width: 980px;
   margin: 0 auto;
+}
+
+.weather-summary-card {
+  padding: 16px;
+  transition: padding 0.2s ease;
+}
+
+.weather-summary-card--compact {
+  padding: 12px;
+}
+
+.weather-summary__metrics {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 
 .gap-6 {

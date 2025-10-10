@@ -154,3 +154,7 @@ export interface DiscordConfig {
   displaySettings: DiscordDisplaySettings;
   uiSettings: DiscordUISettings;
 }
+
+export type UiPreferencesState = {
+  compactMode: boolean;
+};

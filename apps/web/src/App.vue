@@ -9,6 +9,15 @@
           icon
           color="secondary"
           variant="text"
+          :aria-label="compactButtonLabel"
+          @click="toggleCompactMode"
+        >
+          <v-icon :icon="compactIcon" />
+        </v-btn>
+        <v-btn
+          icon
+          color="secondary"
+          variant="text"
           :aria-label="themeButtonLabel"
           @click="toggleTheme"
         >
@@ -62,6 +71,7 @@ import ToastHost from './components/ToastHost.vue';
 import WeatherWidget from './components/WeatherWidget.vue';
 import { provideToasts } from './composables/useToasts';
 import { useColorTheme } from './composables/useColorTheme';
+import { useUiPreferences } from './composables/useUiPreferences';
 
 const pageTitle = 'Automata';
 const alertCount = ref(0);
@@ -77,6 +87,10 @@ const { messages: toastMessages, dismiss: dismissToast, push: pushToast } = prov
 const { isDark, toggleTheme } = useColorTheme();
 const themeIcon = computed(() => (isDark.value ? 'mdi-weather-sunny' : 'mdi-weather-night'));
 const themeButtonLabel = computed(() => (isDark.value ? 'Switch to light theme' : 'Switch to dark theme'));
+
+const { isCompact, toggleCompactMode } = useUiPreferences();
+const compactIcon = computed(() => (isCompact.value ? 'mdi-view-compact-outline' : 'mdi-view-day'));
+const compactButtonLabel = computed(() => (isCompact.value ? 'Switch to expanded widget layout' : 'Switch to compact widget layout'));
 
 const onAlertsAcknowledged = () => {
   alertCount.value = 0;

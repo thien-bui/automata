@@ -1,5 +1,9 @@
 <template>
-  <v-card class="polling-widget" elevation="4">
+  <v-card
+    class="polling-widget"
+    :class="{ 'polling-widget--compact': isCompact }"
+    elevation="4"
+  >
     <v-card-title class="widget-header">
       <div class="widget-header__titles">
         <div class="text-overline text-medium-emphasis">{{ overlineText }}</div>
@@ -14,11 +18,11 @@
 
       <div class="widget-header__actions">
         <slot name="title-actions" />
-        <v-btn 
-          icon="mdi-cog" 
-          variant="text" 
-          :aria-label="settingsAria" 
-          @click="drawerOpen = true" 
+        <v-btn
+          icon="mdi-cog"
+          variant="text"
+          :aria-label="settingsAria"
+          @click="drawerOpen = true"
         />
       </div>
     </v-card-title>
@@ -197,6 +201,11 @@ interface Props {
    * @example 'Cache hit • age 45s' or 'Live provider data'
    */
   cacheDescription?: string;
+  
+  /**
+   * Enables compact layout styling for the widget container
+   */
+  compact?: boolean;
 }
 
 /**
@@ -226,6 +235,7 @@ const props = withDefaults(defineProps<Props>(), {
   errorTitle: 'Error',
   settingsTitle: 'Settings',
   cacheDescription: '',
+  compact: false,
 });
 
 const emit = defineEmits<Emits>();
@@ -233,6 +243,7 @@ const emit = defineEmits<Emits>();
 const { push: pushToast } = useToasts();
 
 const drawerOpen = ref(false);
+const isCompact = computed(() => props.compact);
 
 const statusText = computed(() => {
   if (props.isPolling) {
@@ -292,6 +303,10 @@ function handleSaveSettings() {
   margin: 0 auto;
 }
 
+.polling-widget--compact {
+  max-width: 720px;
+}
+
 .widget-header {
   display: flex;
   align-items: center;
@@ -311,6 +326,14 @@ function handleSaveSettings() {
   margin-left: auto;
 }
 
+.polling-widget--compact .widget-header {
+  gap: 12px;
+}
+
+.polling-widget--compact .widget-header__actions {
+  gap: 4px;
+}
+
 :deep(.widget-summary__section.status-indicator) {
   display: flex;
   justify-content: flex-end;
@@ -325,12 +348,25 @@ function handleSaveSettings() {
   gap: 16px;
 }
 
+.polling-widget--compact :deep(.widget-summary) {
+  flex-direction: column;
+  gap: 12px;
+}
+
 :deep(.widget-summary__section) {
   flex: 1 1 240px;
 }
 
+.polling-widget--compact :deep(.widget-summary__section) {
+  flex: 1 1 auto;
+}
+
 :deep(.widget-summary__section--end) {
   text-align: end;
+}
+
+.polling-widget--compact :deep(.widget-summary__section--end) {
+  text-align: start;
 }
 
 @media (max-width: 960px) {
