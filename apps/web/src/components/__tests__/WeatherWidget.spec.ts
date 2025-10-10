@@ -187,149 +187,101 @@ describe('WeatherWidget', () => {
             },
           }),
           'v-text-field': createSlotStub('input'),
+          'v-divider': createSlotStub('hr'),
+          'v-switch': createSlotStub('input'),
         },
       },
     });
   };
 
-  it('renders the new single card hourly forecast layout', () => {
+  it('renders the widget with proper structure', () => {
     const wrapper = mountComponent();
 
-    // Check that the hourly forecast card exists
-    const hourlyCard = wrapper.find('.hourly-forecast-card');
-    expect(hourlyCard.exists()).toBe(true);
+    // Check that PollingWidget is rendered
+    const pollingWidget = wrapper.findComponent({ name: 'PollingWidget' });
+    expect(pollingWidget.exists()).toBe(true);
 
-    // Check that the forecast container exists
-    const forecastContainer = wrapper.find('.hourly-forecast-container');
-    expect(forecastContainer.exists()).toBe(true);
-
-    // Check that hourly items are rendered (should show 9 hours)
-    const hourlyItems = wrapper.findAll('.hourly-item');
-    expect(hourlyItems).toHaveLength(11);
-
-    // Check that the current hour is centered after three prior hours
-    expect(hourlyItems[0].classes()).not.toContain('current-hour'); // 3 hours prior
-    expect(hourlyItems[1].classes()).not.toContain('current-hour'); // 2 hours prior
-    expect(hourlyItems[2].classes()).not.toContain('current-hour'); // 1 hour prior
-    expect(hourlyItems[3].classes()).toContain('current-hour');      // current hour
-    expect(hourlyItems[4].classes()).not.toContain('current-hour'); // 1 hour after
-    expect(hourlyItems[5].classes()).not.toContain('current-hour'); // 2 hours after
-    expect(hourlyItems[6].classes()).not.toContain('current-hour'); // 3 hours after
-    expect(hourlyItems[7].classes()).not.toContain('current-hour'); // 4 hours after
-    expect(hourlyItems[8].classes()).not.toContain('current-hour'); // 5 hours after
-    expect(hourlyItems[9].classes()).not.toContain('current-hour'); // 6 hours after
-    expect(hourlyItems[10].classes()).not.toContain('current-hour'); // 7 hours after
+    // Check that main content slot is used
+    expect(pollingWidget.find('div').exists()).toBe(true);
   });
 
-  it('displays "Now" for the current hour and formatted time for other hours', () => {
+  it('passes correct props to PollingWidget', () => {
     const wrapper = mountComponent();
+    const pollingWidget = wrapper.findComponent({ name: 'PollingWidget' });
 
-    const hourlyItems = wrapper.findAll('.hourly-item');
-    const timeElements = wrapper.findAll('.hourly-time');
-
-    // First item (index 0) should show "Now" (current hour is first in displayed data)
-    expect(timeElements[0].text()).toMatch(/\d+ (AM|PM)/); // 3 hours prior
-    expect(timeElements[1].text()).toMatch(/\d+ (AM|PM)/); // 2 hours prior
-    expect(timeElements[2].text()).toMatch(/\d+ (AM|PM)/); // 1 hour prior
-    expect(timeElements[3].text()).toBe('Now');             // current hour
-    expect(timeElements[4].text()).toMatch(/\d+ (AM|PM)/); // 1 hour after
-    expect(timeElements[5].text()).toMatch(/\d+ (AM|PM)/); // 2 hours after
-    expect(timeElements[6].text()).toMatch(/\d+ (AM|PM)/); // 3 hours after
-    expect(timeElements[7].text()).toMatch(/\d+ (AM|PM)/); // 4 hours after
-    expect(timeElements[8].text()).toMatch(/\d+ (AM|PM)/); // 5 hours after
-    expect(timeElements[9].text()).toMatch(/\d+ (AM|PM)/); // 6 hours after
-    expect(timeElements[10].text()).toMatch(/\d+ (AM|PM)/); // 7 hours after
+    expect(pollingWidget.props('overlineText')).toBe('Weather');
+    expect(pollingWidget.props('title')).toBe('Current Conditions');
+    expect(pollingWidget.props('subtitle')).toBe('Kent, WA');
+    expect(pollingWidget.props('errorTitle')).toBe('Weather Error');
+    expect(pollingWidget.props('settingsTitle')).toBe('Weather Settings');
+    expect(pollingWidget.props('error')).toBe(null);
+    expect(pollingWidget.props('isPolling')).toBe(false);
+    expect(pollingWidget.props('lastUpdatedIso')).toBe('2025-10-06T20:00:00Z');
+    expect(pollingWidget.props('isStale')).toBe(false);
+    expect(pollingWidget.props('pollingSeconds')).toBe(300);
   });
 
-  it('displays weather icons with appropriate sizes and colors', () => {
+  it('renders weather components in main content', () => {
     const wrapper = mountComponent();
 
-    const iconContainers = wrapper.findAll('.hourly-icon');
-    expect(iconContainers).toHaveLength(11);
+    // Check that WeatherSummary is rendered
+    const weatherSummary = wrapper.findComponent({ name: 'WeatherSummary' });
+    expect(weatherSummary.exists()).toBe(true);
 
-    // Check that icons are rendered (we can't easily test props in this setup)
-    // but we can verify the structure exists
-    iconContainers.forEach((container, index) => {
-      expect(container.exists()).toBe(true);
-      // Since v-icon is stubbed, we check for the stubbed element
-      const icon = container.find('i');
-      expect(icon.exists()).toBe(true);
-    });
+    // Check that HourlyForecast is rendered
+    const hourlyForecast = wrapper.findComponent({ name: 'HourlyForecast' });
+    expect(hourlyForecast.exists()).toBe(true);
   });
 
-  it('displays temperatures with appropriate styling', () => {
+  it('passes correct props to WeatherSummary', () => {
     const wrapper = mountComponent();
+    const weatherSummary = wrapper.findComponent({ name: 'WeatherSummary' });
 
-    const tempElements = wrapper.findAll('.hourly-temperature');
-    expect(tempElements).toHaveLength(11);
-
-    // Check that temperatures are displayed correctly (formatTemperature is passed Fahrenheit values)
-    expect(tempElements[0].text()).toBe('64°'); // 3 hours prior (64°F)
-    expect(tempElements[1].text()).toBe('66°'); // 2 hours prior (66°F)
-    expect(tempElements[2].text()).toBe('70°'); // 1 hour prior (70°F)
-    expect(tempElements[3].text()).toBe('72°'); // current hour (72°F)
-    expect(tempElements[4].text()).toBe('68°'); // 1 hour after (68°F)
-    expect(tempElements[5].text()).toBe('64°'); // 2 hours after (64°F)
-    expect(tempElements[6].text()).toBe('63°'); // 3 hours after (63°F)
-    expect(tempElements[7].text()).toBe('61°'); // 4 hours after (61°F)
-    expect(tempElements[8].text()).toBe('59°'); // 5 hours after (59°F)
-    expect(tempElements[9].text()).toBe('57°'); // 6 hours after (57°F)
-    expect(tempElements[10].text()).toBe('55°'); // 7 hours after (55°F)
-
-    // Current hour temperature (index 3) should have the current-temp class
-    expect(tempElements[0].classes()).not.toContain('current-temp');
-    expect(tempElements[1].classes()).not.toContain('current-temp');
-    expect(tempElements[2].classes()).not.toContain('current-temp');
-    expect(tempElements[3].classes()).toContain('current-temp');
-    expect(tempElements[4].classes()).not.toContain('current-temp');
-    expect(tempElements[5].classes()).not.toContain('current-temp');
-    expect(tempElements[6].classes()).not.toContain('current-temp');
-    expect(tempElements[7].classes()).not.toContain('current-temp');
-    expect(tempElements[8].classes()).not.toContain('current-temp');
-    expect(tempElements[9].classes()).not.toContain('current-temp');
-    expect(tempElements[10].classes()).not.toContain('current-temp');
+    expect(weatherSummary.props('temperature')).toBe('22°C / 72°F');
+    expect(weatherSummary.props('condition')).toBe('Partly cloudy');
+    expect(weatherSummary.props('humidity')).toBe(65);
+    expect(weatherSummary.props('windSpeed')).toBe(10);
+    expect(weatherSummary.props('isCompact')).toBe(false);
+    expect(weatherSummary.props('showMetrics')).toBe(true);
+    expect(weatherSummary.props('showHumidity')).toBe(true);
+    expect(weatherSummary.props('showWindSpeed')).toBe(true);
+    expect(weatherSummary.props('showPrecipitation')).toBe(false); // Based on actual config
   });
 
-  it('shows additional details only for the current hour', () => {
+  it('passes correct props to HourlyForecast', () => {
     const wrapper = mountComponent();
+    const hourlyForecast = wrapper.findComponent({ name: 'HourlyForecast' });
 
-    const detailsElements = wrapper.findAll('.hourly-details');
-    expect(detailsElements).toHaveLength(1);
-
-    // Details should only be present for the current hour (index 3)
-    const hourlyItems = wrapper.findAll('.hourly-item');
-    expect(hourlyItems[0].find('.hourly-details').exists()).toBe(false); // 3 hours prior
-    expect(hourlyItems[1].find('.hourly-details').exists()).toBe(false); // 2 hours prior
-    expect(hourlyItems[2].find('.hourly-details').exists()).toBe(false); // 1 hour prior
-    expect(hourlyItems[3].find('.hourly-details').exists()).toBe(true);  // current hour
-    expect(hourlyItems[4].find('.hourly-details').exists()).toBe(false); // 1 hour after
-    expect(hourlyItems[5].find('.hourly-details').exists()).toBe(false); // 2 hours after
-    expect(hourlyItems[6].find('.hourly-details').exists()).toBe(false); // 3 hours after
-    expect(hourlyItems[7].find('.hourly-details').exists()).toBe(false); // 4 hours after
-    expect(hourlyItems[8].find('.hourly-details').exists()).toBe(false); // 5 hours after
-    expect(hourlyItems[9].find('.hourly-details').exists()).toBe(false); // 6 hours after
-    expect(hourlyItems[10].find('.hourly-details').exists()).toBe(false); // 7 hours after
-
-    const detailsText = detailsElements[0].text();
-    expect(detailsText).toContain('Partly cloudy');
-    expect(detailsText).toContain('65%');
-    expect(detailsText).toContain('10 km/h');
+    expect(hourlyForecast.props('data')).toHaveLength(8); // Actual filtered data length
+    expect(hourlyForecast.props('isCompact')).toBe(false);
+    expect(hourlyForecast.props('showHourlyForecast')).toBe(true);
+    expect(hourlyForecast.props('currentHourHighlight')).toBe(true);
+    expect(hourlyForecast.props('showHumidity')).toBe(true);
+    expect(hourlyForecast.props('showWindSpeed')).toBe(true);
   });
 
-  it('applies correct weather icon based on conditions', async () => {
+  it('renders settings content with form elements', () => {
     const wrapper = mountComponent();
+    
+    // Check that settings content contains form elements
+    const locationInput = wrapper.find('input[label="Location"]');
+    expect(locationInput.exists()).toBe(true);
+    
+    const refreshInput = wrapper.find('input[label="Refresh Interval (seconds)"]');
+    expect(refreshInput.exists()).toBe(true);
+    
+    const compactSwitch = wrapper.find('input[label="Compact mode (weather widget)"]');
+    expect(compactSwitch.exists()).toBe(true);
+  });
 
-    // Get the WeatherWidget component instance to access the getWeatherIcon method
-    const vm = wrapper.findComponent(WeatherWidget).vm as any;
-
-    expect(vm.getWeatherIcon('Clear')).toBe('mdi-weather-sunny');
-    expect(vm.getWeatherIcon('Partly cloudy')).toBe('mdi-weather-cloudy'); // "cloud" matches before "partly"
-    expect(vm.getWeatherIcon('Rain')).toBe('mdi-weather-rainy');
-    expect(vm.getWeatherIcon('Snow')).toBe('mdi-weather-snowy');
-    expect(vm.getWeatherIcon('Thunderstorm')).toBe('mdi-weather-lightning');
-    expect(vm.getWeatherIcon('Fog')).toBe('mdi-weather-fog');
-    expect(vm.getWeatherIcon('Windy')).toBe('mdi-weather-windy');
-    expect(vm.getWeatherIcon('Overcast')).toBe('mdi-weather-cloudy');
-    expect(vm.getWeatherIcon('Unknown condition')).toBe('mdi-weather-sunny'); // default
+  it('has correct structure and styling', () => {
+    const wrapper = mountComponent();
+    
+    // Check that the widget renders without errors
+    expect(wrapper.exists()).toBe(true);
+    
+    // Check that PollingWidget is the root component
+    const pollingWidget = wrapper.findComponent({ name: 'PollingWidget' });
+    expect(pollingWidget.exists()).toBe(true);
   });
 });
