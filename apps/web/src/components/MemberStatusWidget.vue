@@ -17,26 +17,36 @@
     @save-settings="handleSaveSettings"
   >
     <template #main-content>
-      <v-sheet class="pa-4" elevation="1" rounded>
-        <div class="widget-summary mb-4">
+      <v-sheet 
+        class="member-status-widget" 
+        :class="{ 'member-status-widget--compact': isCompact }"
+        elevation="1" 
+        rounded
+      >
+        <div class="widget-summary" :class="{ 'widget-summary--compact': isCompact }">
           <div class="widget-summary__section">
             <div class="text-overline text-medium-emphasis">Guild Overview</div>
-            <div class="text-h4 font-weight-medium" aria-live="polite">
+            <div class="text-h4 font-weight-medium" :class="{ 'text-h6': isCompact }" aria-live="polite">
               {{ onlineCount }} / {{ totalCount }}
             </div>
-            <div class="text-body-1 text-medium-emphasis mt-1">
+            <div class="text-body-1 text-medium-emphasis mt-1" :class="{ 'text-caption': isCompact }">
               Members Online
             </div>
           </div>
           <div class="widget-summary__section widget-summary__section--end">
-            <div class="text-body-2 text-medium-emphasis">Total Members: {{ totalCount }}</div>
-            <div class="text-body-2 text-medium-emphasis">Online: {{ onlineCount }}</div>
+            <div class="text-body-2 text-medium-emphasis" :class="{ 'text-caption': isCompact }">
+              Total: {{ totalCount }}
+            </div>
+            <div class="text-body-2 text-medium-emphasis" :class="{ 'text-caption': isCompact }">
+              Online: {{ onlineCount }}
+            </div>
             <div v-if="uiSettings.showCacheInfo && cacheDescription" class="text-caption text-medium-emphasis mt-1">
               {{ cacheDescription }}
             </div>
           </div>
         </div>
 
+        <!-- Status chips - hidden in compact mode -->
         <v-chip-group v-if="!isCompact" class="status-chip-group mb-3">
           <v-chip
             size="small"
@@ -74,26 +84,40 @@
         </v-chip-group>
       </v-sheet>
 
+      <!-- Member List - shown in both modes but with different styling -->
       <div class="mt-4">
-        <div class="text-subtitle-1 font-weight-medium mb-3">Member List</div>
-        <v-card elevation="2" rounded class="member-list-card">
-          <div class="member-list-container">
+        <div class="text-subtitle-1 font-weight-medium mb-3" :class="{ 'text-body-2': isCompact }">
+          Member List
+        </div>
+        <v-card 
+          elevation="2" 
+          rounded 
+          class="member-list-card"
+          :class="{ 'member-list-card--compact': isCompact }"
+        >
+          <div 
+            class="member-list-container"
+            :class="{ 'member-list-container--compact': isCompact }"
+          >
             <div
               v-for="member in displayedMembers"
               :key="member.id"
               class="member-item"
-              :class="{ 'member-bot': member.bot }"
+              :class="{ 
+                'member-bot': member.bot,
+                'member-item--compact': isCompact 
+              }"
             >
               <div class="member-avatar" v-if="displaySettings.showAvatars">
                 <v-avatar
                   :image="member.avatarUrl || undefined"
-                  :size="isCompact ? 24 : 32"
+                  :size="isCompact ? 20 : 32"
                 >
                   <v-icon v-if="!member.avatarUrl">mdi-account</v-icon>
                 </v-avatar>
               </div>
               <div class="member-info">
-                <div class="member-name">
+                <div class="member-name" :class="{ 'member-name--compact': isCompact }">
                   {{ member.displayName }}
                   <v-chip
                     v-if="member.bot"
@@ -105,7 +129,10 @@
                     BOT
                   </v-chip>
                 </div>
-                <div class="member-username text-caption text-medium-emphasis">
+                <div 
+                  class="member-username text-caption text-medium-emphasis"
+                  :class="{ 'd-none': isCompact }"
+                >
                   @{{ member.username }}
                 </div>
               </div>
@@ -113,14 +140,20 @@
                 <v-icon
                   :icon="getStatusIcon(member.status)"
                   :color="getStatusColor(member.status)"
-                  :size="isCompact ? 16 : 20"
+                  :size="isCompact ? 14 : 20"
                 />
-                <span class="ml-1 text-caption">{{ member.status }}</span>
+                <span 
+                  class="ml-1 text-caption"
+                  :class="{ 'd-none': isCompact }"
+                >
+                  {{ member.status }}
+                </span>
               </div>
             </div>
           </div>
           
-          <div v-if="hasMoreMembers" class="pa-3 text-center">
+          <!-- Show More/Less button - hidden in compact mode -->
+          <div v-if="hasMoreMembers && !isCompact" class="pa-3 text-center">
             <v-btn
               variant="text"
               size="small"
@@ -480,8 +513,20 @@ watch(isStale, (value) => {
 </script>
 
 <style scoped>
+.member-status-widget {
+  padding: 16px;
+}
+
+.member-status-widget--compact {
+  padding: 12px;
+}
+
 .member-list-card {
   overflow: hidden;
+}
+
+.member-list-card--compact {
+  overflow: visible;
 }
 
 .status-chip-group {
@@ -507,12 +552,20 @@ watch(isStale, (value) => {
   overflow-y: auto;
 }
 
+.member-list-container--compact {
+  max-height: 300px;
+}
+
 .member-item {
   display: flex;
   align-items: center;
   padding: 12px 16px;
   border-bottom: 1px solid rgba(var(--v-theme-surface-variant), 0.12);
   transition: background-color 0.2s ease-in-out;
+}
+
+.member-item--compact {
+  padding: 8px 12px;
 }
 
 .member-item:hover {
@@ -532,6 +585,10 @@ watch(isStale, (value) => {
   flex-shrink: 0;
 }
 
+.member-item--compact .member-avatar {
+  margin-right: 8px;
+}
+
 .member-info {
   flex-grow: 1;
   min-width: 0;
@@ -543,6 +600,10 @@ watch(isStale, (value) => {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.member-name--compact {
+  font-size: 0.8rem;
 }
 
 .member-username {
@@ -558,22 +619,39 @@ watch(isStale, (value) => {
   margin-left: 12px;
 }
 
+.member-item--compact .member-status {
+  margin-left: 8px;
+}
+
+/* Compact mode specific adjustments */
+.widget-summary--compact {
+  gap: 8px;
+}
+
+.widget-summary--compact .widget-summary__section {
+  flex: 1 1 auto;
+}
+
 /* Scrollbar styling */
-.member-list-container::-webkit-scrollbar {
+.member-list-container::-webkit-scrollbar,
+.member-list-container--compact::-webkit-scrollbar {
   width: 6px;
 }
 
-.member-list-container::-webkit-scrollbar-track {
+.member-list-container::-webkit-scrollbar-track,
+.member-list-container--compact::-webkit-scrollbar-track {
   background: rgba(var(--v-theme-surface-variant), 0.1);
   border-radius: 3px;
 }
 
-.member-list-container::-webkit-scrollbar-thumb {
+.member-list-container::-webkit-scrollbar-thumb,
+.member-list-container--compact::-webkit-scrollbar-thumb {
   background: rgba(var(--v-theme-on-surface-variant), 0.3);
   border-radius: 3px;
 }
 
-.member-list-container::-webkit-scrollbar-thumb:hover {
+.member-list-container::-webkit-scrollbar-thumb:hover,
+.member-list-container--compact::-webkit-scrollbar-thumb:hover {
   background: rgba(var(--v-theme-on-surface-variant), 0.5);
 }
 

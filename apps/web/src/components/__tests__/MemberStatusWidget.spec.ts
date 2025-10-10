@@ -114,9 +114,11 @@ vi.mock('../../composables/useToasts', () => ({
 }));
 
 // Mock the useUiPreferences composable
+const mockIsWidgetCompact = vi.fn(() => false); // Default to non-compact for tests
+
 vi.mock('../../composables/useUiPreferences', () => ({
   useUiPreferences: () => ({
-    isWidgetCompact: vi.fn(() => false) // Default to non-compact for tests
+    isWidgetCompact: mockIsWidgetCompact
   })
 }));
 
@@ -257,7 +259,7 @@ describe('MemberStatusWidget', () => {
       expect(wrapper.text()).toContain('Guild Overview');
       expect(wrapper.text()).toContain('25 / 100');
       expect(wrapper.text()).toContain('Members Online');
-      expect(wrapper.text()).toContain('Total Members: 100');
+      expect(wrapper.text()).toContain('Total: 100');
       expect(wrapper.text()).toContain('Online: 25');
     });
 
@@ -516,6 +518,149 @@ describe('MemberStatusWidget', () => {
       expect(vm.getStatusCount('idle')).toBe(1);
       expect(vm.getStatusCount('dnd')).toBe(1);
       expect(vm.getStatusCount('offline')).toBe(1);
+    });
+  });
+
+  describe('compact mode', () => {
+    beforeEach(() => {
+      mockIsWidgetCompact.mockReturnValue(false); // Reset to non-compact
+    });
+
+    it('hides status chips in compact mode', () => {
+      mockIsWidgetCompact.mockReturnValue(true);
+      const wrapper = mountComponent();
+
+      // The v-chip-group should be hidden in compact mode
+      // Since it's stubbed, we check that the conditional rendering is working
+      // by verifying the component structure rather than text content
+      const chipGroup = wrapper.find('.status-chip-group');
+      expect(chipGroup.exists()).toBe(false);
+    });
+
+    it('shows status chips in full mode', () => {
+      mockIsWidgetCompact.mockReturnValue(false);
+      const wrapper = mountComponent();
+
+      // Status chips should be visible in full mode
+      expect(wrapper.text()).toContain('Online: 2');
+      expect(wrapper.text()).toContain('Idle: 1');
+      expect(wrapper.text()).toContain('DND: 1');
+      expect(wrapper.text()).toContain('Offline: 1');
+    });
+
+    it('hides usernames in compact mode', () => {
+      mockIsWidgetCompact.mockReturnValue(true);
+      const wrapper = mountComponent();
+
+      // Check that the username element has the d-none class in compact mode
+      const usernameElements = wrapper.findAll('.member-username');
+      expect(usernameElements.length).toBeGreaterThan(0);
+      expect(usernameElements[0].classes()).toContain('d-none');
+    });
+
+    it('shows usernames in full mode', () => {
+      mockIsWidgetCompact.mockReturnValue(false);
+      const wrapper = mountComponent();
+
+      const memberItems = wrapper.findAll('.member-item');
+      const firstMember = memberItems[0];
+      
+      // Should show both display name and username
+      expect(firstMember.text()).toContain('User One');
+      expect(firstMember.text()).toContain('@user1');
+    });
+
+    it('hides status text in compact mode', () => {
+      mockIsWidgetCompact.mockReturnValue(true);
+      const wrapper = mountComponent();
+
+      // Check that the status text span has the d-none class in compact mode
+      const statusTextElements = wrapper.findAll('.member-status span');
+      expect(statusTextElements.length).toBeGreaterThan(0);
+      expect(statusTextElements[0].classes()).toContain('d-none');
+    });
+
+    it('shows status text in full mode', () => {
+      mockIsWidgetCompact.mockReturnValue(false);
+      const wrapper = mountComponent();
+
+      const memberItems = wrapper.findAll('.member-item');
+      const firstMember = memberItems[0];
+      
+      // Should show status text in full mode
+      expect(firstMember.text()).toContain('online');
+    });
+
+    it('hides "Show More" button in compact mode', async () => {
+      mockIsWidgetCompact.mockReturnValue(true);
+      
+      mockUseDiscordConfig.mockReturnValueOnce({
+        defaultRefreshSeconds: computed(() => 300),
+        minRefreshSeconds: computed(() => 60),
+        maxRefreshSeconds: computed(() => 3600),
+        displaySettings: computed(() => ({
+          showBots: false,
+          showOfflineMembers: true,
+          sortBy: 'status',
+          groupByStatus: true,
+          maxMembersToShow: 3,
+          showAvatars: true,
+          compactMode: false,
+        })),
+        uiSettings: computed(() => ({
+          compactMode: false,
+          showCacheInfo: true,
+          autoRefresh: true,
+        })),
+        isValidRefreshInterval: vi.fn((seconds: number) => seconds >= 60 && seconds <= 3600),
+        clampRefreshInterval: vi.fn((seconds: number) => Math.max(60, Math.min(3600, Math.round(seconds)))),
+        updateDisplaySettings: vi.fn(),
+        updateUISettings: vi.fn(),
+        resetToDefaults: vi.fn()
+      });
+
+      const wrapper = mountComponent();
+
+      // Should not show "Show More" button in compact mode
+      const showMoreButton = wrapper.find('button');
+      expect(showMoreButton.exists()).toBe(false);
+    });
+
+    it('applies compact CSS classes when in compact mode', () => {
+      mockIsWidgetCompact.mockReturnValue(true);
+      const wrapper = mountComponent();
+
+      // Should have compact CSS classes
+      expect(wrapper.find('.member-status-widget--compact').exists()).toBe(true);
+      expect(wrapper.find('.widget-summary--compact').exists()).toBe(true);
+      expect(wrapper.find('.member-list-card--compact').exists()).toBe(true);
+      expect(wrapper.find('.member-list-container--compact').exists()).toBe(true);
+      expect(wrapper.find('.member-item--compact').exists()).toBe(true);
+    });
+
+    it('does not apply compact CSS classes in full mode', () => {
+      mockIsWidgetCompact.mockReturnValue(false);
+      const wrapper = mountComponent();
+
+      // Should not have compact CSS classes
+      expect(wrapper.find('.member-status-widget--compact').exists()).toBe(false);
+      expect(wrapper.find('.widget-summary--compact').exists()).toBe(false);
+      expect(wrapper.find('.member-list-card--compact').exists()).toBe(false);
+      expect(wrapper.find('.member-list-container--compact').exists()).toBe(false);
+      expect(wrapper.find('.member-item--compact').exists()).toBe(false);
+    });
+
+    it('still shows member list in compact mode', () => {
+      mockIsWidgetCompact.mockReturnValue(true);
+      const wrapper = mountComponent();
+
+      const memberItems = wrapper.findAll('.member-item');
+      expect(memberItems).toHaveLength(5); // Should still show members
+
+      const firstMember = memberItems[0];
+      expect(firstMember.text()).toContain('User One');
+      // The bot indicator should not be visible since bots are filtered out by default
+      expect(firstMember.text()).not.toContain('BOT');
     });
   });
 

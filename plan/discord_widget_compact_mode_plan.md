@@ -1,40 +1,42 @@
 # Discord Widget Compact Mode Plan
 
 ## Objectives
-- Enable a compact rendering of the Discord member status widget that surfaces the critical data points identified in `plan/compact_datapoints.md`.
-- Align the widget with the global compact mode toggle so Discord visuals respond alongside Weather and Route.
-- Preserve the ability to inspect individual member details when expanded while keeping the compact experience lightweight.
+- Deliver a compact Discord member summary that highlights totals and status counts from `plan/compact_datapoints.md` without overwhelming the layout.
+- Respect the global/per-widget compact preference exposed by `useUiPreferences`, keeping Discord aligned with Weather and Route widget behavior.
+- Preserve access to detailed member information on demand while trimming default rendering cost and visual noise in compact mode.
 
 ## Current State Insights
-- `MemberStatusWidget.vue` already maintains a `displaySettings.compactMode` flag, but it is only configurable via the widget’s settings drawer.
-- The component renders chips, avatars, and the full member list even when `compactMode` is `true`; only avatar sizes and chip visibility change.
-- `useDiscordConfig` exposes both `displaySettings` and `uiSettings`, yet there is no shared store to sync with other widgets.
-- Polling chrome lacks awareness of compact styling; spacing adjustments must be coordinated with Weather/Route.
+- `MemberStatusWidget.vue` now calls `isWidgetCompact('member-status-widget')` and forwards the flag to `PollingWidget`, but the template still renders chips, avatars, and the full member grid even when compact.
+- `CompactModeControl` is present in the settings drawer, yet helper text does not clarify the relationship between global and per-widget overrides.
+- The member list is always filtered, sorted, and sliced before rendering, so compact mode still performs the full computation work even if we later hide the list.
+- Polling chrome receives the compact prop, but the widget lacks scoped styles and template guards to make use of the tighter spacing.
 
 ## Implementation Steps
-1. **Wire up the shared compact preference**
-   - Import the global composable (`useUiPreferences`) and derive `const isCompact = computed(() => globalCompact.value ?? displaySettings.value.compactMode)`.
-   - Update both `displaySettings` and `uiSettings` via `useDiscordConfig` helper methods when the global flag changes so persisted config matches the UI.
-   - Ensure the settings drawer reflects when the global setting is active (disable the checkbox or show a helper note).
-2. **Tighten compact data presentation**
-   - In compact mode, display only the guild name, total/online counts, and a concise status breakdown (e.g. inline badges rather than full chips).
-   - Replace the detailed member list with a trimmed view: show top N members or a collapsed summary (“View details” button) when compact is enabled.
-   - Hide avatars and secondary metadata to reduce vertical space; keep screen-reader labels for accessibility.
-3. **Introduce shared compact styling**
-   - Utilize the new `compact` prop on `PollingWidget` (from Weather plan) to reduce padding and typography.
-   - Add a scoped class (e.g. `.member-status--compact`) to adjust grid gaps, font sizes, and spacing for the summary counters.
-4. **Performance considerations**
-   - When compact, avoid computing or sorting the full member list if it will not be rendered; lazily evaluate when expanding to the full view.
-   - Ensure that toggling between compact and expanded modes does not trigger unnecessary re-fetches or watchers.
-5. **Extend global toggle exposure**
-   - Surface the shared compact toggle in a global toolbar/settings entry so Discord users can opt-in/out without opening the widget-specific drawer.
-   - Coordinate analytics or logging if required to understand usage of the new mode.
+1. **Gate non-essential UI**
+   - Skip rendering the status chip group, full member grid, and avatar decorations when `isCompact` is true; replace with a concise status summary (badge row or list) and optional “Expand details” control.
+   - Ensure the “Show More” toggle either disappears or opens a separate expanded view without conflicting with the compact layout.
+2. **Introduce compact-specific styling**
+   - Add a compact wrapper class (e.g. `member-status-widget--compact`) to trim padding, adjust typography, and keep the guild overview readable inside `polling-widget--compact`.
+   - Verify the summary section aligns vertically with the PollingWidget spacing and avoids empty gutters.
+3. **Optimize computed work**
+   - Short-circuit member sorting/filtering when the compact path avoids rendering the list, or lazily compute the list only when the user expands details.
+   - Ensure alerting/toast behavior and polling cadence remain unaffected by the new branching.
+4. **Clarify preference UX**
+   - Update `CompactModeControl` helper copy (or add supporting text near the control) to explain how global overrides interact with widget-specific choices for Discord.
+   - Consider surfacing the global compact toggle entry point if Discord is often the widget where users look for the control.
+5. **Hardening and accessibility**
+   - Reevaluate focus order after hiding interactive elements so the remaining controls remain keyboard-friendly.
+   - Confirm that screen reader announcements still expose online totals and status changes even when avatars and chips are hidden.
 
 ## Testing & Validation
-- Update `MemberStatusWidget` unit tests to assert that compact mode hides avatars/member list and only renders the minimal summary data.
-- Add coverage for the global composable to ensure Discord-specific watchers correctly propagate overrides.
-- Run `npm run build --workspace=@automata/web` to verify type safety after wiring the new store.
+- Extend `MemberStatusWidget` unit tests to cover compact mode: expect status chips/member list to be hidden, summary text to remain, and any expand controls to behave.
+- Add a test double to `useUiPreferences` in specs verifying that per-widget overrides flip between compact and full render paths.
+- Run `npm run build --workspace=@automata/web` to ensure the compact-mode refactor stays within TypeScript constraints.
 
 ## Open Questions
-- How should we handle “Show More” interactions when the global compact mode is active—should expanding temporarily disable compact mode for the widget? In compact mode, there is not show more option.
-- Do we need persistence (e.g. local storage) for display preferences per user, or is an in-memory toggle sufficient for now? In memory toggle.
+- Should compact mode offer a dedicated “Expand member details” action, or do we keep the full list inaccessible until the user disables compact?
+** Answer: Compact mode should show a list of members and their online status. This can be the same component currently being used in the detailed view.
+- Do we want to promote the status breakdown summary into a reusable composable/shared component for Weather/Route consistency?
+** Answer: Yes, break up the discord widget component to reduce complexity and promose reusability.
+- Is it acceptable to skip computing the member list when compact, even if analytics or other consumers rely on the filtered data downstream?
+** The member list and status needs to be available in compact mode.
