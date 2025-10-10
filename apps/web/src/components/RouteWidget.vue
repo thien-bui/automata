@@ -46,25 +46,45 @@
         </div>
       </v-sheet>
 
-      <MapPreview :mode="mode" :from="origin" :to="destination"/>
+      <!-- Map preview - hidden in compact mode but still available for nav mode switching -->
+      <MapPreview v-if="!isCompact" :mode="mode" :from="origin" :to="destination"/>
 
-      <v-alert
-        v-if="activeAlerts.length > 0"
-        type="warning"
-        variant="tonal"
-        class="mt-4"
-        elevation="1"
-        dismissible
-        border="start"
-        @click:close="acknowledgeAlerts"
-      >
-        <div class="text-subtitle-1 font-weight-medium">Route Alerts</div>
-        <ul class="mt-2 mb-0 ps-4">
-          <li v-for="alert in activeAlerts" :key="alert.id">
-            {{ alert.message }}
-          </li>
-        </ul>
-      </v-alert>
+      <!-- Alert display - detailed list in normal mode, compact icon in compact mode -->
+      <template v-if="activeAlerts.length > 0">
+        <v-alert
+          v-if="!isCompact"
+          type="warning"
+          variant="tonal"
+          class="mt-4"
+          elevation="1"
+          dismissible
+          border="start"
+          @click:close="acknowledgeAlerts"
+        >
+          <div class="text-subtitle-1 font-weight-medium">Route Alerts</div>
+          <ul class="mt-2 mb-0 ps-4">
+            <li v-for="alert in activeAlerts" :key="alert.id">
+              {{ alert.message }}
+            </li>
+          </ul>
+        </v-alert>
+        
+        <!-- Compact mode alert indicator -->
+        <div v-else class="mt-4 d-flex align-center gap-2">
+          <v-icon color="warning" icon="mdi-alert" size="small" />
+          <span class="text-body-2 text-medium-emphasis">
+            {{ activeAlerts.length }} alert{{ activeAlerts.length > 1 ? 's' : '' }}
+          </span>
+          <v-btn
+            variant="text"
+            size="x-small"
+            color="warning"
+            @click="acknowledgeAlerts"
+          >
+            Dismiss
+          </v-btn>
+        </div>
+      </template>
     </template>
 
     <template #status-extra>
@@ -449,12 +469,17 @@ watch(
       return;
     }
 
-    const message = `Travel time ${payload.durationMinutes.toFixed(1)} min exceeds threshold of ${threshold} min.`;
+    // Only construct detailed message if not in compact mode or if we need it for toasts
+    const needsDetailedMessage = !isCompact.value || lastAlertKey !== alertKey;
+    const message = needsDetailedMessage 
+      ? `Travel time ${payload.durationMinutes.toFixed(1)} min exceeds threshold of ${threshold} min.`
+      : '';
 
     if (acknowledgedAlertKey && acknowledgedAlertKey !== alertKey) {
       acknowledgedAlertKey = null;
     }
 
+    // In compact mode, we only need minimal alert data for the count
     activeAlerts.value = [
       {
         id: Date.now(),
@@ -465,7 +490,7 @@ watch(
 
     if (lastAlertKey !== alertKey) {
       pushToast({
-        text: message,
+        text: message || `Travel time exceeds threshold of ${threshold} min.`,
         variant: 'warning',
         timeout: 7000,
       });

@@ -109,6 +109,12 @@ vi.mock('../../composables/useAlertThreshold.ts', () => ({
   useAlertThreshold: () => getAlertThresholdState(),
 }));
 
+vi.mock('../../composables/useUiPreferences.ts', () => ({
+  useUiPreferences: () => ({
+    isWidgetCompact: () => false, // Always return false for tests to show MapPreview
+  }),
+}));
+
 import RouteWidget from '../RouteWidget.vue';
 import { MonitoringMode } from '../monitoringMode';
 import { provideToasts } from '../../composables/useToasts';
@@ -192,6 +198,12 @@ describe('RouteWidget', () => {
       global: {
         stubs: {
           MapPreview: MapPreviewStub,
+          CompactModeControl: defineComponent({
+            name: 'CompactModeControlStub',
+            setup() {
+              return () => h('div');
+            },
+          }),
           'v-card': createSlotStub('div'),
           'v-card-title': createSlotStub('div'),
           'v-card-text': createSlotStub('div'),
@@ -208,6 +220,42 @@ describe('RouteWidget', () => {
           'v-alert': createSlotStub('div'),
           'v-progress-circular': defineComponent({
             name: 'VProgressCircularStub',
+            setup() {
+              return () => h('div');
+            },
+          }),
+          'v-icon': defineComponent({
+            name: 'VIconStub',
+            setup() {
+              return () => h('i');
+            },
+          }),
+          'v-list-subheader': defineComponent({
+            name: 'VListSubheaderStub',
+            setup() {
+              return () => h('div');
+            },
+          }),
+          'v-slider': defineComponent({
+            name: 'VSliderStub',
+            setup() {
+              return () => h('input');
+            },
+          }),
+          'v-spacer': defineComponent({
+            name: 'VSpacerStub',
+            setup() {
+              return () => h('span');
+            },
+          }),
+          'v-card-actions': defineComponent({
+            name: 'VCardActionsStub',
+            setup() {
+              return () => h('div');
+            },
+          }),
+          'v-dialog': defineComponent({
+            name: 'VDialogStub',
             setup() {
               return () => h('div');
             },
