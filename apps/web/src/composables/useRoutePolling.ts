@@ -3,6 +3,7 @@ import { useRouteTime, type RouteFetchReason } from './useRouteTime';
 import { useAutoMode } from './useAutoMode';
 import { useToasts } from './useToasts';
 import { MonitoringMode } from '../components/monitoringMode';
+import { createAutoModeScheduler, type AutoModeScheduler } from '../utils/autoModeScheduler';
 
 interface UseRoutePollingOptions {
   from: string;
@@ -38,23 +39,12 @@ interface UseRoutePollingResult {
 }
 
 export function useRoutePolling(options: UseRoutePollingOptions): UseRoutePollingResult {
-  const {
-    resolveModeForDate: resolveAutoModeForDate,
-    getNextBoundary: getNextAutoModeBoundary,
-    getNavModeRefreshSeconds,
-  } = useAutoMode();
+  const { config: autoModeConfig, getNavModeRefreshSeconds } = useAutoMode();
 
   const { push: pushToast } = useToasts();
 
-  // Resolve auto mode functions
-  function resolveModeForDate(date: Date): MonitoringMode {
-    const autoMode = resolveAutoModeForDate(date);
-    return autoMode === 'Nav' ? MonitoringMode.Nav : MonitoringMode.Simple;
-  }
-
-  function nextAutoModeBoundary(from: Date): Date {
-    return getNextAutoModeBoundary(from);
-  }
+  // Cron scheduler for auto mode switching
+  let autoModeScheduler: AutoModeScheduler | null = null;
 
   // State
   const mode = ref<MonitoringMode>(options.initialMode);
@@ -88,7 +78,6 @@ export function useRoutePolling(options: UseRoutePollingOptions): UseRoutePollin
   const isVitestEnvironment = typeof globalThis !== 'undefined' && 'vi' in globalThis;
 
   let intervalHandle: number | null = null;
-  let autoSwitchHandle: number | null = null;
   let lastErrorMessage: string | null = null;
   let staleNotified = false;
 
@@ -108,33 +97,34 @@ export function useRoutePolling(options: UseRoutePollingOptions): UseRoutePollin
     }
   }
 
-  function clearAutoSwitchTimer(): void {
-    if (autoSwitchHandle) {
-      window.clearTimeout(autoSwitchHandle);
-      autoSwitchHandle = null;
+  function applyAutoMode(newMode: 'Simple' | 'Nav'): void {
+    const targetMode = newMode === 'Nav' ? MonitoringMode.Nav : MonitoringMode.Simple;
+    if (mode.value !== targetMode) {
+      mode.value = targetMode;
     }
   }
 
-  function applyAutoMode(now = new Date()): void {
-    const nextMode = resolveModeForDate(now);
-    if (mode.value !== nextMode) {
-      mode.value = nextMode;
+  function initializeAutoModeScheduler(): void {
+    if (autoModeScheduler) {
+      autoModeScheduler.destroy();
     }
+
+    autoModeScheduler = createAutoModeScheduler(
+      (newMode: 'Simple' | 'Nav') => {
+        applyAutoMode(newMode);
+      },
+      autoModeConfig.value,
+    );
+
+    autoModeScheduler.schedule();
+    autoModeScheduler.applyCurrentMode();
   }
 
-  function scheduleNextAutoMode(now = new Date()): void {
-    clearAutoSwitchTimer();
-    const boundary = nextAutoModeBoundary(now);
-    const delay = Math.max(boundary.getTime() - now.getTime(), 0);
-    autoSwitchHandle = window.setTimeout(() => {
-      const current = new Date();
-      applyAutoMode(current);
-      if (isVitestEnvironment) {
-        autoSwitchHandle = null;
-      } else {
-        scheduleNextAutoMode(current);
-      }
-    }, delay);
+  function destroyAutoModeScheduler(): void {
+    if (autoModeScheduler) {
+      autoModeScheduler.destroy();
+      autoModeScheduler = null;
+    }
   }
 
   async function triggerPolling(reason: RouteFetchReason, options: { forceRefresh?: boolean } = {}): Promise<void> {
@@ -233,11 +223,20 @@ export function useRoutePolling(options: UseRoutePollingOptions): UseRoutePollin
   );
 
   function initializePolling(): void {
-    const now = new Date();
-    applyAutoMode(now);
-    scheduleNextAutoMode(now);
+    initializeAutoModeScheduler();
     void triggerPolling('initial');
   }
+
+  // Watch for config changes and update scheduler
+  watch(
+    () => autoModeConfig.value,
+    () => {
+      if (autoModeScheduler) {
+        autoModeScheduler.updateConfig(autoModeConfig.value);
+      }
+    },
+    { deep: true },
+  );
 
   if (hasVueInstance) {
     onMounted(() => {
@@ -246,7 +245,7 @@ export function useRoutePolling(options: UseRoutePollingOptions): UseRoutePollin
 
     onBeforeUnmount(() => {
       clearIntervalHandle();
-      clearAutoSwitchTimer();
+      destroyAutoModeScheduler();
     });
   } else {
     initializePolling();

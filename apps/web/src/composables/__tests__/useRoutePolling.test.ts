@@ -1,8 +1,20 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { ref } from 'vue';
+import { ref, computed, type ComputedRef } from 'vue';
 import { useRoutePolling } from '../useRoutePolling';
 import { MonitoringMode } from '../../components/monitoringMode';
-import type { RouteTimeResponse } from '@automata/types';
+import type { AutoModeConfig, RouteTimeResponse } from '@automata/types';
+import type { useRouteTime } from '../useRouteTime';
+import type { useAutoMode } from '../useAutoMode';
+import type { Mock } from 'vitest';
+
+type UseRouteTimeResult = ReturnType<typeof useRouteTime>;
+type UseAutoModeReturn = ReturnType<typeof useAutoMode>;
+type AugmentedRouteTimeMock = UseRouteTimeResult & {
+  refresh: Mock<any[], Promise<void>>;
+  setMode: Mock<any[], void>;
+  setFreshnessSeconds: Mock<any[], void>;
+  setEndpoints: Mock<any[], void>;
+};
 
 // Mock dependencies
 vi.mock('../useRouteTime', () => ({
@@ -17,31 +29,112 @@ vi.mock('../useToasts', () => ({
   useToasts: vi.fn(),
 }));
 
-const mockRouteTime = {
-  data: ref<RouteTimeResponse | null>(null),
-  error: ref<string | null>(null),
-  isLoading: ref(false),
-  isRefreshing: ref(false),
-  isStale: ref(false),
-  lastUpdatedIso: ref<string | null>(null),
-  cacheAgeSeconds: ref<number | null>(null),
-  cacheHit: ref(false),
-  from: ref('Origin'),
-  to: ref('Destination'),
-  refresh: vi.fn(),
-  setMode: vi.fn(),
-  setFreshnessSeconds: vi.fn(),
+const createRouteTimeMock = (): AugmentedRouteTimeMock => {
+  const data = ref<RouteTimeResponse | null>(null);
+  const error = ref<string | null>(null);
+  const isLoading = ref(false);
+  const isRefreshing = ref(false);
+  const freshnessSeconds = ref(120);
+  const mode = ref<'driving' | 'walking' | 'transit'>('driving');
+  const from = ref('Origin');
+  const to = ref('Destination');
+  const lastUpdated = ref<string | null>(null);
+  const cacheAge = ref<number | null>(null);
+  const cacheHit = ref(false);
+  const stale = ref(false);
+  const refreshMock = vi.fn(async () => {});
+  const setModeMock = vi.fn();
+  const setEndpointsMock = vi.fn();
+  const setFreshnessSecondsMock = vi.fn();
+
+  return {
+    data,
+    error,
+    isLoading,
+    isRefreshing,
+    isStale: computed(() => stale.value),
+    lastUpdatedIso: computed(() => lastUpdated.value),
+    cacheAgeSeconds: computed(() => cacheAge.value),
+    cacheHit: computed(() => cacheHit.value),
+    freshnessSeconds,
+    mode,
+    from,
+    to,
+    refresh: refreshMock,
+    setMode: setModeMock,
+    setEndpoints: setEndpointsMock,
+    setFreshnessSeconds: setFreshnessSecondsMock,
+  };
 };
 
-const mockAutoMode = {
-  resolveModeForDate: vi.fn(),
-  getNextBoundary: vi.fn(),
-  getNavModeRefreshSeconds: vi.fn(() => 60),
-};
+const createDefaultAutoModeConfig = (): AutoModeConfig => ({
+  enabled: true,
+  timeWindows: [
+    {
+      name: 'morning-commute',
+      mode: 'Nav',
+      startTime: { hour: 8, minute: 30 },
+      endTime: { hour: 9, minute: 30 },
+      daysOfWeek: [1, 2, 3, 4, 5],
+      description: 'Morning commute window',
+    },
+  ],
+  defaultMode: 'Simple',
+  navModeRefreshSeconds: 60,
+});
 
-const mockToasts = {
+const createToastMock = () => ({
   push: vi.fn(),
+  messages: ref([]),
+  dismiss: vi.fn(),
+  clear: vi.fn(),
+});
+
+const isTimeWithinWindow = (date: Date, window: AutoModeConfig['timeWindows'][number]): boolean => {
+  const day = date.getDay();
+  if (!window.daysOfWeek.includes(day)) {
+    return false;
+  }
+
+  const currentMinutes = date.getHours() * 60 + date.getMinutes();
+  const startMinutes = window.startTime.hour * 60 + window.startTime.minute;
+  const endMinutes = window.endTime.hour * 60 + window.endTime.minute;
+
+  if (startMinutes > endMinutes) {
+    return currentMinutes >= startMinutes || currentMinutes < endMinutes;
+  }
+
+  return currentMinutes >= startMinutes && currentMinutes < endMinutes;
 };
+
+const createAutoModeMock = (): UseAutoModeReturn => {
+  const resolveModeForDate = vi.fn((date: Date) => {
+    const config = autoModeConfigRef.value;
+    if (!config.enabled) {
+      return config.defaultMode;
+    }
+
+    const activeWindow = config.timeWindows.find(window => isTimeWithinWindow(date, window));
+    return activeWindow ? activeWindow.mode : config.defaultMode;
+  });
+
+  const getNextBoundary = vi.fn((date: Date) => new Date(date.getTime() + 30 * 60 * 1000));
+
+  return {
+    config: computed(() => autoModeConfigRef.value),
+    isEnabled: computed(() => autoModeConfigRef.value.enabled),
+    resolveModeForDate,
+    getNextBoundary,
+    getNavModeRefreshSeconds: vi.fn(() => autoModeConfigRef.value.navModeRefreshSeconds),
+    updateConfig: vi.fn(),
+    resetConfig: vi.fn(),
+  } as unknown as UseAutoModeReturn;
+};
+
+let routeTimeMock: ReturnType<typeof createRouteTimeMock>;
+const autoModeConfigRef = ref<AutoModeConfig>(createDefaultAutoModeConfig());
+let autoModeMock: UseAutoModeReturn;
+let toastMock: ReturnType<typeof createToastMock>;
 
 describe('useRoutePolling', () => {
   beforeEach(async () => {
@@ -52,12 +145,15 @@ describe('useRoutePolling', () => {
     const autoModeModule = await import('../useAutoMode');
     const toastsModule = await import('../useToasts');
 
-    vi.mocked(routeTimeModule.useRouteTime).mockReturnValue(mockRouteTime);
-    vi.mocked(autoModeModule.useAutoMode).mockReturnValue(mockAutoMode);
-    vi.mocked(toastsModule.useToasts).mockReturnValue(mockToasts);
+    routeTimeMock = createRouteTimeMock();
+    toastMock = createToastMock();
+    autoModeConfigRef.value = createDefaultAutoModeConfig();
 
-    mockAutoMode.resolveModeForDate.mockReturnValue('Simple');
-    mockAutoMode.getNextBoundary.mockReturnValue(new Date(Date.now() + 3600000)); // 1 hour from now
+    autoModeMock = createAutoModeMock();
+
+    vi.mocked(routeTimeModule.useRouteTime).mockReturnValue(routeTimeMock);
+    vi.mocked(autoModeModule.useAutoMode).mockReturnValue(autoModeMock);
+    vi.mocked(toastsModule.useToasts).mockReturnValue(toastMock);
   });
 
   afterEach(() => {
@@ -92,9 +188,11 @@ describe('useRoutePolling', () => {
   });
 
   it('uses Nav mode refresh seconds when in Nav mode', () => {
-    mockAutoMode.getNavModeRefreshSeconds.mockReturnValue(30);
-    mockAutoMode.resolveModeForDate.mockReturnValue('Nav');
-    
+    autoModeConfigRef.value = {
+      ...autoModeConfigRef.value,
+      navModeRefreshSeconds: 30,
+    };
+
     const result = useRoutePolling({
       from: 'Origin',
       to: 'Destination',
@@ -113,7 +211,7 @@ describe('useRoutePolling', () => {
       initialRefreshInterval: 120,
     });
 
-    expect(mockRouteTime.refresh).toHaveBeenCalledWith({
+    expect(routeTimeMock.refresh).toHaveBeenCalledWith({
       background: false,
       reason: 'initial',
       forceRefresh: undefined,
@@ -121,11 +219,9 @@ describe('useRoutePolling', () => {
   });
 
   it('applies auto mode on mount', () => {
-    const testDate = new Date('2024-06-01T08:30:00Z');
+    const testDate = new Date(2024, 5, 3, 8, 45, 0, 0); // Monday 8:45 AM
     vi.setSystemTime(testDate);
-    
-    mockAutoMode.resolveModeForDate.mockReturnValue('Nav');
-    
+
     const result = useRoutePolling({
       from: 'Origin',
       to: 'Destination',
@@ -133,7 +229,6 @@ describe('useRoutePolling', () => {
       initialRefreshInterval: 120,
     });
 
-    expect(mockAutoMode.resolveModeForDate).toHaveBeenCalledWith(testDate);
     expect(result.mode.value).toBe(MonitoringMode.Nav);
   });
 
@@ -145,11 +240,11 @@ describe('useRoutePolling', () => {
       initialRefreshInterval: 60,
     });
 
-    expect(mockRouteTime.setFreshnessSeconds).toHaveBeenCalledWith(60);
+    expect(routeTimeMock.setFreshnessSeconds).toHaveBeenCalledWith(60);
 
     vi.advanceTimersByTime(60000); // 60 seconds
     
-    expect(mockRouteTime.refresh).toHaveBeenCalledWith({
+    expect(routeTimeMock.refresh).toHaveBeenCalledWith({
       background: true,
       reason: 'interval',
       forceRefresh: undefined,
@@ -165,15 +260,15 @@ describe('useRoutePolling', () => {
     });
 
     // Clear the initial call
-    mockRouteTime.refresh.mockClear();
+    routeTimeMock.refresh.mockClear();
 
     result.setMode(MonitoringMode.Nav);
     
     // Wait for the watcher to trigger
     await vi.runAllTimersAsync();
 
-    expect(mockRouteTime.setMode).toHaveBeenCalledWith('driving');
-    expect(mockRouteTime.refresh).toHaveBeenCalledWith({
+    expect(routeTimeMock.setMode).toHaveBeenCalledWith('driving');
+    expect(routeTimeMock.refresh).toHaveBeenCalledWith({
       background: true,
       reason: 'mode-change',
       forceRefresh: undefined,
@@ -188,17 +283,17 @@ describe('useRoutePolling', () => {
       initialRefreshInterval: 120,
     });
 
-    mockRouteTime.refresh.mockClear();
-    mockRouteTime.error.value = null;
+    routeTimeMock.refresh.mockClear();
+    routeTimeMock.error.value = null;
 
     await result.triggerPolling('manual');
 
-    expect(mockRouteTime.refresh).toHaveBeenCalledWith({
+    expect(routeTimeMock.refresh).toHaveBeenCalledWith({
       background: false,
       reason: 'manual',
       forceRefresh: undefined,
     });
-    expect(mockToasts.push).toHaveBeenCalledWith({
+    expect(toastMock.push).toHaveBeenCalledWith({
       text: 'Route data refreshed.',
       variant: 'success',
     });
@@ -212,24 +307,24 @@ describe('useRoutePolling', () => {
       initialRefreshInterval: 120,
     });
 
-    mockRouteTime.refresh.mockClear();
-    mockRouteTime.error.value = null;
+    routeTimeMock.refresh.mockClear();
+    routeTimeMock.error.value = null;
 
     await result.triggerPolling('hard-manual', { forceRefresh: true });
 
-    expect(mockRouteTime.refresh).toHaveBeenCalledWith({
+    expect(routeTimeMock.refresh).toHaveBeenCalledWith({
       background: false,
       reason: 'hard-manual',
       forceRefresh: true,
     });
-    expect(mockToasts.push).toHaveBeenCalledWith({
+    expect(toastMock.push).toHaveBeenCalledWith({
       text: 'Route data refreshed from provider.',
       variant: 'success',
     });
   });
 
   it('shows error toast when error occurs', () => {
-    mockRouteTime.error.value = 'Network error';
+    routeTimeMock.error.value = 'Network error';
 
     useRoutePolling({
       from: 'Origin',
@@ -239,16 +334,23 @@ describe('useRoutePolling', () => {
     });
 
     // Error toast should be shown via watcher
-    expect(mockToasts.push).toHaveBeenCalledWith({
+    expect(toastMock.push).toHaveBeenCalledWith({
       text: 'Network error',
       variant: 'error',
       timeout: 6000,
     });
   });
 
-  it('shows stale data toast when data is stale', () => {
-    mockRouteTime.data.value = createRouteData(30);
-    mockRouteTime.isStale.value = true;
+  it('shows stale data toast when data is stale', async () => {
+    // Create a new mock with stale data for this test
+    const staleMockRouteTime = {
+      ...routeTimeMock,
+      data: ref(createRouteData(30)),
+      isStale: computed(() => true),
+    } as UseRouteTimeResult;
+
+    const routeTimeModule = await import('../useRouteTime');
+    vi.mocked(routeTimeModule.useRouteTime).mockReturnValue(staleMockRouteTime);
 
     useRoutePolling({
       from: 'Origin',
@@ -257,21 +359,15 @@ describe('useRoutePolling', () => {
       initialRefreshInterval: 120,
     });
 
-    expect(mockToasts.push).toHaveBeenCalledWith({
+    expect(toastMock.push).toHaveBeenCalledWith({
       text: 'Showing cached route data while waiting for a fresh provider response.',
       variant: 'warning',
       timeout: 7000,
     });
   });
 
-  it('schedules auto mode switches', () => {
-    const now = new Date('2024-06-01T08:00:00Z');
-    const boundary = new Date('2024-06-01T08:30:00Z');
-    
-    vi.setSystemTime(now);
-    mockAutoMode.getNextBoundary.mockReturnValue(boundary);
-    mockAutoMode.resolveModeForDate.mockReturnValue('Nav');
-
+  it('schedules auto mode switches', async () => {
+    vi.setSystemTime(new Date(2024, 5, 3, 8, 0, 0, 0)); // Monday 8:00 AM
     useRoutePolling({
       from: 'Origin',
       to: 'Destination',
@@ -279,10 +375,17 @@ describe('useRoutePolling', () => {
       initialRefreshInterval: 120,
     });
 
-    // Fast forward to boundary
-    vi.advanceTimersByTime(boundary.getTime() - now.getTime());
+    routeTimeMock.refresh.mockClear();
 
-    expect(mockAutoMode.resolveModeForDate).toHaveBeenCalled();
+    // Fast forward 30 minutes to the start boundary
+    vi.advanceTimersByTime(30 * 60 * 1000);
+    await vi.runAllTimersAsync();
+
+    expect(routeTimeMock.refresh).toHaveBeenCalledWith({
+      background: true,
+      reason: 'mode-change',
+      forceRefresh: undefined,
+    });
   });
 
   it('updates refresh interval', () => {
@@ -299,7 +402,7 @@ describe('useRoutePolling', () => {
   });
 
   it('computes isPolling correctly', () => {
-    mockRouteTime.isLoading.value = true;
+    routeTimeMock.isLoading.value = true;
     
     const result = useRoutePolling({
       from: 'Origin',
@@ -310,20 +413,22 @@ describe('useRoutePolling', () => {
 
     expect(result.isPolling.value).toBe(true);
 
-    mockRouteTime.isLoading.value = false;
-    mockRouteTime.isRefreshing.value = true;
+    routeTimeMock.isLoading.value = false;
+    routeTimeMock.isRefreshing.value = true;
 
     expect(result.isPolling.value).toBe(true);
 
-    mockRouteTime.isRefreshing.value = false;
+    routeTimeMock.isRefreshing.value = false;
 
     expect(result.isPolling.value).toBe(false);
   });
 
   it('computes isNavMode correctly', () => {
-    mockAutoMode.resolveModeForDate.mockReturnValue('Nav');
-    mockAutoMode.getNavModeRefreshSeconds.mockReturnValue(60);
-    
+    autoModeConfigRef.value = {
+      ...autoModeConfigRef.value,
+      navModeRefreshSeconds: 60,
+    };
+
     const result = useRoutePolling({
       from: 'Origin',
       to: 'Destination',
@@ -334,27 +439,26 @@ describe('useRoutePolling', () => {
     expect(result.pollingSeconds.value).toBe(60); // Nav mode uses getNavModeRefreshSeconds
   });
 
-  it('cleans up timers on unmount', () => {
-    const clearIntervalSpy = vi.spyOn(window, 'clearInterval');
-    const clearTimeoutSpy = vi.spyOn(window, 'clearTimeout');
+  it('reapplies current mode when auto mode config changes', async () => {
+    vi.setSystemTime(new Date(2024, 5, 3, 8, 45, 0, 0)); // Monday 8:45 AM
 
-    // Create the composable to set up timers
-    useRoutePolling({
+    const result = useRoutePolling({
       from: 'Origin',
       to: 'Destination',
       initialMode: MonitoringMode.Simple,
       initialRefreshInterval: 120,
     });
 
-    // Advance timers to trigger cleanup
-    vi.advanceTimersByTime(1000);
+    expect(result.mode.value).toBe(MonitoringMode.Nav);
 
-    // The cleanup happens in onBeforeUnmount, which we can't directly test
-    // but we can verify that the timers are set up correctly
-    expect(clearIntervalSpy).not.toHaveBeenCalled();
-    expect(clearTimeoutSpy).not.toHaveBeenCalled();
+    autoModeConfigRef.value = {
+      ...autoModeConfigRef.value,
+      enabled: false,
+      timeWindows: [],
+    };
 
-    clearIntervalSpy.mockRestore();
-    clearTimeoutSpy.mockRestore();
+    await vi.runAllTimersAsync();
+
+    expect(result.mode.value).toBe(MonitoringMode.Simple);
   });
 });

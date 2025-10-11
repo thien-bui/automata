@@ -13,17 +13,17 @@
     "test:e2e:headed": "playwright test --headed"
   },
   "dependencies": {
-    "vue": "^3.4.31",
-    "vuetify": "^3.6.10",
+    "@googlemaps/js-api-loader": "^1.16.6",
     "@mdi/font": "^7.4.47",
-    "@googlemaps/js-api-loader": "^1.16.6"
+    "vue": "^3.4.31",
+    "vuetify": "^3.6.10"
   },
   "devDependencies": {
     "@playwright/test": "^1.47.1",
-    "@vue/test-utils": "^2.4.6",
     "@types/google.maps": "^3.55.8",
     "@types/node": "^20.14.9",
     "@vitejs/plugin-vue": "^5.1.1",
+    "@vue/test-utils": "^2.4.6",
     "jsdom": "^24.0.0",
     "sass": "^1.77.8",
     "vite": "^5.3.5",

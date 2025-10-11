@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { ref } from 'vue';
+import { computed, readonly, ref } from 'vue';
 import { useRouteAlerts } from '../useRouteAlerts';
-import type { RouteTimeResponse } from '@automata/types';
+import type { RouteTimeResponse, WidgetCompactMode } from '@automata/types';
 
 // Mock dependencies
 vi.mock('../useToasts', () => ({
@@ -14,15 +14,36 @@ vi.mock('../useUiPreferences', () => ({
 
 const mockToasts = {
   push: vi.fn(),
+  messages: ref([]),
+  dismiss: vi.fn(),
+  clear: vi.fn(),
 };
 
+const compactState = ref({
+  compactMode: false,
+  widgetCompactModes: {},
+});
+
 const mockUiPreferences = {
-  isWidgetCompact: vi.fn(() => false),
+  state: readonly(compactState),
+  isCompact: computed(() => compactState.value.compactMode),
+  setCompactMode: vi.fn(),
+  toggleCompactMode: vi.fn(),
+  resetPreferences: vi.fn(),
+  getWidgetCompactMode: vi.fn((): WidgetCompactMode => 'use-global'),
+  setWidgetCompactMode: vi.fn(),
+  isWidgetCompact: vi.fn((_widgetName: string) => false),
+  didHydrateFromStorage: computed(() => true),
 };
 
 describe('useRouteAlerts', () => {
   beforeEach(async () => {
     vi.clearAllMocks();
+    compactState.value = {
+      compactMode: false,
+      widgetCompactModes: {},
+    };
+    mockUiPreferences.isWidgetCompact.mockReturnValue(false);
 
     const toastsModule = await import('../useToasts');
     const uiPreferencesModule = await import('../useUiPreferences');

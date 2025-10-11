@@ -1,6 +1,6 @@
 import { mount } from '@vue/test-utils';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { computed, defineComponent, h, nextTick, ref } from 'vue';
+import { computed, defineComponent, h, nextTick, readonly, ref } from 'vue';
 import RouteWidget from '../RouteWidget.vue';
 import { MonitoringMode } from '../monitoringMode';
 import { provideToasts } from '../../composables/useToasts';
@@ -74,7 +74,9 @@ vi.mock('../../composables/useRoutePolling', () => ({
 const useRouteAlertsMock = vi.hoisted(() =>
   vi.fn(() => ({
     activeAlerts: ref([{ id: 1, message: 'Alert' }]),
-    acknowledgeAlerts: vi.fn(),
+    acknowledgeAlerts: vi.fn(() => {
+      /* noop by default */
+    }),
     emitAlertCount: vi.fn(),
   })),
 );
@@ -91,9 +93,41 @@ vi.mock('../../composables/useAlertThreshold', () => ({
   }),
 }));
 
-const useUiPreferencesMock = vi.hoisted(() => vi.fn(() => ({
-  isWidgetCompact: () => false,
-})));
+function createUiPreferencesMock(compact = false) {
+  const stateRef = ref({
+    compactMode: compact,
+    widgetCompactModes: {},
+  });
+
+  return {
+    state: readonly(stateRef),
+    isCompact: computed(() => stateRef.value.compactMode),
+    setCompactMode: vi.fn((value: boolean) => {
+      stateRef.value = {
+        ...stateRef.value,
+        compactMode: value,
+      };
+    }),
+    toggleCompactMode: vi.fn(() => {
+      stateRef.value = {
+        ...stateRef.value,
+        compactMode: !stateRef.value.compactMode,
+      };
+    }),
+    resetPreferences: vi.fn(() => {
+      stateRef.value = {
+        compactMode: compact,
+        widgetCompactModes: {},
+      };
+    }),
+    getWidgetCompactMode: vi.fn(() => 'use-global'),
+    setWidgetCompactMode: vi.fn(),
+    isWidgetCompact: vi.fn((_widgetName: string) => compact),
+    didHydrateFromStorage: computed(() => true),
+  };
+}
+
+const useUiPreferencesMock = vi.hoisted(() => vi.fn(() => createUiPreferencesMock(false)));
 
 vi.mock('../../composables/useUiPreferences', () => ({
   useUiPreferences: useUiPreferencesMock,
@@ -115,20 +149,29 @@ function createMockRouteData(): RouteTimeResponse {
 }
 
 function createRoutePollingState() {
-  const modeRef = ref(MonitoringMode.Simple);
-  const refreshIntervalRef = ref(120);
-  const pollingSecondsRef = ref(120);
+  const modeRef = ref<MonitoringMode>(MonitoringMode.Simple);
+  const refreshIntervalRef = ref<number>(120);
+  const pollingSecondsRef = ref<number>(120);
+  const dataRef = ref<RouteTimeResponse | null>(createMockRouteData());
+  const errorRef = ref<string | null>(null);
+  const isPollingRef = ref(false);
+  const isStaleRef = ref(false);
+  const lastUpdatedIsoRef = ref<string | null>('2024-06-01T12:00:00Z');
+  const cacheAgeSecondsRef = ref<number | null>(0);
+  const cacheHitRef = ref(false);
+  const fromRef = ref('Origin');
+  const toRef = ref('Destination');
 
   return {
-    data: ref(createMockRouteData()),
-    error: ref(null),
-    isPolling: ref(false),
-    isStale: ref(false),
-    lastUpdatedIso: ref('2024-06-01T12:00:00Z'),
-    cacheAgeSeconds: ref(0),
-    cacheHit: ref(false),
-    from: ref('Origin'),
-    to: ref('Destination'),
+    data: dataRef,
+    error: errorRef,
+    isPolling: isPollingRef,
+    isStale: isStaleRef,
+    lastUpdatedIso: lastUpdatedIsoRef,
+    cacheAgeSeconds: cacheAgeSecondsRef,
+    cacheHit: cacheHitRef,
+    from: fromRef,
+    to: toRef,
     mode: modeRef,
     refreshInterval: refreshIntervalRef,
     pollingSeconds: pollingSecondsRef,
@@ -183,16 +226,14 @@ describe('RouteWidget Integration Tests', () => {
     vi.setSystemTime(baseDate);
 
     useRoutePollingMock.mockImplementation(createRoutePollingState);
-    useUiPreferencesMock.mockReturnValue({
-      isWidgetCompact: () => false,
-    });
+    useUiPreferencesMock.mockReturnValue(createUiPreferencesMock(false));
     useRouteAlertsMock.mockImplementation(() => {
       const alertsRef = ref([{ id: 1, message: 'Alert' }]);
       return {
         activeAlerts: alertsRef,
-        acknowledgeAlerts: () => {
+        acknowledgeAlerts: vi.fn(() => {
           alertsRef.value = [];
-        },
+        }),
         emitAlertCount: vi.fn(),
       };
     });
@@ -437,9 +478,7 @@ describe('RouteWidget Integration Tests', () => {
 
   it('handles compact mode correctly', async () => {
     // Mock compact mode
-    useUiPreferencesMock.mockReturnValue({
-      isWidgetCompact: () => true,
-    });
+    useUiPreferencesMock.mockReturnValue(createUiPreferencesMock(true));
 
     const wrapper = mountComponent();
     await flushPendingUpdates();
@@ -452,12 +491,12 @@ describe('RouteWidget Integration Tests', () => {
   it('handles error states gracefully', async () => {
     // Mock error state
     useRoutePollingMock.mockReturnValue({
-      data: ref(null),
-      error: ref('Network error'),
+      data: ref<RouteTimeResponse | null>(null),
+      error: ref<string | null>('Network error'),
       isPolling: ref(false),
       isStale: ref(false),
-      lastUpdatedIso: ref(null),
-      cacheAgeSeconds: ref(null),
+      lastUpdatedIso: ref<string | null>(null),
+      cacheAgeSeconds: ref<number | null>(null),
       cacheHit: ref(false),
       from: ref('Origin'),
       to: ref('Destination'),
