@@ -1,6 +1,6 @@
 <template>
   <PollingWidget
-    overline-text="Monitoring"
+    :overline-text="isNavMode ? '' : 'Monitoring'"
     :title="currentModeLabel"
     :subtitle="`${originLabel} → ${destinationLabel}`"
     error-title="Route Error"
