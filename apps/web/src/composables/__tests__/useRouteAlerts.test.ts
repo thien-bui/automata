@@ -21,14 +21,14 @@ const mockUiPreferences = {
 };
 
 describe('useRouteAlerts', () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     vi.clearAllMocks();
-    
-    const { useToasts } = require('../useToasts');
-    const { useUiPreferences } = require('../useUiPreferences');
-    
-    useToasts.mockReturnValue(mockToasts);
-    useUiPreferences.mockReturnValue(mockUiPreferences);
+
+    const toastsModule = await import('../useToasts');
+    const uiPreferencesModule = await import('../useUiPreferences');
+
+    vi.mocked(toastsModule.useToasts).mockReturnValue(mockToasts);
+    vi.mocked(uiPreferencesModule.useUiPreferences).mockReturnValue(mockUiPreferences);
   });
 
   const createRouteData = (durationMinutes: number): RouteTimeResponse => ({

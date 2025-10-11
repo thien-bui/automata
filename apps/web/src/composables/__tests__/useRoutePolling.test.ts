@@ -44,18 +44,18 @@ const mockToasts = {
 };
 
 describe('useRoutePolling', () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     vi.useFakeTimers();
     vi.clearAllMocks();
-    
-    const { useRouteTime } = require('../useRouteTime');
-    const { useAutoMode } = require('../useAutoMode');
-    const { useToasts } = require('../useToasts');
-    
-    useRouteTime.mockReturnValue(mockRouteTime);
-    useAutoMode.mockReturnValue(mockAutoMode);
-    useToasts.mockReturnValue(mockToasts);
-    
+
+    const routeTimeModule = await import('../useRouteTime');
+    const autoModeModule = await import('../useAutoMode');
+    const toastsModule = await import('../useToasts');
+
+    vi.mocked(routeTimeModule.useRouteTime).mockReturnValue(mockRouteTime);
+    vi.mocked(autoModeModule.useAutoMode).mockReturnValue(mockAutoMode);
+    vi.mocked(toastsModule.useToasts).mockReturnValue(mockToasts);
+
     mockAutoMode.resolveModeForDate.mockReturnValue('Simple');
     mockAutoMode.getNextBoundary.mockReturnValue(new Date(Date.now() + 3600000)); // 1 hour from now
   });
@@ -93,6 +93,7 @@ describe('useRoutePolling', () => {
 
   it('uses Nav mode refresh seconds when in Nav mode', () => {
     mockAutoMode.getNavModeRefreshSeconds.mockReturnValue(30);
+    mockAutoMode.resolveModeForDate.mockReturnValue('Nav');
     
     const result = useRoutePolling({
       from: 'Origin',
@@ -320,6 +321,9 @@ describe('useRoutePolling', () => {
   });
 
   it('computes isNavMode correctly', () => {
+    mockAutoMode.resolveModeForDate.mockReturnValue('Nav');
+    mockAutoMode.getNavModeRefreshSeconds.mockReturnValue(60);
+    
     const result = useRoutePolling({
       from: 'Origin',
       to: 'Destination',

@@ -1,5 +1,6 @@
 import { mount } from '@vue/test-utils';
 import { describe, it, expect, vi } from 'vitest';
+import { defineComponent, h } from 'vue';
 import RouteAlerts from '../RouteAlerts.vue';
 
 interface RouteAlert {
@@ -9,10 +10,30 @@ interface RouteAlert {
 
 const createAlert = (id: number, message: string): RouteAlert => ({ id, message });
 
-const createSlotStub = (tag: string) => ({
-  name: `${tag}-slot-stub`,
-  template: `<div><slot /></div>`,
-});
+interface StubOptions {
+  props?: string[];
+  emits?: string[];
+}
+
+const createSlotStub = (name: string, tag: string, options: StubOptions = {}) =>
+  defineComponent({
+    name,
+    props: options.props ?? [],
+    emits: options.emits ?? [],
+    setup(_props, { attrs, slots, emit }) {
+      const data: Record<string, unknown> = { ...attrs };
+
+      if (options.emits?.includes('click')) {
+        data.onClick = (event: Event) => emit('click', event);
+      }
+
+      if (options.emits?.includes('click:close')) {
+        data['onClick:close'] = (event: Event) => emit('click:close', event);
+      }
+
+      return () => h(tag, data, slots.default?.());
+    },
+  });
 
 describe('RouteAlerts', () => {
   const mountComponent = (props: Partial<{
@@ -28,9 +49,9 @@ describe('RouteAlerts', () => {
       props: { ...defaultProps, ...props },
       global: {
         stubs: {
-          'v-alert': createSlotStub('div'),
-          'v-icon': createSlotStub('i'),
-          'v-btn': createSlotStub('button'),
+          'v-alert': createSlotStub('VAlertStub', 'div', { emits: ['click:close'] }),
+          'v-icon': createSlotStub('VIconStub', 'i', { props: ['color', 'icon', 'size'] }),
+          'v-btn': createSlotStub('VBtnStub', 'button', { props: ['variant', 'size', 'color'], emits: ['click'] }),
         },
       },
     });
@@ -92,7 +113,7 @@ describe('RouteAlerts', () => {
     const alerts = [createAlert(1, 'Traffic delay')];
     const wrapper = mountComponent({ alerts, compact: true });
     
-    const dismissButton = wrapper.find('button');
+    const dismissButton = wrapper.findComponent({ name: 'VBtnStub' });
     await dismissButton.trigger('click');
     
     expect(wrapper.emitted('acknowledge-alerts')).toBeTruthy();

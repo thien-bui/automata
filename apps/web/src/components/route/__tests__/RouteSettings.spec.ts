@@ -1,12 +1,29 @@
 import { mount } from '@vue/test-utils';
 import { describe, it, expect, vi } from 'vitest';
+import { defineComponent, h } from 'vue';
 import RouteSettings from '../RouteSettings.vue';
 import { MonitoringMode } from '../../monitoringMode';
 
-const createSlotStub = (tag: string) => ({
-  name: `${tag}-slot-stub`,
-  template: `<div><slot /></div>`,
-});
+interface StubOptions {
+  props?: string[];
+  emits?: string[];
+}
+
+const createSlotStub = (name: string, tag: string, options: StubOptions = {}) =>
+  defineComponent({
+    name,
+    props: options.props ?? [],
+    emits: options.emits ?? [],
+    setup(_props, { attrs, slots, emit }) {
+      const data: Record<string, unknown> = { ...attrs };
+
+      if (options.emits?.includes('click')) {
+        data.onClick = (event: Event) => emit('click', event);
+      }
+
+      return () => h(tag, data, slots.default?.());
+    },
+  });
 
 describe('RouteSettings', () => {
   const mountComponent = (props: Partial<{
@@ -26,11 +43,19 @@ describe('RouteSettings', () => {
       props: { ...defaultProps, ...props },
       global: {
         stubs: {
-          'v-list-subheader': createSlotStub('div'),
-          'v-slider': createSlotStub('input'),
-          'v-btn': createSlotStub('button'),
-          'v-divider': createSlotStub('hr'),
-          'CompactModeControl': createSlotStub('div'),
+          'v-list-subheader': createSlotStub('VListSubheaderStub', 'div'),
+          'v-slider': createSlotStub('VSliderStub', 'input', {
+            props: ['modelValue', 'min', 'max', 'step', 'thumbLabel', 'color', 'ariaLabel'],
+            emits: ['update:modelValue'],
+          }),
+          'v-btn': createSlotStub('VBtnStub', 'button', {
+            props: ['size', 'variant'],
+            emits: ['click'],
+          }),
+          'v-divider': createSlotStub('VDividerStub', 'hr'),
+          CompactModeControl: createSlotStub('CompactModeControl', 'div', {
+            props: ['widgetName'],
+          }),
         },
       },
     });
@@ -75,11 +100,11 @@ describe('RouteSettings', () => {
     
     const slider = wrapper.findAllComponents({ name: 'VSliderStub' })[0];
     expect(slider.exists()).toBe(true);
-    expect(slider.attributes('model-value')).toBe('180');
-    expect(slider.attributes('min')).toBe('15');
-    expect(slider.attributes('max')).toBe('300');
-    expect(slider.attributes('step')).toBe('15');
-    expect(slider.attributes('color')).toBe('secondary');
+    expect(slider.props('modelValue')).toBe(180);
+    expect(slider.props('min')).toBe(15);
+    expect(slider.props('max')).toBe(300);
+    expect(slider.props('step')).toBe(15);
+    expect(slider.props('color')).toBe('secondary');
   });
 
   it('renders threshold slider with correct value', () => {
@@ -87,11 +112,11 @@ describe('RouteSettings', () => {
     
     const slider = wrapper.findAllComponents({ name: 'VSliderStub' })[1];
     expect(slider.exists()).toBe(true);
-    expect(slider.attributes('model-value')).toBe('60');
-    expect(slider.attributes('min')).toBe('5');
-    expect(slider.attributes('max')).toBe('180');
-    expect(slider.attributes('step')).toBe('5');
-    expect(slider.attributes('color')).toBe('secondary');
+    expect(slider.props('modelValue')).toBe(60);
+    expect(slider.props('min')).toBe(5);
+    expect(slider.props('max')).toBe(180);
+    expect(slider.props('step')).toBe(5);
+    expect(slider.props('color')).toBe('secondary');
   });
 
   it('emits update:mode when RouteModeToggle changes', async () => {
@@ -133,8 +158,9 @@ describe('RouteSettings', () => {
   it('emits reset-threshold when reset button is clicked', async () => {
     const wrapper = mountComponent();
     
-    const resetButton = wrapper.find('button');
-    await resetButton.trigger('click');
+    const buttons = wrapper.findAllComponents({ name: 'VBtnStub' });
+    const resetButton = buttons[buttons.length - 1];
+    await resetButton.vm.$emit('click');
     
     expect(wrapper.emitted('reset-threshold')).toBeTruthy();
     expect(wrapper.emitted('reset-threshold')).toHaveLength(1);
@@ -145,7 +171,7 @@ describe('RouteSettings', () => {
     
     const compactControl = wrapper.findComponent({ name: 'CompactModeControl' });
     expect(compactControl.exists()).toBe(true);
-    expect(compactControl.props('widget-name')).toBe('route-widget');
+    expect(compactControl.props('widgetName')).toBe('route-widget');
   });
 
   it('displays correct polling interval text', () => {
@@ -187,10 +213,11 @@ describe('RouteSettings', () => {
   it('has reset button with correct text', () => {
     const wrapper = mountComponent();
     
-    const resetButton = wrapper.find('button');
+    const buttons = wrapper.findAllComponents({ name: 'VBtnStub' });
+    const resetButton = buttons[buttons.length - 1];
     expect(resetButton.exists()).toBe(true);
-    expect(resetButton.attributes('variant')).toBe('text');
-    expect(resetButton.attributes('size')).toBe('small');
+    expect(resetButton.props('variant')).toBe('text');
+    expect(resetButton.props('size')).toBe('small');
   });
 
   it('renders divider before CompactModeControl', () => {

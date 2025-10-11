@@ -96,6 +96,7 @@ This is a TypeScript monorepo with:
 ### Unit Tests (Vitest)
 - Favor deterministic Vitest unit tests
 - Mock network and Redis dependencies with lightweight adapters
+- Mount real components and mock only fragile externals; stub children wholly only when their behavior is irrelevant to the parent test
 - Seed fixture data via helper factories under `test/` directories
 - Clean up with `beforeEach/afterEach` hooks
 

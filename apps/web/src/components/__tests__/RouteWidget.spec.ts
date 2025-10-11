@@ -35,11 +35,17 @@ vi.mock('../route/index', () => ({
     props: ['modelValue', 'density', 'ariaLabel'],
     emits: ['update:modelValue'],
     setup(props, { emit }) {
-      return () => h('button', {
-        onClick: () => emit('update:modelValue', 
-          props.modelValue === MonitoringMode.Simple ? MonitoringMode.Nav : MonitoringMode.Simple
-        )
-      }, props.modelValue);
+      return () => h(
+        'button',
+        {
+          'aria-label': props.ariaLabel,
+          onClick: () => emit(
+            'update:modelValue',
+            props.modelValue === MonitoringMode.Simple ? MonitoringMode.Nav : MonitoringMode.Simple,
+          ),
+        },
+        props.modelValue === MonitoringMode.Simple ? 'Simple Mode' : 'Navigation Mode',
+      );
     },
   }),
   RouteSettings: defineComponent({
@@ -59,33 +65,22 @@ vi.mock('../route/index', () => ({
 }));
 
 // Mock composables
+const useRoutePollingMock = vi.hoisted(() => vi.fn(() => createRoutePollingState()));
+
 vi.mock('../../composables/useRoutePolling', () => ({
-  useRoutePolling: () => ({
-    data: ref(createMockRouteData()),
-    error: ref(null),
-    isPolling: ref(false),
-    isStale: ref(false),
-    lastUpdatedIso: ref('2024-06-01T12:00:00Z'),
-    cacheAgeSeconds: ref(0),
-    cacheHit: ref(false),
-    from: ref('Origin'),
-    to: ref('Destination'),
-    mode: ref(MonitoringMode.Simple),
-    refreshInterval: ref(120),
-    pollingSeconds: ref(120),
-    triggerPolling: vi.fn(),
-    setMode: vi.fn(),
-    setRefreshInterval: vi.fn(),
-    setFreshnessSeconds: vi.fn(),
-  }),
+  useRoutePolling: useRoutePollingMock,
 }));
 
-vi.mock('../../composables/useRouteAlerts', () => ({
-  useRouteAlerts: () => ({
-    activeAlerts: ref([]),
+const useRouteAlertsMock = vi.hoisted(() =>
+  vi.fn(() => ({
+    activeAlerts: ref([{ id: 1, message: 'Alert' }]),
     acknowledgeAlerts: vi.fn(),
     emitAlertCount: vi.fn(),
-  }),
+  })),
+);
+
+vi.mock('../../composables/useRouteAlerts', () => ({
+  useRouteAlerts: useRouteAlertsMock,
 }));
 
 vi.mock('../../composables/useAlertThreshold', () => ({
@@ -96,10 +91,12 @@ vi.mock('../../composables/useAlertThreshold', () => ({
   }),
 }));
 
+const useUiPreferencesMock = vi.hoisted(() => vi.fn(() => ({
+  isWidgetCompact: () => false,
+})));
+
 vi.mock('../../composables/useUiPreferences', () => ({
-  useUiPreferences: () => ({
-    isWidgetCompact: () => false,
-  }),
+  useUiPreferences: useUiPreferencesMock,
 }));
 
 function createMockRouteData(): RouteTimeResponse {
@@ -113,6 +110,37 @@ function createMockRouteData(): RouteTimeResponse {
       hit: false,
       ageSeconds: 0,
       staleWhileRevalidate: false,
+    },
+  };
+}
+
+function createRoutePollingState() {
+  const modeRef = ref(MonitoringMode.Simple);
+  const refreshIntervalRef = ref(120);
+  const pollingSecondsRef = ref(120);
+
+  return {
+    data: ref(createMockRouteData()),
+    error: ref(null),
+    isPolling: ref(false),
+    isStale: ref(false),
+    lastUpdatedIso: ref('2024-06-01T12:00:00Z'),
+    cacheAgeSeconds: ref(0),
+    cacheHit: ref(false),
+    from: ref('Origin'),
+    to: ref('Destination'),
+    mode: modeRef,
+    refreshInterval: refreshIntervalRef,
+    pollingSeconds: pollingSecondsRef,
+    triggerPolling: vi.fn(),
+    setMode(value: MonitoringMode) {
+      modeRef.value = value;
+    },
+    setRefreshInterval(value: number) {
+      refreshIntervalRef.value = value;
+    },
+    setFreshnessSeconds(value: number) {
+      pollingSecondsRef.value = value;
     },
   };
 }
@@ -153,6 +181,21 @@ describe('RouteWidget Integration Tests', () => {
     baseDate.setFullYear(2024, 5, 1);
     baseDate.setHours(12, 0, 0, 0);
     vi.setSystemTime(baseDate);
+
+    useRoutePollingMock.mockImplementation(createRoutePollingState);
+    useUiPreferencesMock.mockReturnValue({
+      isWidgetCompact: () => false,
+    });
+    useRouteAlertsMock.mockImplementation(() => {
+      const alertsRef = ref([{ id: 1, message: 'Alert' }]);
+      return {
+        activeAlerts: alertsRef,
+        acknowledgeAlerts: () => {
+          alertsRef.value = [];
+        },
+        emitAlertCount: vi.fn(),
+      };
+    });
   });
 
   afterEach(() => {
@@ -172,6 +215,26 @@ describe('RouteWidget Integration Tests', () => {
     return mount(Wrapper, {
       global: {
         stubs: {
+          PollingWidget: defineComponent({
+            name: 'PollingWidget',
+            props: {
+              overlineText: { type: String, default: '' },
+              title: { type: String, default: '' },
+              subtitle: { type: String, default: '' },
+            },
+            setup(props, { slots }) {
+              return () => h('section', { 'data-test': 'polling-widget' }, [
+                h('header', [
+                  h('div', props.overlineText),
+                  h('h2', props.title),
+                  h('p', props.subtitle),
+                ]),
+                slots['title-actions']?.(),
+                slots['main-content']?.(),
+                slots['settings-content']?.(),
+              ]);
+            },
+          }),
           MapPreview: MapPreviewStub,
           CompactModeControl: defineComponent({
             name: 'CompactModeControlStub',
@@ -281,13 +344,13 @@ describe('RouteWidget Integration Tests', () => {
     const modeToggle = wrapper.findComponent({ name: 'RouteModeToggle' });
     
     // Initial state should be Simple
-    expect(modeToggle.text()).toBe(MonitoringMode.Simple);
+    expect(modeToggle.text()).toBe('Simple Mode');
 
     // Click to switch to Nav
     await modeToggle.trigger('click');
     await flushPendingUpdates();
 
-    expect(modeToggle.text()).toBe(MonitoringMode.Nav);
+    expect(modeToggle.text()).toBe('Navigation Mode');
   });
 
   it('handles settings interactions', async () => {
@@ -328,11 +391,14 @@ describe('RouteWidget Integration Tests', () => {
     // Test alert acknowledgment event
     const alerts = wrapper.findComponent({ name: 'RouteAlerts' });
     await alerts.find('button').trigger('click');
+    const widget = wrapper.findComponent({ name: 'RouteWidget' });
+    await flushPendingUpdates();
 
-    expect(wrapper.emitted('alerts-acknowledged')).toBeTruthy();
+    expect(widget.emitted('alerts-acknowledged')).toBeTruthy();
 
     // Test alerts-updated event (should be called with count)
-    expect(wrapper.emitted('alerts-updated')).toBeTruthy();
+    await flushPendingUpdates();
+    expect(widget.emitted('alerts-updated')).toBeTruthy();
   });
 
   it('displays correct title and subtitle', async () => {
@@ -371,8 +437,7 @@ describe('RouteWidget Integration Tests', () => {
 
   it('handles compact mode correctly', async () => {
     // Mock compact mode
-    const { useUiPreferences } = require('../../composables/useUiPreferences');
-    useUiPreferences.mockReturnValue({
+    useUiPreferencesMock.mockReturnValue({
       isWidgetCompact: () => true,
     });
 
@@ -386,8 +451,7 @@ describe('RouteWidget Integration Tests', () => {
 
   it('handles error states gracefully', async () => {
     // Mock error state
-    const { useRoutePolling } = require('../../composables/useRoutePolling');
-    useRoutePolling.mockReturnValue({
+    useRoutePollingMock.mockReturnValue({
       data: ref(null),
       error: ref('Network error'),
       isPolling: ref(false),

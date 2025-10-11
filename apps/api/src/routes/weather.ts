@@ -101,7 +101,14 @@ export async function registerWeather(
     const maxAcceptableAgeSeconds = freshnessSeconds + weatherCacheConfig.staleGraceSeconds;
     const cacheKey = buildCacheKey({ location });
 
-    const cachedRecord = coerceCachedRecord(await app.redis.get(cacheKey), (msg, meta) => {
+    let cachedRaw: string | null = null;
+    try {
+      cachedRaw = await app.redis.get(cacheKey);
+    } catch (error) {
+      app.log.error({ err: error }, 'Failed to read weather cache entry from Redis');
+    }
+
+    const cachedRecord = coerceCachedRecord(cachedRaw, (msg, meta) => {
       app.log.warn(meta, msg);
     });
 
@@ -143,12 +150,16 @@ export async function registerWeather(
         cachedAtIso: lastUpdatedIso,
       };
 
-      await app.redis.set(
-        cacheKey,
-        JSON.stringify(cacheValue),
-        'EX',
-        weatherCacheConfig.redisExpireSeconds,
-      );
+      try {
+        await app.redis.set(
+          cacheKey,
+          JSON.stringify(cacheValue),
+          'EX',
+          weatherCacheConfig.redisExpireSeconds,
+        );
+      } catch (error) {
+        app.log.error({ err: error }, 'Failed to persist weather cache entry to Redis');
+      }
 
       return response;
     } catch (error) {

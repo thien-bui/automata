@@ -29,19 +29,42 @@ export function useRouteAlerts(options: UseRouteAlertsOptions): UseRouteAlertsRe
 
   const isCompact = computed(() => isWidgetCompact('route-widget'));
 
-  function emitAlertCount(count: number): void {
-    // This function is meant to be called by the parent component
-    // to emit events to the parent
+  let emitHandler: (count: number) => void = () => {};
+
+  const emitAlertCountImpl = (count: number): void => {
     if (count === lastEmittedAlertCount) {
       return;
     }
+
     lastEmittedAlertCount = count;
+    emitHandler(count);
+  };
+
+  const result = {
+    activeAlerts,
+    acknowledgeAlerts,
+  } as UseRouteAlertsResult;
+
+  Object.defineProperty(result, 'emitAlertCount', {
+    get(): (count: number) => void {
+      return emitAlertCountImpl;
+    },
+    set(handler: (count: number) => void) {
+      emitHandler = handler;
+      if (typeof handler === 'function') {
+        handler(lastEmittedAlertCount);
+      }
+    },
+  });
+
+  function dispatchAlertCount(count: number): void {
+    emitAlertCountImpl(count);
   }
 
   function acknowledgeAlerts(): void {
     acknowledgedAlertKey = lastAlertKey;
     activeAlerts.value = [];
-    emitAlertCount(0);
+    dispatchAlertCount(0);
   }
 
   watch(
@@ -51,24 +74,24 @@ export function useRouteAlerts(options: UseRouteAlertsOptions): UseRouteAlertsRe
         activeAlerts.value = [];
         lastAlertKey = null;
         acknowledgedAlertKey = null;
-        emitAlertCount(0);
+        dispatchAlertCount(0);
         return;
       }
 
       const overThreshold = payload.durationMinutes > threshold;
-      const alertKey = `${payload.lastUpdatedIso}:${threshold}`;
+      const alertKey = `${payload.lastUpdatedIso}:${threshold}:${payload.durationMinutes.toFixed(1)}`;
 
       if (!overThreshold) {
         activeAlerts.value = [];
         lastAlertKey = null;
         acknowledgedAlertKey = null;
-        emitAlertCount(0);
+        dispatchAlertCount(0);
         return;
       }
 
       if (acknowledgedAlertKey === alertKey) {
         activeAlerts.value = [];
-        emitAlertCount(0);
+        dispatchAlertCount(0);
         return;
       }
 
@@ -89,7 +112,7 @@ export function useRouteAlerts(options: UseRouteAlertsOptions): UseRouteAlertsRe
           message,
         },
       ];
-      emitAlertCount(activeAlerts.value.length);
+      dispatchAlertCount(activeAlerts.value.length);
 
       if (lastAlertKey !== alertKey) {
         pushToast({
@@ -101,12 +124,8 @@ export function useRouteAlerts(options: UseRouteAlertsOptions): UseRouteAlertsRe
 
       lastAlertKey = alertKey;
     },
-    { immediate: true },
+    { immediate: true, flush: 'sync' },
   );
 
-  return {
-    activeAlerts,
-    acknowledgeAlerts,
-    emitAlertCount,
-  };
+  return result;
 }

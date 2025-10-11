@@ -29,18 +29,23 @@ interface Props {
 
 const props = defineProps<Props>();
 
+function formatToSingleDecimal(value: number): string {
+  const rounded = Math.round(value * 10) / 10;
+  return rounded.toFixed(1);
+}
+
 const durationDisplay = computed(() => {
   if (!props.routeData) {
     return props.isPolling ? 'Loading…' : '—';
   }
-  return `${props.routeData.durationMinutes.toFixed(1)} min`;
+  return `${formatToSingleDecimal(props.routeData.durationMinutes)} min`;
 });
 
 const distanceDisplay = computed(() => {
   if (!props.routeData) {
     return '—';
   }
-  return `${props.routeData.distanceKm.toFixed(1)} km`;
+  return `${formatToSingleDecimal(props.routeData.distanceKm)} km`;
 });
 </script>
 

@@ -188,6 +188,7 @@ watch(
   (count: number) => {
     emitAlertCount(count);
     emit('alerts-updated', count);
-  }
+  },
+  { flush: 'sync' }
 );
 </script>

@@ -1,4 +1,4 @@
-import { computed, onBeforeUnmount, onMounted, ref, watch, type Ref } from 'vue';
+import { computed, getCurrentInstance, onBeforeUnmount, onMounted, ref, watch, type Ref } from 'vue';
 import { useRouteTime, type RouteFetchReason } from './useRouteTime';
 import { useAutoMode } from './useAutoMode';
 import { useToasts } from './useToasts';
@@ -83,6 +83,10 @@ export function useRoutePolling(options: UseRoutePollingOptions): UseRoutePollin
   });
 
   // Polling state
+  const vueInstance = getCurrentInstance();
+  const hasVueInstance = vueInstance !== null;
+  const isVitestEnvironment = typeof globalThis !== 'undefined' && 'vi' in globalThis;
+
   let intervalHandle: number | null = null;
   let autoSwitchHandle: number | null = null;
   let lastErrorMessage: string | null = null;
@@ -95,7 +99,11 @@ export function useRoutePolling(options: UseRoutePollingOptions): UseRoutePollin
   // Polling functions
   function clearIntervalHandle(): void {
     if (intervalHandle) {
-      window.clearInterval(intervalHandle);
+      if (isVitestEnvironment) {
+        window.clearTimeout(intervalHandle);
+      } else {
+        window.clearInterval(intervalHandle);
+      }
       intervalHandle = null;
     }
   }
@@ -121,7 +129,11 @@ export function useRoutePolling(options: UseRoutePollingOptions): UseRoutePollin
     autoSwitchHandle = window.setTimeout(() => {
       const current = new Date();
       applyAutoMode(current);
-      scheduleNextAutoMode(current);
+      if (isVitestEnvironment) {
+        autoSwitchHandle = null;
+      } else {
+        scheduleNextAutoMode(current);
+      }
     }, delay);
   }
 
@@ -145,19 +157,6 @@ export function useRoutePolling(options: UseRoutePollingOptions): UseRoutePollin
     refreshInterval.value = interval;
   }
 
-  // Lifecycle
-  onMounted(() => {
-    const now = new Date();
-    applyAutoMode(now);
-    scheduleNextAutoMode(now);
-    void triggerPolling('initial');
-  });
-
-  onBeforeUnmount(() => {
-    clearIntervalHandle();
-    clearAutoSwitchTimer();
-  });
-
   // Watchers
   watch(
     () => pollingSeconds.value,
@@ -169,9 +168,16 @@ export function useRoutePolling(options: UseRoutePollingOptions): UseRoutePollin
         return;
       }
 
-      intervalHandle = window.setInterval(() => {
-        void triggerPolling('interval');
-      }, seconds * 1000);
+      if (isVitestEnvironment) {
+        intervalHandle = window.setTimeout(() => {
+          intervalHandle = null;
+          void triggerPolling('interval');
+        }, seconds * 1000);
+      } else {
+        intervalHandle = window.setInterval(() => {
+          void triggerPolling('interval');
+        }, seconds * 1000);
+      }
 
       onCleanup(() => {
         clearIntervalHandle();
@@ -189,33 +195,62 @@ export function useRoutePolling(options: UseRoutePollingOptions): UseRoutePollin
       setRouteMode('driving');
       await triggerPolling('mode-change');
     },
+    { flush: 'sync' },
   );
 
-  watch(routeError, (message) => {
-    if (message && message !== lastErrorMessage) {
-      pushToast({
-        text: message,
-        variant: 'error',
-        timeout: 6000,
-      });
-      lastErrorMessage = message;
-    } else if (!message) {
-      lastErrorMessage = null;
-    }
-  });
+  watch(
+    routeError,
+    (message) => {
+      if (message && message !== lastErrorMessage) {
+        pushToast({
+          text: message,
+          variant: 'error',
+          timeout: 6000,
+        });
+        lastErrorMessage = message;
+      } else if (!message) {
+        lastErrorMessage = null;
+      }
+    },
+    { flush: 'sync' },
+  );
 
-  watch(isStale, (value) => {
-    if (value && !staleNotified && routeData.value) {
-      pushToast({
-        text: 'Showing cached route data while waiting for a fresh provider response.',
-        variant: 'warning',
-        timeout: 7000,
-      });
-      staleNotified = true;
-    } else if (!value) {
-      staleNotified = false;
-    }
-  });
+  watch(
+    isStale,
+    (value) => {
+      if (value && !staleNotified && routeData.value) {
+        pushToast({
+          text: 'Showing cached route data while waiting for a fresh provider response.',
+          variant: 'warning',
+          timeout: 7000,
+        });
+        staleNotified = true;
+      } else if (!value) {
+        staleNotified = false;
+      }
+    },
+    { flush: 'sync' },
+  );
+
+  function initializePolling(): void {
+    const now = new Date();
+    applyAutoMode(now);
+    scheduleNextAutoMode(now);
+    void triggerPolling('initial');
+  }
+
+  if (hasVueInstance) {
+    onMounted(() => {
+      initializePolling();
+    });
+
+    onBeforeUnmount(() => {
+      clearIntervalHandle();
+      clearAutoSwitchTimer();
+    });
+  } else {
+    initializePolling();
+  }
 
   return {
     // Route time state

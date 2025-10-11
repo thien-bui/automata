@@ -1,12 +1,17 @@
 import { mount } from '@vue/test-utils';
 import { describe, it, expect, vi } from 'vitest';
+import { defineComponent, h } from 'vue';
 import RouteModeToggle from '../RouteModeToggle.vue';
 import { MonitoringMode } from '../../monitoringMode';
 
-const createSlotStub = (tag: string) => ({
-  name: `${tag}-slot-stub`,
-  template: `<div><slot /></div>`,
-});
+const createSlotStub = (name: string, tag: string, propKeys: string[] = []) =>
+  defineComponent({
+    name,
+    props: propKeys,
+    setup(_props, { attrs, slots }) {
+      return () => h(tag, attrs, slots.default?.());
+    },
+  });
 
 describe('RouteModeToggle', () => {
   const mountComponent = (props: Partial<{
@@ -30,8 +35,15 @@ describe('RouteModeToggle', () => {
       props: { ...defaultProps, ...props },
       global: {
         stubs: {
-          'v-btn-toggle': createSlotStub('div'),
-          'v-btn': createSlotStub('button'),
+          'v-btn-toggle': createSlotStub('VBtnToggleStub', 'div', [
+            'modelValue',
+            'mandatory',
+            'density',
+            'color',
+            'class',
+            'ariaLabel',
+          ]),
+          'v-btn': createSlotStub('VBtnStub', 'button', ['value']),
         },
       },
     });
@@ -42,11 +54,11 @@ describe('RouteModeToggle', () => {
     
     const toggle = wrapper.findComponent({ name: 'VBtnToggleStub' });
     expect(toggle.exists()).toBe(true);
-    expect(toggle.attributes('model-value')).toBe(MonitoringMode.Simple);
-    expect(toggle.attributes('mandatory')).toBe('true');
-    expect(toggle.attributes('density')).toBe('default');
-    expect(toggle.attributes('color')).toBe('primary');
-    expect(toggle.attributes('aria-label')).toBe('Select monitoring mode');
+    expect(toggle.props('modelValue')).toBe(MonitoringMode.Simple);
+    expect(toggle.props('mandatory')).toBe(true);
+    expect(toggle.props('density')).toBe('default');
+    expect(toggle.props('color')).toBe('primary');
+    expect(toggle.props('ariaLabel')).toBe('Select monitoring mode');
   });
 
   it('renders with custom props', () => {
@@ -61,12 +73,12 @@ describe('RouteModeToggle', () => {
     const wrapper = mountComponent(customProps);
     
     const toggle = wrapper.findComponent({ name: 'VBtnToggleStub' });
-    expect(toggle.attributes('model-value')).toBe(MonitoringMode.Nav);
-    expect(toggle.attributes('mandatory')).toBe('false');
-    expect(toggle.attributes('density')).toBe('compact');
-    expect(toggle.attributes('color')).toBe('secondary');
-    expect(toggle.attributes('class')).toContain('custom-class');
-    expect(toggle.attributes('aria-label')).toBe('Custom aria label');
+    expect(toggle.props('modelValue')).toBe(MonitoringMode.Nav);
+    expect(toggle.props('mandatory')).toBe(false);
+    expect(toggle.props('density')).toBe('compact');
+    expect(toggle.props('color')).toBe('secondary');
+    expect(toggle.props('class')).toContain('custom-class');
+    expect(toggle.props('ariaLabel')).toBe('Custom aria label');
   });
 
   it('renders two buttons for Simple and Nav modes', () => {
@@ -74,8 +86,8 @@ describe('RouteModeToggle', () => {
     
     const buttons = wrapper.findAllComponents({ name: 'VBtnStub' });
     expect(buttons).toHaveLength(2);
-    expect(buttons[0].attributes('value')).toBe(MonitoringMode.Simple);
-    expect(buttons[1].attributes('value')).toBe(MonitoringMode.Nav);
+    expect(buttons[0].props('value')).toBe(MonitoringMode.Simple);
+    expect(buttons[1].props('value')).toBe(MonitoringMode.Nav);
   });
 
   it('emits update:modelValue when mode changes', async () => {
@@ -105,21 +117,21 @@ describe('RouteModeToggle', () => {
     const wrapper = mountComponent({ modelValue: MonitoringMode.Nav });
     
     const toggle = wrapper.findComponent({ name: 'VBtnToggleStub' });
-    expect(toggle.attributes('model-value')).toBe(MonitoringMode.Nav);
+    expect(toggle.props('modelValue')).toBe(MonitoringMode.Nav);
   });
 
   it('applies custom button class correctly', () => {
     const wrapper = mountComponent({ buttonClass: 'my-toggle-class' });
     
     const toggle = wrapper.findComponent({ name: 'VBtnToggleStub' });
-    expect(toggle.attributes('class')).toContain('my-toggle-class');
+    expect(toggle.props('class')).toContain('my-toggle-class');
   });
 
   it('handles empty button class', () => {
     const wrapper = mountComponent({ buttonClass: '' });
     
     const toggle = wrapper.findComponent({ name: 'VBtnToggleStub' });
-    expect(toggle.attributes('class')).toBe('');
+    expect(toggle.props('class')).toBe('');
   });
 
   it('handles different density values', () => {
@@ -128,7 +140,7 @@ describe('RouteModeToggle', () => {
     densities.forEach((density) => {
       const wrapper = mountComponent({ density });
       const toggle = wrapper.findComponent({ name: 'VBtnToggleStub' });
-      expect(toggle.attributes('density')).toBe(density);
+      expect(toggle.props('density')).toBe(density);
     });
   });
 
@@ -136,21 +148,21 @@ describe('RouteModeToggle', () => {
     const wrapper = mountComponent({ color: 'accent' });
     
     const toggle = wrapper.findComponent({ name: 'VBtnToggleStub' });
-    expect(toggle.attributes('color')).toBe('accent');
+    expect(toggle.props('color')).toBe('accent');
   });
 
   it('handles mandatory false', () => {
     const wrapper = mountComponent({ mandatory: false });
     
     const toggle = wrapper.findComponent({ name: 'VBtnToggleStub' });
-    expect(toggle.attributes('mandatory')).toBe('false');
+    expect(toggle.props('mandatory')).toBe(false);
   });
 
   it('has correct button values', () => {
     const wrapper = mountComponent();
     
     const buttons = wrapper.findAllComponents({ name: 'VBtnStub' });
-    expect(buttons[0].attributes('value')).toBe('Simple');
-    expect(buttons[1].attributes('value')).toBe('Nav');
+    expect(buttons[0].props('value')).toBe(MonitoringMode.Simple);
+    expect(buttons[1].props('value')).toBe(MonitoringMode.Nav);
   });
 });
