@@ -60,6 +60,7 @@ This is a TypeScript monorepo with:
 - Use `<script setup lang="ts">` with Composition API
 - Prefer `defineProps/defineEmits` and typed refs/computed values
 - Keep Vuetify layout/styling in SFC `<style scoped lang="scss">` blocks
+- Lean on Vuetify-provided props, utility classes, and theme tokens before introducing custom CSS
 - Defer global tokens to root theme config
 
 ### State Management
