@@ -327,11 +327,39 @@ function handleSaveSettings() {
 }
 
 .polling-widget--compact .widget-header {
-  gap: 12px;
+  gap: 10px;
+  padding: 10px 16px;
 }
 
 .polling-widget--compact .widget-header__actions {
   gap: 4px;
+}
+
+.polling-widget--compact .widget-header__titles {
+  display: grid;
+  gap: 2px;
+}
+
+.polling-widget--compact :deep(.widget-header__titles .text-overline) {
+  display: none;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+.polling-widget--compact :deep(.widget-header__titles .text-h6) {
+  font-size: 1.1rem;
+}
+
+.polling-widget--compact :deep(.widget-header__titles .text-body-2) {
+  font-size: 0.85rem;
+}
+
+.polling-widget--compact :deep(.widget-header__titles .text-caption) {
+  font-size: 0.75rem;
+}
+
+.polling-widget--compact :deep(.widget-header__titles .mt-1) {
+  margin-top: 2px !important;
 }
 
 :deep(.widget-summary__section.status-indicator) {
