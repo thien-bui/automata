@@ -1,7 +1,7 @@
 <template>
   <PollingWidget
     overline-text="Monitoring"
-    :title="currentModeLabel"
+    title="Navigation"
     :subtitle="`${originLabel} → ${destinationLabel}`"
     error-title="Route Error"
     settings-title="Route Settings"
