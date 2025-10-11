@@ -5,7 +5,7 @@
     :subtitle="`${originLabel} → ${destinationLabel}`"
     error-title="Route Error"
     settings-title="Route Settings"
-    :error="routeError"
+    :error="error"
     :is-polling="isPolling"
     :last-updated-iso="lastUpdatedIso"
     :is-stale="isStale"
@@ -17,74 +17,30 @@
     @save-settings="handleSaveSettings"
   >
     <template #title-actions>
-      <v-btn-toggle
-        v-model="mode"
-        mandatory
+      <RouteModeToggle
+        :model-value="mode"
         density="compact"
         aria-label="Select monitoring mode"
-      >
-        <v-btn :value="MonitoringMode.Simple">Simple</v-btn>
-        <v-btn :value="MonitoringMode.Nav">Nav</v-btn>
-      </v-btn-toggle>
+        @update:model-value="handleModeUpdate"
+      />
     </template>
 
     <template #main-content>
-      <v-sheet class="pa-4" elevation="1" rounded>
-        <div class="widget-summary">
-          <div class="widget-summary__section">
-            <div class="text-overline text-medium-emphasis">Estimated duration</div>
-            <div class="text-h4 font-weight-medium" aria-live="polite">
-              {{ durationDisplay }}
-            </div>
-          </div>
-          <div class="widget-summary__section widget-summary__section--end">
-            <div class="text-body-2 text-medium-emphasis">Distance: {{ distanceDisplay }}</div>
-            <div v-if="cacheDescription" class="text-caption text-medium-emphasis mt-1">
-              {{ cacheDescription }}
-            </div>
-          </div>
-        </div>
-      </v-sheet>
+      <RouteSummary
+        :route-data="data"
+        :is-polling="isPolling"
+        :cache-description="cacheDescription"
+      />
 
       <!-- Map preview - hidden in compact mode but still available for nav mode switching -->
       <MapPreview v-if="!isCompact" :mode="mode" :from="origin" :to="destination"/>
 
       <!-- Alert display - detailed list in normal mode, compact icon in compact mode -->
-      <template v-if="activeAlerts.length > 0">
-        <v-alert
-          v-if="!isCompact"
-          type="warning"
-          variant="tonal"
-          class="mt-4"
-          elevation="1"
-          dismissible
-          border="start"
-          @click:close="acknowledgeAlerts"
-        >
-          <div class="text-subtitle-1 font-weight-medium">Route Alerts</div>
-          <ul class="mt-2 mb-0 ps-4">
-            <li v-for="alert in activeAlerts" :key="alert.id">
-              {{ alert.message }}
-            </li>
-          </ul>
-        </v-alert>
-        
-        <!-- Compact mode alert indicator -->
-        <div v-else class="mt-4 d-flex align-center gap-2">
-          <v-icon color="warning" icon="mdi-alert" size="small" />
-          <span class="text-body-2 text-medium-emphasis">
-            {{ activeAlerts.length }} alert{{ activeAlerts.length > 1 ? 's' : '' }}
-          </span>
-          <v-btn
-            variant="text"
-            size="x-small"
-            color="warning"
-            @click="acknowledgeAlerts"
-          >
-            Dismiss
-          </v-btn>
-        </div>
-      </template>
+      <RouteAlerts
+        :alerts="activeAlerts"
+        :compact="isCompact"
+        @acknowledge-alerts="handleAcknowledgeAlerts"
+      />
     </template>
 
     <template #status-extra>
@@ -94,122 +50,64 @@
     </template>
 
     <template #settings-content>
-      <div class="route-settings">
-        <div class="mb-6">
-          <v-list-subheader>Mode</v-list-subheader>
-          <v-btn-toggle
-            v-model="mode"
-            color="primary"
-            mandatory
-            class="my-2"
-            aria-label="Toggle monitoring mode"
-          >
-            <v-btn :value="MonitoringMode.Simple">Simple</v-btn>
-            <v-btn :value="MonitoringMode.Nav">Nav</v-btn>
-          </v-btn-toggle>
-
-          <v-list-subheader class="mt-6">Refresh cadence</v-list-subheader>
-          <v-slider
-            v-model="refreshInterval"
-            :min="15"
-            :max="300"
-            :step="15"
-            thumb-label
-            color="secondary"
-            aria-label="Polling interval in seconds"
-          />
-          <div class="text-caption text-medium-emphasis px-2">
-            Polling every {{ refreshInterval }} seconds.
-          </div>
-
-          <v-list-subheader class="mt-6">Alert threshold</v-list-subheader>
-          <v-slider
-            v-model="thresholdMinutes"
-            :min="5"
-            :max="180"
-            :step="5"
-            thumb-label
-            color="secondary"
-            aria-label="Alert threshold in minutes"
-          />
-          <div class="text-caption text-medium-emphasis px-2 d-flex justify-space-between align-center">
-            <span>Alerts fire above {{ thresholdMinutes }} minutes.</span>
-            <v-btn size="small" variant="text" @click="resetAlertThreshold">Reset</v-btn>
-          </div>
-
-          <v-divider class="my-4" />
-          <CompactModeControl widget-name="route-widget" />
-        </div>
-      </div>
+      <RouteSettings
+        :mode="mode"
+        :refresh-interval="refreshInterval"
+        :threshold-minutes="thresholdMinutes"
+        :is-nav-mode="isNavMode"
+        @update:mode="handleModeUpdate"
+        @update:refresh-interval="handleRefreshIntervalUpdate"
+        @update:threshold-minutes="handleThresholdUpdate"
+        @reset-threshold="handleResetThreshold"
+        @save="handleSaveSettings"
+      />
     </template>
   </PollingWidget>
 </template>
 
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
+import { computed, watch } from 'vue';
 
 import PollingWidget from './PollingWidget.vue';
 import MapPreview from './MapPreview.vue';
-import { useRouteTime, type RouteFetchReason } from '../composables/useRouteTime';
+import { RouteSummary, RouteAlerts, RouteModeToggle, RouteSettings } from './route';
+import { useRoutePolling } from '../composables/useRoutePolling';
+import { useRouteAlerts } from '../composables/useRouteAlerts';
 import { useAlertThreshold } from '../composables/useAlertThreshold';
 import { useToasts } from '../composables/useToasts';
-import { useAutoMode } from '../composables/useAutoMode';
 import { useUiPreferences } from '../composables/useUiPreferences';
 import { MonitoringMode } from './monitoringMode';
-import CompactModeControl from './CompactModeControl.vue';
 
 const emit = defineEmits<{
   (e: 'alerts-acknowledged'): void;
   (e: 'alerts-updated', count: number): void;
 }>();
 
-type PollingReason = RouteFetchReason;
-
-type RouteAlert = {
-  id: number;
-  message: string;
-};
-
 const DEFAULT_FROM = '443 Ramsay Way, Kent, WA 98032';
 const DEFAULT_TO = '35522 21st Ave SW ste B, Federal Way, WA 98023';
 
 const {
-  resolveModeForDate: resolveAutoModeForDate,
-  getNextBoundary: getNextAutoModeBoundary,
-  getNavModeRefreshSeconds,
-} = useAutoMode();
-
-function resolveModeForDate(date: Date): MonitoringMode {
-  const autoMode = resolveAutoModeForDate(date);
-  return autoMode === 'Nav' ? MonitoringMode.Nav : MonitoringMode.Simple;
-}
-
-function nextAutoModeBoundary(from: Date): Date {
-  return getNextAutoModeBoundary(from);
-}
-
-const mode = ref<MonitoringMode>(MonitoringMode.Simple);
-const refreshInterval = ref(120);
-
-const {
-  data: routeData,
-  error: routeError,
-  isLoading,
-  isRefreshing,
+  data,
+  error,
+  isPolling,
   isStale,
   lastUpdatedIso,
   cacheAgeSeconds,
   cacheHit,
-  refresh: refreshRoute,
-  setMode: setRouteMode,
-  setFreshnessSeconds,
   from: origin,
   to: destination,
-} = useRouteTime({
+  mode,
+  refreshInterval,
+  pollingSeconds,
+  triggerPolling,
+  setMode,
+  setRefreshInterval,
+  setFreshnessSeconds,
+} = useRoutePolling({
   from: DEFAULT_FROM,
   to: DEFAULT_TO,
-  mode: 'driving',
-  freshnessSeconds: refreshInterval.value,
+  initialMode: MonitoringMode.Simple,
+  initialRefreshInterval: 120,
 });
 
 const { thresholdMinutes, setThreshold, resetThreshold } = useAlertThreshold();
@@ -217,50 +115,14 @@ const { push: pushToast } = useToasts();
 const { isWidgetCompact } = useUiPreferences();
 
 const isCompact = computed(() => isWidgetCompact('route-widget'));
-
-const activeAlerts = ref<RouteAlert[]>([]);
-let intervalHandle: number | null = null;
-let autoSwitchHandle: number | null = null;
-let lastAlertKey: string | null = null;
-let acknowledgedAlertKey: string | null = null;
-let lastErrorMessage: string | null = null;
-let staleNotified = false;
-let lastEmittedAlertCount = 0;
-
 const isNavMode = computed(() => mode.value === MonitoringMode.Nav);
-
-const pollingSeconds = computed(() => (isNavMode.value ? getNavModeRefreshSeconds() : refreshInterval.value));
-
-const isPolling = computed(() => isLoading.value || isRefreshing.value);
 
 const currentModeLabel = computed(() =>
   mode.value === MonitoringMode.Simple ? 'Simple Mode' : 'Navigation Mode',
 );
 
-const settingsAria = computed(() => `Open settings. Current mode ${currentModeLabel.value}.`);
-
-const statusText = computed(() => {
-  if (isPolling.value) {
-    return 'Refreshing route data…';
-  }
-  if (routeError.value) {
-    return routeError.value;
-  }
-  if (!lastUpdatedIso.value) {
-    return 'Awaiting first update.';
-  }
-  const timestamp = new Date(lastUpdatedIso.value);
-  if (Number.isNaN(timestamp.getTime())) {
-    return 'Awaiting first update.';
-  }
-  const formatted = timestamp.toLocaleTimeString();
-  return isStale.value ? `Showing cached data from ${formatted}.` : `Last updated ${formatted}.`;
-});
-
-const progressValue = computed(() => (isPolling.value ? undefined : 100));
-
 const cacheDescription = computed(() => {
-  if (!routeData.value) {
+  if (!data.value) {
     return '';
   }
   if (isStale.value) {
@@ -274,230 +136,58 @@ const cacheDescription = computed(() => {
   return 'Live provider data';
 });
 
-const durationDisplay = computed(() => {
-  if (!routeData.value) {
-    return isPolling.value ? 'Loading…' : '—';
-  }
-  return `${routeData.value.durationMinutes.toFixed(1)} min`;
-});
-
-const distanceDisplay = computed(() => {
-  if (!routeData.value) {
-    return '—';
-  }
-  return `${routeData.value.distanceKm.toFixed(1)} km`;
-});
-
 const originLabel = computed(() => origin.value);
 const destinationLabel = computed(() => destination.value);
 
-function emitAlertCount(count: number) {
-  if (count === lastEmittedAlertCount) {
-    return;
-  }
-  lastEmittedAlertCount = count;
-  emit('alerts-updated', count);
+// Route alerts
+const { activeAlerts, acknowledgeAlerts, emitAlertCount } = useRouteAlerts({
+  routeData: data,
+  thresholdMinutes,
+});
+
+// Event handlers
+function handleModeUpdate(newMode: MonitoringMode): void {
+  setMode(newMode);
 }
 
-function clearIntervalHandle() {
-  if (intervalHandle) {
-    window.clearInterval(intervalHandle);
-    intervalHandle = null;
-  }
+function handleRefreshIntervalUpdate(interval: number): void {
+  setRefreshInterval(interval);
 }
 
-function clearAutoSwitchTimer() {
-  if (autoSwitchHandle) {
-    window.clearTimeout(autoSwitchHandle);
-    autoSwitchHandle = null;
-  }
+function handleThresholdUpdate(threshold: number): void {
+  setThreshold(threshold);
 }
 
-function applyAutoMode(now = new Date()) {
-  const nextMode = resolveModeForDate(now);
-  if (mode.value !== nextMode) {
-    mode.value = nextMode;
-  }
-}
-
-function scheduleNextAutoMode(now = new Date()) {
-  clearAutoSwitchTimer();
-  const boundary = nextAutoModeBoundary(now);
-  const delay = Math.max(boundary.getTime() - now.getTime(), 0);
-  autoSwitchHandle = window.setTimeout(() => {
-    const current = new Date();
-    applyAutoMode(current);
-    scheduleNextAutoMode(current);
-  }, delay);
-}
-
-async function triggerPolling(reason: PollingReason, options: { forceRefresh?: boolean } = {}) {
-  const background = reason === 'interval' || reason === 'mode-change';
-  await refreshRoute({ background, reason, forceRefresh: options.forceRefresh });
-  const manualTrigger = reason === 'manual' || reason === 'hard-manual';
-  if (manualTrigger && !routeError.value) {
-    pushToast({
-      text: options.forceRefresh ? 'Route data refreshed from provider.' : 'Route data refreshed.',
-      variant: 'success',
-    });
-  }
-}
-
-
-function resetAlertThreshold() {
+function handleResetThreshold(): void {
   resetThreshold();
 }
 
-function handleManualRefresh() {
+function handleManualRefresh(): void {
   void triggerPolling('manual');
 }
 
-function handleHardRefresh() {
+function handleHardRefresh(): void {
   void triggerPolling('hard-manual', { forceRefresh: true });
 }
 
-function handleSaveSettings() {
-  // Settings are handled directly via v-model binding
+function handleSaveSettings(): void {
   pushToast({
     text: 'Route settings saved.',
     variant: 'success',
   });
 }
 
-function acknowledgeAlerts() {
-  acknowledgedAlertKey = lastAlertKey;
-  activeAlerts.value = [];
-  emitAlertCount(0);
+function handleAcknowledgeAlerts(): void {
+  acknowledgeAlerts();
   emit('alerts-acknowledged');
 }
 
-onMounted(() => {
-  const now = new Date();
-  applyAutoMode(now);
-  scheduleNextAutoMode(now);
-  void triggerPolling('initial');
-});
-
-onBeforeUnmount(() => {
-  clearIntervalHandle();
-  clearAutoSwitchTimer();
-});
-
+// Watch for alert count changes and emit to parent
 watch(
-  () => pollingSeconds.value,
-  (seconds, _previous, onCleanup) => {
-    setFreshnessSeconds(seconds);
-    clearIntervalHandle();
-
-    if (!Number.isFinite(seconds) || seconds <= 0) {
-      return;
-    }
-
-    intervalHandle = window.setInterval(() => {
-      void triggerPolling('interval');
-    }, seconds * 1000);
-
-    onCleanup(() => {
-      clearIntervalHandle();
-    });
-  },
-  { immediate: true },
-);
-
-watch(
-  () => mode.value,
-  async (value, previous) => {
-    if (value === previous) {
-      return;
-    }
-    setRouteMode('driving');
-    await triggerPolling('mode-change');
-  },
-);
-
-watch(routeError, (message) => {
-  if (message && message !== lastErrorMessage) {
-    pushToast({
-      text: message,
-      variant: 'error',
-      timeout: 6000,
-    });
-    lastErrorMessage = message;
-  } else if (!message) {
-    lastErrorMessage = null;
+  () => activeAlerts.value.length,
+  (count: number) => {
+    emitAlertCount(count);
+    emit('alerts-updated', count);
   }
-});
-
-watch(isStale, (value) => {
-  if (value && !staleNotified && routeData.value) {
-    pushToast({
-      text: 'Showing cached route data while waiting for a fresh provider response.',
-      variant: 'warning',
-      timeout: 7000,
-    });
-    staleNotified = true;
-  } else if (!value) {
-    staleNotified = false;
-  }
-});
-
-watch(
-  [routeData, thresholdMinutes],
-  ([payload, threshold]) => {
-    if (!payload) {
-      activeAlerts.value = [];
-      lastAlertKey = null;
-      acknowledgedAlertKey = null;
-      emitAlertCount(0);
-      return;
-    }
-
-    const overThreshold = payload.durationMinutes > threshold;
-    const alertKey = `${payload.lastUpdatedIso}:${threshold}`;
-
-    if (!overThreshold) {
-      activeAlerts.value = [];
-      lastAlertKey = null;
-      acknowledgedAlertKey = null;
-      emitAlertCount(0);
-      return;
-    }
-
-    if (acknowledgedAlertKey === alertKey) {
-      activeAlerts.value = [];
-      emitAlertCount(0);
-      return;
-    }
-
-    // Only construct detailed message if not in compact mode or if we need it for toasts
-    const needsDetailedMessage = !isCompact.value || lastAlertKey !== alertKey;
-    const message = needsDetailedMessage 
-      ? `Travel time ${payload.durationMinutes.toFixed(1)} min exceeds threshold of ${threshold} min.`
-      : '';
-
-    if (acknowledgedAlertKey && acknowledgedAlertKey !== alertKey) {
-      acknowledgedAlertKey = null;
-    }
-
-    // In compact mode, we only need minimal alert data for the count
-    activeAlerts.value = [
-      {
-        id: Date.now(),
-        message,
-      },
-    ];
-    emitAlertCount(activeAlerts.value.length);
-
-    if (lastAlertKey !== alertKey) {
-      pushToast({
-        text: message || `Travel time exceeds threshold of ${threshold} min.`,
-        variant: 'warning',
-        timeout: 7000,
-      });
-    }
-
-    lastAlertKey = alertKey;
-  },
-  { immediate: true },
 );
 </script>

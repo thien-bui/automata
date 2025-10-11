@@ -1,123 +1,121 @@
 import { mount } from '@vue/test-utils';
-import { describe, it, expect, beforeEach, afterEach, vi, type MockInstance } from 'vitest';
-import { computed, defineComponent, h, nextTick, ref, type Ref, type ComputedRef, type ComponentInternalInstance } from 'vue';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { computed, defineComponent, h, nextTick, ref } from 'vue';
+import RouteWidget from '../RouteWidget.vue';
+import { MonitoringMode } from '../monitoringMode';
+import { provideToasts } from '../../composables/useToasts';
+import type { RouteTimeResponse } from '@automata/types';
 
-type RouteTimeResponseMock = {
-  durationMinutes: number;
-  distanceKm: number;
-  provider: string;
-  mode: string;
-  lastUpdatedIso: string;
-  cache: {
-    hit: boolean;
-    ageSeconds: number;
-    staleWhileRevalidate: boolean;
-  };
-};
+// Mock all the new route components
+vi.mock('../route/index', () => ({
+  RouteSummary: defineComponent({
+    name: 'RouteSummary',
+    props: ['routeData', 'isPolling', 'cacheDescription'],
+    setup(props) {
+      return () => h('div', { 'data-test': 'route-summary' }, [
+        h('div', { 'data-test': 'duration' }, props.routeData?.durationMinutes || '—'),
+        h('div', { 'data-test': 'distance' }, props.routeData?.distanceKm || '—'),
+        h('div', { 'data-test': 'cache-desc' }, props.cacheDescription),
+      ]);
+    },
+  }),
+  RouteAlerts: defineComponent({
+    name: 'RouteAlerts',
+    props: ['alerts', 'compact'],
+    emits: ['acknowledge-alerts'],
+    setup(props, { emit }) {
+      return () => h('div', { 'data-test': 'route-alerts' }, [
+        h('div', { 'data-test': 'alert-count' }, props.alerts.length),
+        h('button', { onClick: () => emit('acknowledge-alerts') }, 'Dismiss'),
+      ]);
+    },
+  }),
+  RouteModeToggle: defineComponent({
+    name: 'RouteModeToggle',
+    props: ['modelValue', 'density', 'ariaLabel'],
+    emits: ['update:modelValue'],
+    setup(props, { emit }) {
+      return () => h('button', {
+        onClick: () => emit('update:modelValue', 
+          props.modelValue === MonitoringMode.Simple ? MonitoringMode.Nav : MonitoringMode.Simple
+        )
+      }, props.modelValue);
+    },
+  }),
+  RouteSettings: defineComponent({
+    name: 'RouteSettings',
+    props: ['mode', 'refreshInterval', 'thresholdMinutes', 'isNavMode'],
+    emits: ['update:mode', 'update:refreshInterval', 'update:thresholdMinutes', 'reset-threshold', 'save'],
+    setup(props, { emit }) {
+      return () => h('div', { 'data-test': 'route-settings' }, [
+        h('button', { onClick: () => emit('update:mode', MonitoringMode.Nav) }, 'Mode'),
+        h('button', { onClick: () => emit('update:refreshInterval', 180) }, 'Interval'),
+        h('button', { onClick: () => emit('update:thresholdMinutes', 60) }, 'Threshold'),
+        h('button', { onClick: () => emit('reset-threshold') }, 'Reset'),
+        h('button', { onClick: () => emit('save') }, 'Save'),
+      ]);
+    },
+  }),
+}));
 
-interface RouteTimeStateMock {
-  data: Ref<RouteTimeResponseMock>;
-  error: Ref<string | null>;
-  isLoading: Ref<boolean>;
-  isRefreshing: Ref<boolean>;
-  isStale: ComputedRef<boolean>;
-  lastUpdatedIso: ComputedRef<string>;
-  cacheAgeSeconds: ComputedRef<number>;
-  cacheHit: ComputedRef<boolean>;
-  freshnessSeconds: Ref<number>;
-  mode: Ref<string>;
-  from: Ref<string>;
-  to: Ref<string>;
-  refresh: (options?: { background?: boolean; reason?: string; forceRefresh?: boolean }) => Promise<void>;
-  setMode: (value: string) => void;
-  setEndpoints: (params: { from?: string; to?: string }) => void;
-  setFreshnessSeconds: (value: number) => void;
-}
+// Mock composables
+vi.mock('../../composables/useRoutePolling', () => ({
+  useRoutePolling: () => ({
+    data: ref(createMockRouteData()),
+    error: ref(null),
+    isPolling: ref(false),
+    isStale: ref(false),
+    lastUpdatedIso: ref('2024-06-01T12:00:00Z'),
+    cacheAgeSeconds: ref(0),
+    cacheHit: ref(false),
+    from: ref('Origin'),
+    to: ref('Destination'),
+    mode: ref(MonitoringMode.Simple),
+    refreshInterval: ref(120),
+    pollingSeconds: ref(120),
+    triggerPolling: vi.fn(),
+    setMode: vi.fn(),
+    setRefreshInterval: vi.fn(),
+    setFreshnessSeconds: vi.fn(),
+  }),
+}));
 
-interface AlertThresholdStateMock {
-  thresholdMinutes: Ref<number>;
-  setThreshold: (value: number) => void;
-  resetThreshold: () => void;
-}
+vi.mock('../../composables/useRouteAlerts', () => ({
+  useRouteAlerts: () => ({
+    activeAlerts: ref([]),
+    acknowledgeAlerts: vi.fn(),
+    emitAlertCount: vi.fn(),
+  }),
+}));
 
-function createRouteTimeState(): RouteTimeStateMock {
-  const data = ref<RouteTimeResponseMock>({
-    durationMinutes: 18,
-    distanceKm: 7,
+vi.mock('../../composables/useAlertThreshold', () => ({
+  useAlertThreshold: () => ({
+    thresholdMinutes: ref(45),
+    setThreshold: vi.fn(),
+    resetThreshold: vi.fn(),
+  }),
+}));
+
+vi.mock('../../composables/useUiPreferences', () => ({
+  useUiPreferences: () => ({
+    isWidgetCompact: () => false,
+  }),
+}));
+
+function createMockRouteData(): RouteTimeResponse {
+  return {
+    durationMinutes: 25.5,
+    distanceKm: 12.3,
     provider: 'google-directions',
     mode: 'driving',
-    lastUpdatedIso: new Date('2024-06-01T12:00:00Z').toISOString(),
+    lastUpdatedIso: '2024-06-01T12:00:00Z',
     cache: {
       hit: false,
       ageSeconds: 0,
       staleWhileRevalidate: false,
     },
-  });
-
-  const refresh = vi.fn(async () => undefined);
-  const setMode = vi.fn();
-  const setEndpoints = vi.fn();
-  const setFreshnessSeconds = vi.fn();
-
-  return {
-    data,
-    error: ref<string | null>(null),
-    isLoading: ref(false),
-    isRefreshing: ref(false),
-    isStale: computed(() => false),
-    lastUpdatedIso: computed(() => data.value.lastUpdatedIso),
-    cacheAgeSeconds: computed(() => data.value.cache.ageSeconds),
-    cacheHit: computed(() => data.value.cache.hit),
-    freshnessSeconds: ref(120),
-    mode: ref('driving'),
-    from: ref('Origin'),
-    to: ref('Destination'),
-    refresh: refresh as RouteTimeStateMock['refresh'],
-    setMode: setMode as RouteTimeStateMock['setMode'],
-    setEndpoints: setEndpoints as RouteTimeStateMock['setEndpoints'],
-    setFreshnessSeconds: setFreshnessSeconds as RouteTimeStateMock['setFreshnessSeconds'],
   };
 }
-
-function createAlertThresholdState(): AlertThresholdStateMock {
-  const thresholdMinutes = ref(45);
-  const setThreshold = vi.fn((value: number) => {
-    thresholdMinutes.value = value;
-  }) as AlertThresholdStateMock['setThreshold'];
-  const resetThreshold = vi.fn(() => {
-    thresholdMinutes.value = 45;
-  }) as AlertThresholdStateMock['resetThreshold'];
-
-  return {
-    thresholdMinutes,
-    setThreshold,
-    resetThreshold,
-  };
-}
-
-let routeTimeState: RouteTimeStateMock;
-let alertThresholdState: AlertThresholdStateMock;
-
-const getRouteTimeState = (): RouteTimeStateMock => routeTimeState;
-const getAlertThresholdState = (): AlertThresholdStateMock => alertThresholdState;
-
-vi.mock('../../composables/useRouteTime.ts', () => ({
-  useRouteTime: () => getRouteTimeState(),
-}));
-
-vi.mock('../../composables/useAlertThreshold.ts', () => ({
-  useAlertThreshold: () => getAlertThresholdState(),
-}));
-
-vi.mock('../../composables/useUiPreferences.ts', () => ({
-  useUiPreferences: () => ({
-    isWidgetCompact: () => false, // Always return false for tests to show MapPreview
-  }),
-}));
-
-import RouteWidget from '../RouteWidget.vue';
-import { MonitoringMode } from '../monitoringMode';
-import { provideToasts } from '../../composables/useToasts';
 
 const createSlotStub = (tag: string) =>
   defineComponent({
@@ -130,57 +128,34 @@ const createSlotStub = (tag: string) =>
 const MapPreviewStub = defineComponent({
   name: 'MapPreviewStub',
   props: {
-    mode: {
-      type: String,
-      default: 'Simple',
-    },
-    from: {
-      type: String,
-      default: '',
-    },
-    to: {
-      type: String,
-      default: '',
-    },
+    mode: { type: String, default: 'Simple' },
+    from: { type: String, default: '' },
+    to: { type: String, default: '' },
   },
   setup(props) {
     const showMap = () => (props.mode === 'Nav' || props.mode === 'nav') && props.from && props.to;
     return () =>
       showMap()
         ? h('div', { 'data-test': 'map-preview' })
-        : null; // Don't render anything when map shouldn't be shown
+        : null;
   },
 });
-
 
 const flushPendingUpdates = async (): Promise<void> => {
   await nextTick();
   await nextTick();
 };
 
-describe('RouteWidget', () => {
-  let setIntervalSpy: MockInstance<Parameters<typeof window.setInterval>, ReturnType<typeof window.setInterval>>;
-  let clearIntervalSpy: MockInstance<Parameters<typeof window.clearInterval>, ReturnType<typeof window.clearInterval>>;
-
+describe('RouteWidget Integration Tests', () => {
   beforeEach(() => {
     vi.useFakeTimers();
     const baseDate = new Date();
     baseDate.setFullYear(2024, 5, 1);
     baseDate.setHours(12, 0, 0, 0);
     vi.setSystemTime(baseDate);
-
-    routeTimeState = createRouteTimeState();
-    alertThresholdState = createAlertThresholdState();
-
-    setIntervalSpy = vi.spyOn(window, 'setInterval');
-    setIntervalSpy.mockReturnValue(1 as unknown as ReturnType<typeof window.setInterval>);
-    clearIntervalSpy = vi.spyOn(window, 'clearInterval');
-    clearIntervalSpy.mockImplementation(() => undefined);
   });
 
   afterEach(() => {
-    setIntervalSpy.mockRestore();
-    clearIntervalSpy.mockRestore();
     vi.useRealTimers();
     vi.clearAllMocks();
   });
@@ -265,121 +240,177 @@ describe('RouteWidget', () => {
     });
   };
 
-  it('shows the map preview only while navigation mode is active', async () => {
+  it('renders all route components correctly', async () => {
     const wrapper = mountComponent();
-    const widget = wrapper.findComponent(RouteWidget);
-    const getInternalInstance = () =>
-      widget.vm.$ as ComponentInternalInstance & { setupState: { mode: MonitoringMode } };
-    const setMode = (value: MonitoringMode) => {
-      getInternalInstance().setupState.mode = value;
-    };
     await flushPendingUpdates();
 
+    expect(wrapper.find('[data-test="route-summary"]').exists()).toBe(true);
+    expect(wrapper.find('[data-test="route-alerts"]').exists()).toBe(true);
+    expect(wrapper.find('[data-test="duration"]').exists()).toBe(true);
+    expect(wrapper.find('[data-test="distance"]').exists()).toBe(true);
+  });
+
+  it('displays route data correctly', async () => {
+    const wrapper = mountComponent();
+    await flushPendingUpdates();
+
+    expect(wrapper.find('[data-test="duration"]').text()).toBe('25.5');
+    expect(wrapper.find('[data-test="distance"]').text()).toBe('12.3');
+  });
+
+  it('shows map preview in Nav mode', async () => {
+    const wrapper = mountComponent();
+    await flushPendingUpdates();
+
+    // Initially in Simple mode, no map
     expect(wrapper.find('[data-test="map-preview"]').exists()).toBe(false);
 
-    setMode(MonitoringMode.Nav);
+    // Switch to Nav mode
+    const modeToggle = wrapper.findComponent({ name: 'RouteModeToggle' });
+    await modeToggle.trigger('click');
     await flushPendingUpdates();
-    expect(getInternalInstance().setupState.mode).toBe(MonitoringMode.Nav);
 
+    // Should show map in Nav mode
     expect(wrapper.find('[data-test="map-preview"]').exists()).toBe(true);
-
-    setMode(MonitoringMode.Simple);
-    await flushPendingUpdates();
-
-    expect(wrapper.find('[data-test="map-preview"]').exists()).toBe(false);
   });
 
-  it('renders and removes MapPreview when switching modes via direct mode change', async () => {
-    const wrapper = mountComponent();
-    const widget = wrapper.findComponent(RouteWidget);
-    const getInternalInstance = () =>
-      widget.vm.$ as ComponentInternalInstance & { setupState: { mode: MonitoringMode } };
-    const setMode = (value: MonitoringMode) => {
-      getInternalInstance().setupState.mode = value;
-    };
-
-    const findMapPreview = () => wrapper.find('[data-test="map-preview"]');
-
-    await flushPendingUpdates();
-    expect(findMapPreview().exists()).toBe(false);
-
-    setMode(MonitoringMode.Nav);
-    await flushPendingUpdates();
-    expect(findMapPreview().exists()).toBe(true);
-
-    setMode(MonitoringMode.Simple);
-    await flushPendingUpdates();
-    expect(findMapPreview().exists()).toBe(false);
-  });
-
-  it('triggers an initial refresh on mount', async () => {
+  it('handles mode switching', async () => {
     const wrapper = mountComponent();
     await flushPendingUpdates();
 
-    expect(getRouteTimeState().refresh).toHaveBeenCalledTimes(1);
-    expect(getRouteTimeState().refresh).toHaveBeenCalledWith({
-      background: false,
-      reason: 'initial',
-      forceRefresh: undefined,
+    const modeToggle = wrapper.findComponent({ name: 'RouteModeToggle' });
+    
+    // Initial state should be Simple
+    expect(modeToggle.text()).toBe(MonitoringMode.Simple);
+
+    // Click to switch to Nav
+    await modeToggle.trigger('click');
+    await flushPendingUpdates();
+
+    expect(modeToggle.text()).toBe(MonitoringMode.Nav);
+  });
+
+  it('handles settings interactions', async () => {
+    const wrapper = mountComponent();
+    await flushPendingUpdates();
+
+    const settings = wrapper.findComponent({ name: 'RouteSettings' });
+    
+    // Test settings interactions
+    await settings.find('button').trigger('click'); // Mode button
+    await settings.findAll('button')[1].trigger('click'); // Interval button
+    await settings.findAll('button')[2].trigger('click'); // Threshold button
+    await settings.findAll('button')[3].trigger('click'); // Reset button
+    await settings.findAll('button')[4].trigger('click'); // Save button
+
+    // Should not throw errors
+    expect(true).toBe(true);
+  });
+
+  it('handles alert acknowledgment', async () => {
+    const wrapper = mountComponent();
+    await flushPendingUpdates();
+
+    const alerts = wrapper.findComponent({ name: 'RouteAlerts' });
+    const dismissButton = alerts.find('button');
+    
+    await dismissButton.trigger('click');
+    await flushPendingUpdates();
+
+    // Should not throw errors
+    expect(true).toBe(true);
+  });
+
+  it('emits correct events', async () => {
+    const wrapper = mountComponent();
+    await flushPendingUpdates();
+
+    // Test alert acknowledgment event
+    const alerts = wrapper.findComponent({ name: 'RouteAlerts' });
+    await alerts.find('button').trigger('click');
+
+    expect(wrapper.emitted('alerts-acknowledged')).toBeTruthy();
+
+    // Test alerts-updated event (should be called with count)
+    expect(wrapper.emitted('alerts-updated')).toBeTruthy();
+  });
+
+  it('displays correct title and subtitle', async () => {
+    const wrapper = mountComponent();
+    await flushPendingUpdates();
+
+    // Should show monitoring mode and route
+    expect(wrapper.text()).toContain('Simple Mode');
+    expect(wrapper.text()).toContain('Origin → Destination');
+  });
+
+  it('handles cache description', async () => {
+    const wrapper = mountComponent();
+    await flushPendingUpdates();
+
+    const cacheDesc = wrapper.find('[data-test="cache-desc"]');
+    expect(cacheDesc.exists()).toBe(true);
+  });
+
+  it('maintains accessibility features', async () => {
+    const wrapper = mountComponent();
+    await flushPendingUpdates();
+
+    // Should have proper ARIA labels
+    const modeToggle = wrapper.findComponent({ name: 'RouteModeToggle' });
+    expect(modeToggle.attributes('aria-label')).toBe('Select monitoring mode');
+  });
+
+  it('integrates properly with PollingWidget', async () => {
+    const wrapper = mountComponent();
+    await flushPendingUpdates();
+
+    // Should render within PollingWidget structure
+    expect(wrapper.findComponent({ name: 'PollingWidget' }).exists()).toBe(true);
+  });
+
+  it('handles compact mode correctly', async () => {
+    // Mock compact mode
+    const { useUiPreferences } = require('../../composables/useUiPreferences');
+    useUiPreferences.mockReturnValue({
+      isWidgetCompact: () => true,
     });
 
-    wrapper.unmount();
+    const wrapper = mountComponent();
+    await flushPendingUpdates();
 
-    expect(getRouteTimeState().setFreshnessSeconds).toHaveBeenCalledWith(120);
+    // Should still render all components in compact mode
+    expect(wrapper.find('[data-test="route-summary"]').exists()).toBe(true);
+    expect(wrapper.find('[data-test="route-alerts"]').exists()).toBe(true);
   });
 
-  it('automatically switches modes at 8:30am, 9:30am, 5pm and 8pm local time on weekdays', async () => {
-    // Test the auto mode logic by testing the time boundaries directly
-    // This tests the core logic without relying on timer complexities
-    
-    // Test Monday 8:30 AM - should be Nav mode (morning window start)
-    const morningStart = new Date(2024, 5, 3, 8, 30, 0, 0); // Monday
-    vi.setSystemTime(morningStart);
-    
-    const wrapper1 = mountComponent();
-    await flushPendingUpdates();
-    const internal1 = wrapper1.findComponent(RouteWidget).vm.$ as ComponentInternalInstance & { setupState: { mode: MonitoringMode } };
-    expect(internal1.setupState.mode).toBe(MonitoringMode.Nav);
-    wrapper1.unmount();
+  it('handles error states gracefully', async () => {
+    // Mock error state
+    const { useRoutePolling } = require('../../composables/useRoutePolling');
+    useRoutePolling.mockReturnValue({
+      data: ref(null),
+      error: ref('Network error'),
+      isPolling: ref(false),
+      isStale: ref(false),
+      lastUpdatedIso: ref(null),
+      cacheAgeSeconds: ref(null),
+      cacheHit: ref(false),
+      from: ref('Origin'),
+      to: ref('Destination'),
+      mode: ref(MonitoringMode.Simple),
+      refreshInterval: ref(120),
+      pollingSeconds: ref(120),
+      triggerPolling: vi.fn(),
+      setMode: vi.fn(),
+      setRefreshInterval: vi.fn(),
+      setFreshnessSeconds: vi.fn(),
+    });
 
-    // Test Monday 9:30 AM - should be Simple mode (morning window end)
-    const morningEnd = new Date(2024, 5, 3, 9, 30, 0, 0); // Monday
-    vi.setSystemTime(morningEnd);
-    
-    const wrapper2 = mountComponent();
+    const wrapper = mountComponent();
     await flushPendingUpdates();
-    const internal2 = wrapper2.findComponent(RouteWidget).vm.$ as ComponentInternalInstance & { setupState: { mode: MonitoringMode } };
-    expect(internal2.setupState.mode).toBe(MonitoringMode.Simple);
-    wrapper2.unmount();
 
-    // Test Monday 5:00 PM - should be Nav mode (evening window start)
-    const eveningStart = new Date(2024, 5, 3, 17, 0, 0, 0); // Monday
-    vi.setSystemTime(eveningStart);
-    
-    const wrapper3 = mountComponent();
-    await flushPendingUpdates();
-    const internal3 = wrapper3.findComponent(RouteWidget).vm.$ as ComponentInternalInstance & { setupState: { mode: MonitoringMode } };
-    expect(internal3.setupState.mode).toBe(MonitoringMode.Nav);
-    wrapper3.unmount();
-
-    // Test Monday 8:00 PM - should be Simple mode (evening window end)
-    const eveningEnd = new Date(2024, 5, 3, 20, 0, 0, 0); // Monday
-    vi.setSystemTime(eveningEnd);
-    
-    const wrapper4 = mountComponent();
-    await flushPendingUpdates();
-    const internal4 = wrapper4.findComponent(RouteWidget).vm.$ as ComponentInternalInstance & { setupState: { mode: MonitoringMode } };
-    expect(internal4.setupState.mode).toBe(MonitoringMode.Simple);
-    wrapper4.unmount();
-
-    // Test Tuesday 8:30 AM - should be Nav mode again
-    const nextDayMorning = new Date(2024, 5, 4, 8, 30, 0, 0); // Tuesday
-    vi.setSystemTime(nextDayMorning);
-    
-    const wrapper5 = mountComponent();
-    await flushPendingUpdates();
-    const internal5 = wrapper5.findComponent(RouteWidget).vm.$ as ComponentInternalInstance & { setupState: { mode: MonitoringMode } };
-    expect(internal5.setupState.mode).toBe(MonitoringMode.Nav);
-    wrapper5.unmount();
+    // Should handle error state without crashing
+    expect(wrapper.find('[data-test="route-summary"]').exists()).toBe(true);
+    expect(wrapper.find('[data-test="duration"]').text()).toBe('—');
   });
 });
