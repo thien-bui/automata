@@ -32,8 +32,8 @@
         :cache-description="cacheDescription"
       />
 
-      <!-- Map preview - hidden in compact mode but still available for nav mode switching -->
-      <MapPreview v-if="!isCompact" :mode="mode" :from="origin" :to="destination"/>
+      <!-- Map preview - shown in Nav mode regardless of compact setting -->
+      <MapPreview v-if="!isCompact || isNavMode" :mode="mode" :from="origin" :to="destination"/>
 
       <!-- Alert display - detailed list in normal mode, compact icon in compact mode -->
       <RouteAlerts
