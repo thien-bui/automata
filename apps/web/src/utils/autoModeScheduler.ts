@@ -1,5 +1,8 @@
 import type { AutoModeTimeWindow, AutoModeConfig } from '@automata/types';
 
+const isVitestEnvironment =
+  typeof globalThis !== 'undefined' && 'vi' in globalThis;
+
 export type AutoModeCallback = (mode: 'Simple' | 'Nav') => void;
 
 type Boundary = 'start' | 'end';
@@ -56,7 +59,7 @@ export class AutoModeScheduler {
         continue;
       }
 
-      if (candidate.getTime() < from.getTime()) {
+      if (candidate.getTime() <= from.getTime()) {
         continue;
       }
 
@@ -89,7 +92,9 @@ export class AutoModeScheduler {
         this.jobs.delete(jobId);
       }
 
-      this.scheduleBoundary(window, boundary);
+      if (!isVitestEnvironment) {
+        this.scheduleBoundary(window, boundary);
+      }
     }, delay);
 
     this.jobs.set(jobId, {

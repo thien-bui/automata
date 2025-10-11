@@ -118,6 +118,10 @@ export function useRoutePolling(options: UseRoutePollingOptions): UseRoutePollin
 
     autoModeScheduler.schedule();
     autoModeScheduler.applyCurrentMode();
+
+    if (options.initialMode === MonitoringMode.Nav && mode.value !== MonitoringMode.Nav) {
+      mode.value = MonitoringMode.Nav;
+    }
   }
 
   function destroyAutoModeScheduler(): void {
@@ -202,7 +206,7 @@ export function useRoutePolling(options: UseRoutePollingOptions): UseRoutePollin
         lastErrorMessage = null;
       }
     },
-    { flush: 'sync' },
+    { flush: 'sync', immediate: true },
   );
 
   watch(
@@ -219,7 +223,7 @@ export function useRoutePolling(options: UseRoutePollingOptions): UseRoutePollin
         staleNotified = false;
       }
     },
-    { flush: 'sync' },
+    { flush: 'sync', immediate: true },
   );
 
   function initializePolling(): void {
