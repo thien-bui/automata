@@ -1,7 +1,7 @@
 <template>
   <PollingWidget
-    overline-text="Discord"
-    title="Member Status"
+    overline-text="Friend List"
+    title="Discord"
     :subtitle="guildName"
     error-title="Discord Error"
     settings-title="Discord Settings"
