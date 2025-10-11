@@ -6,7 +6,7 @@
   >
     <v-card-title class="widget-header">
       <div class="widget-header__titles">
-        <div class="text-overline text-medium-emphasis">{{ overlineText }}</div>
+        <div v-if="shouldShowOverline" class="text-overline text-medium-emphasis">{{ overlineText }}</div>
         <div class="text-h6 font-weight-medium">{{ title }}</div>
         <div class="text-body-2 text-medium-emphasis mt-1">
           {{ subtitle }}
@@ -244,6 +244,11 @@ const { push: pushToast } = useToasts();
 
 const drawerOpen = ref(false);
 const isCompact = computed(() => props.compact);
+
+const shouldShowOverline = computed(() => {
+  // Hide overline text in compact mode or when overlineText is empty
+  return !props.compact && props.overlineText.trim() !== '';
+});
 
 const statusText = computed(() => {
   if (props.isPolling) {
