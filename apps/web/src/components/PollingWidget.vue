@@ -6,12 +6,12 @@
   >
     <v-card-title class="widget-header">
       <div class="widget-header__titles">
-        <div v-if="shouldShowOverline" class="text-overline text-medium-emphasis">{{ overlineText }}</div>
-        <div class="text-h6 font-weight-medium">{{ title }}</div>
-        <div class="text-body-2 text-medium-emphasis mt-1">
+        <div v-if="shouldShowOverline" class="widget-header__overline text-overline text-medium-emphasis">{{ overlineText }}</div>
+        <div class="widget-header__title text-h6 font-weight-medium">{{ title }}</div>
+        <div class="widget-header__subtitle text-body-2 text-medium-emphasis">
           {{ subtitle }}
         </div>
-        <div v-if="lastUpdateDisplay" class="text-caption text-medium-emphasis mt-1">
+        <div v-if="lastUpdateDisplay" class="widget-header__timestamp text-caption text-medium-emphasis">
           {{ lastUpdateDisplay }}
         </div>
       </div>
@@ -302,142 +302,123 @@ function handleSaveSettings() {
 }
 </script>
 
-<style scoped>
+<style scoped lang="scss">
 .polling-widget {
-  max-width: 980px;
-  margin: 0 auto;
+  width: min(61.25rem, calc(100% - clamp(1.5rem, 5vw, 2.5rem)));
+  margin-inline: auto;
 }
 
 .polling-widget--compact {
-  max-width: 720px;
+  width: min(45rem, calc(100% - clamp(1.5rem, 5vw, 2.5rem)));
 }
 
 .widget-header {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  flex-wrap: wrap;
+  gap: clamp(0.75rem, 2vw, 1.25rem);
 }
 
 .widget-header__titles {
+  display: grid;
+  gap: 0.25rem;
   min-width: 0;
+  align-content: start;
 }
 
 .widget-header__actions {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 8px;
-  margin-left: auto;
+  justify-content: flex-end;
+  justify-self: end;
+  gap: 0.5rem;
+}
+
+.widget-header__title,
+.widget-header__subtitle,
+.widget-header__timestamp {
+  min-width: 0;
 }
 
 .polling-widget--compact .widget-header {
-  gap: 10px;
-  padding: 10px 16px;
+  gap: clamp(0.5rem, 2vw, 0.75rem);
+  padding-block: 0.625rem;
+  padding-inline: clamp(1rem, 3vw, 1.5rem);
 }
 
 .polling-widget--compact .widget-header__actions {
-  gap: 4px;
+  gap: 0.25rem;
 }
 
 .polling-widget--compact .widget-header__titles {
+  gap: 0.125rem;
+}
+
+.polling-widget--compact .widget-header__title {
+  font-size: clamp(1.05rem, 1vw + 1rem, 1.15rem);
+}
+
+.polling-widget--compact .widget-header__subtitle {
+  font-size: clamp(0.85rem, 0.5vw + 0.8rem, 0.95rem);
+}
+
+.polling-widget--compact .widget-header__timestamp {
+  font-size: clamp(0.75rem, 0.4vw + 0.7rem, 0.875rem);
+}
+
+.widget-summary {
   display: grid;
-  gap: 2px;
-}
-
-.polling-widget--compact :deep(.widget-header__titles .text-overline) {
-  display: none;
-  margin: 0 !important;
-  padding: 0 !important;
-}
-
-.polling-widget--compact :deep(.widget-header__titles .text-h6) {
-  font-size: 1.1rem;
-}
-
-.polling-widget--compact :deep(.widget-header__titles .text-body-2) {
-  font-size: 0.85rem;
-}
-
-.polling-widget--compact :deep(.widget-header__titles .text-caption) {
-  font-size: 0.75rem;
-}
-
-.polling-widget--compact :deep(.widget-header__titles .mt-1) {
-  margin-top: 2px !important;
-}
-
-:deep(.widget-summary__section.status-indicator) {
-  display: flex;
-  justify-content: flex-end;
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
+  gap: clamp(0.75rem, 2vw, 1rem);
 }
 
-:deep(.widget-summary) {
+.widget-summary__section {
   display: flex;
   flex-wrap: wrap;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 16px;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
 }
 
-.polling-widget--compact :deep(.widget-summary) {
-  flex-direction: column;
-  gap: 12px;
-}
-
-:deep(.widget-summary__section) {
-  flex: 1 1 240px;
-}
-
-.polling-widget--compact :deep(.widget-summary__section) {
-  flex: 1 1 auto;
-}
-
-:deep(.widget-summary__section--end) {
+.widget-summary__section--end {
+  justify-self: end;
+  justify-content: flex-end;
   text-align: end;
 }
 
-.polling-widget--compact :deep(.widget-summary__section--end) {
-  text-align: start;
+.polling-widget--compact .widget-summary {
+  grid-template-columns: 1fr;
+  align-items: stretch;
+  gap: 0.75rem;
 }
 
-@media (max-width: 960px) {
-  .polling-widget {
-    margin-inline: 16px;
-  }
-
-  .widget-header {
-    align-items: flex-start;
-  }
+.polling-widget--compact .widget-summary__section--end {
+  justify-self: start;
+  justify-content: flex-start;
+  text-align: start;
 }
 
 @media (max-width: 640px) {
   .widget-header {
-    flex-direction: column;
-    align-items: stretch;
+    grid-template-columns: 1fr;
   }
 
   .widget-header__actions {
-    width: 100%;
+    justify-self: end;
     justify-content: flex-end;
   }
 
-  :deep(.widget-summary) {
-    flex-direction: column;
-    gap: 12px;
+  .widget-summary {
+    grid-template-columns: 1fr;
+    align-items: stretch;
   }
 
-  :deep(.widget-summary__section) {
-    width: 100%;
-  }
-
-  :deep(.widget-summary__section--end) {
-    text-align: start;
-  }
-
-  :deep(.widget-summary__section.status-indicator) {
+  .widget-summary__section--end {
+    justify-self: start;
     justify-content: flex-start;
+    text-align: start;
   }
 }
 </style>

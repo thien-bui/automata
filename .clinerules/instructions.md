@@ -174,6 +174,47 @@ packages/types/src/
 └── index.ts         # Shared TypeScript types
 ```
 
+### CSS
+**When to use CSS Grid (2-D layout)**
+* Page/screen scaffolding: headers/sidebars/content/footers
+* Dashboards, galleries, card grids with consistent rows & columns
+* Complex alignment in both directions at once
+* Example:
+```css
+.page {
+  display: grid;
+  grid-template-columns: 1fr min(75ch, 100%) 1fr;
+  /* center column + gutters */
+  gap: 1rem;
+}
+.cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+  gap: 1rem;
+}
+```
+
+**When to use Flexbox (1-D layout)**
+* Nav bars, toolbars, menus, tabs
+* Horizontal or vertical stacks with spacing and alignment
+* “Distribute available space” problems (e.g., one item grows, others shrink)
+* Example:
+```css
+.nav { display: flex; gap: .75rem; align-items: center; }
+.nav .spacer { margin-inline-start: auto; } /* push items right */
+```
+
+**Rule of thumb**
+* Grid for overall layout and any two-dimensional arrangement.
+* Flex for arranging items along a single axis inside components.
+* It’s normal to do: Grid for the page → Flex inside each grid cell.
+
+**Modern tips (work great with both)**
+* Use `gap` instead of margins for consistent gutters.
+* Prefer fluid sizing: `clamp()`, `min()`, `max()`, and `aspect-ratio`.
+* Pair with container queries for component-level responsiveness.
+* Avoid reordering content visually (`order`) if it harms reading/tab order.
+
 ## Key Principles
 1. **Type Safety First**: Maintain strict TypeScript compliance
 2. **Test Coverage**: Write tests for all new functionality
