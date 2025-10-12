@@ -1,21 +1,24 @@
 <template>
   <v-sheet
-    class="weather-summary-card"
-    :class="{ 'weather-summary-card--compact': isCompact }"
+    class="weather-summary"
+    :class="{ 'weather-summary--compact': isCompact }"
     elevation="1"
     rounded
   >
-    <div class="widget-summary">
-      <div class="widget-summary__section">
-        <div class="text-overline text-medium-emphasis">Current Temperature</div>
-        <div class="text-h4 font-weight-medium" aria-live="polite">
+    <div class="weather-summary__layout">
+      <div class="weather-summary__section">
+        <div class="weather-summary__label text-overline text-medium-emphasis">
+          Current Temperature
+        </div>
+        <div class="weather-summary__temperature text-h4 font-weight-medium" aria-live="polite">
           {{ temperature }}
         </div>
-        <div class="text-body-1 text-medium-emphasis mt-1">
+        <div class="weather-summary__condition text-body-1 text-medium-emphasis">
           {{ condition }}
         </div>
         <WeatherMetrics
           v-if="isCompact && showMetrics"
+          class="weather-summary__metrics"
           v-bind="sanitizedMetrics"
           :show-humidity="showHumidity"
           :show-wind-speed="showWindSpeed"
@@ -23,11 +26,9 @@
           :is-compact="isCompact"
         />
       </div>
-      <div
-        v-if="!isCompact"
-        class="widget-summary__section widget-summary__section--end"
-      >
+      <div v-if="!isCompact" class="weather-summary__section weather-summary__section--metrics">
         <WeatherMetrics
+          class="weather-summary__metrics"
           v-bind="sanitizedMetrics"
           :show-humidity="showHumidity"
           :show-wind-speed="showWindSpeed"
@@ -65,27 +66,50 @@ const sanitizedMetrics = computed(() => ({
 }));
 </script>
 
-<style scoped>
-.weather-summary-card {
-  padding: 16px;
+<style scoped lang="scss">
+.weather-summary {
+  padding: clamp(1rem, 2vw, 1.5rem);
   transition: padding 0.2s ease;
 }
 
-.weather-summary-card--compact {
-  padding: 12px;
+.weather-summary--compact {
+  padding: clamp(0.75rem, 2vw, 1rem);
 }
 
-.widget-summary {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
+.weather-summary__layout {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+  gap: clamp(0.75rem, 3vw, 1.5rem);
+  align-items: end;
 }
 
-.widget-summary__section {
-  flex: 1;
+.weather-summary__section {
+  display: grid;
+  gap: clamp(0.375rem, 1vw, 0.75rem);
+  min-width: 0;
 }
 
-.widget-summary__section--end {
-  text-align: right;
+.weather-summary__section--metrics {
+  justify-items: end;
+  text-align: end;
+}
+
+.weather-summary__metrics {
+  width: 100%;
+}
+
+.weather-summary--compact .weather-summary__metrics {
+  width: auto;
+}
+
+.weather-summary__condition {
+  max-width: 28rem;
+}
+
+@media (max-width: 640px) {
+  .weather-summary__section--metrics {
+    justify-items: start;
+    text-align: start;
+  }
 }
 </style>

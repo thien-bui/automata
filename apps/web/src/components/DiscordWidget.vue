@@ -14,7 +14,7 @@
     :compact="isCompact"
     @manual-refresh="handleManualRefresh"
     @hard-refresh="handleHardRefresh"
-  @save-settings="handleSaveSettings"
+    @save-settings="handleSaveSettings"
   >
     <template #main-content>
       <DiscordWidgetHeader
@@ -36,19 +36,21 @@
     </template>
 
     <template #settings-content>
-      <DiscordWidgetSettings
-        v-model:refresh-interval="refreshIntervalInput"
-        v-model:show-bots="showBotsInput"
-        v-model:show-offline-members="showOfflineMembersInput"
-        v-model:show-avatars="showAvatarsInput"
-        v-model:group-by-status="groupByStatusInput"
-        v-model:sort-by="sortByInput"
-        v-model:max-members-to-show="maxMembersToShowInput"
-        :min-refresh-seconds="minRefreshSeconds"
-        :max-refresh-seconds="maxRefreshSeconds"
-        :sort-options="sortOptions"
-        @submit="updateRefreshInterval"
-      />
+      <div class="discord-widget__settings">
+        <DiscordWidgetSettings
+          v-model:refresh-interval="refreshIntervalInput"
+          v-model:show-bots="showBotsInput"
+          v-model:show-offline-members="showOfflineMembersInput"
+          v-model:show-avatars="showAvatarsInput"
+          v-model:group-by-status="groupByStatusInput"
+          v-model:sort-by="sortByInput"
+          v-model:max-members-to-show="maxMembersToShowInput"
+          :min-refresh-seconds="minRefreshSeconds"
+          :max-refresh-seconds="maxRefreshSeconds"
+          :sort-options="sortOptions"
+          @submit="updateRefreshInterval"
+        />
+      </div>
     </template>
   </PollingWidget>
 </template>
@@ -300,3 +302,10 @@ watch(isStale, (value) => {
   }
 });
 </script>
+
+<style scoped lang="scss">
+.discord-widget__settings {
+  display: grid;
+  gap: clamp(1rem, 3vw, 1.5rem);
+}
+</style>

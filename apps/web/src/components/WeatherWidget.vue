@@ -21,9 +21,9 @@
         :temperature="currentTemperatureDisplay"
         :condition="currentConditionDisplay"
         :humidity="currentHourEntry?.humidityPercent"
-    :wind-speed="currentHourEntry?.windSpeedKph"
-    :is-compact="isCompact"
-    :show-metrics="displaySettings.showHumidity || displaySettings.showWindSpeed"
+        :wind-speed="currentHourEntry?.windSpeedKph"
+        :is-compact="isCompact"
+        :show-metrics="displaySettings.showHumidity || displaySettings.showWindSpeed"
         :show-humidity="displaySettings.showHumidity"
         :show-wind-speed="displaySettings.showWindSpeed"
         :show-precipitation="displaySettings.showPrecipitation"
@@ -33,7 +33,7 @@
         v-if="!isCompact && displaySettings.showHourlyForecast"
         :data="displayedHourlyData"
         :is-compact="isCompact"
-    :show-hourly-forecast="displaySettings.showHourlyForecast"
+        :show-hourly-forecast="displaySettings.showHourlyForecast"
         :current-hour-highlight="displaySettings.currentHourHighlight"
         :show-humidity="displaySettings.showHumidity"
         :show-wind-speed="displaySettings.showWindSpeed"
@@ -41,26 +41,32 @@
     </template>
 
     <template #settings-content>
-      <v-text-field
-        v-model="locationInput"
-        label="Location"
-        placeholder="Enter city or address"
-        variant="outlined"
-        density="compact"
-        @keyup.enter="updateLocation"
-      />
-      <v-text-field
-        v-model.number="refreshIntervalInput"
-        label="Refresh Interval (seconds)"
-        type="number"
-        :min="minRefreshSeconds"
-        :max="maxRefreshSeconds"
-        variant="outlined"
-        density="compact"
-        @keyup.enter="updateRefreshInterval"
-      />
-      <v-divider class="my-4" />
-      <CompactModeControl widget-name="weather-widget" />
+      <div class="weather-widget__settings">
+        <div class="weather-widget__fields">
+          <v-text-field
+            class="weather-widget__field"
+            v-model="locationInput"
+            label="Location"
+            placeholder="Enter city or address"
+            variant="outlined"
+            density="compact"
+            @keyup.enter="updateLocation"
+          />
+          <v-text-field
+            class="weather-widget__field"
+            v-model.number="refreshIntervalInput"
+            label="Refresh Interval (seconds)"
+            type="number"
+            :min="minRefreshSeconds"
+            :max="maxRefreshSeconds"
+            variant="outlined"
+            density="compact"
+            @keyup.enter="updateRefreshInterval"
+          />
+        </div>
+        <v-divider class="weather-widget__divider" />
+        <CompactModeControl class="weather-widget__compact-control" widget-name="weather-widget" />
+      </div>
     </template>
   </PollingWidget>
 </template>
@@ -404,3 +410,27 @@ watch(isStale, (value) => {
 });
 
 </script>
+
+<style scoped lang="scss">
+.weather-widget__settings {
+  display: grid;
+  gap: clamp(1.25rem, 3vw, 1.75rem);
+}
+
+.weather-widget__fields {
+  display: grid;
+  gap: clamp(0.75rem, 2vw, 1rem);
+}
+
+.weather-widget__field :deep(.v-field) {
+  border-radius: 0.75rem;
+}
+
+.weather-widget__divider {
+  margin-block: 0;
+}
+
+.weather-widget__compact-control {
+  margin-inline: clamp(0rem, 1vw, 0.5rem);
+}
+</style>

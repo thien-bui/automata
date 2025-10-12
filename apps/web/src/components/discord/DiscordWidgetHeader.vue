@@ -1,37 +1,37 @@
 <template>
   <v-sheet
-    class="discord-widget"
-    :class="{ 'discord-widget--compact': isCompact }"
+    class="discord-header"
+    :class="{ 'discord-header--compact': isCompact }"
     elevation="1"
     rounded
   >
-    <div v-if="!isCompact" class="widget-summary">
-      <div class="widget-summary__section">
-        <div class="text-overline text-medium-emphasis">Guild Overview</div>
-        <div class="text-h4 font-weight-medium" aria-live="polite">
+    <div v-if="!isCompact" class="discord-header__summary">
+      <div class="discord-header__metric">
+        <div class="discord-header__label text-overline text-medium-emphasis">Guild Overview</div>
+        <div class="discord-header__total text-h4 font-weight-medium" aria-live="polite">
           {{ onlineCount }} / {{ totalCount }}
         </div>
-        <div class="text-body-1 text-medium-emphasis mt-1">
+        <div class="discord-header__subtitle text-body-1 text-medium-emphasis">
           Members Online
         </div>
       </div>
-      <div class="widget-summary__section widget-summary__section--end">
-        <div class="text-body-2 text-medium-emphasis">
+      <div class="discord-header__meta">
+        <div class="discord-header__meta-line text-body-2 text-medium-emphasis">
           Total: {{ totalCount }}
         </div>
-        <div class="text-body-2 text-medium-emphasis">
+        <div class="discord-header__meta-line text-body-2 text-medium-emphasis">
           Online: {{ onlineCount }}
         </div>
         <div
           v-if="showCacheInfo && cacheDescription"
-          class="text-caption text-medium-emphasis mt-1"
+          class="discord-header__cache text-caption text-medium-emphasis"
         >
           {{ cacheDescription }}
         </div>
       </div>
     </div>
 
-    <v-chip-group v-if="!isCompact" class="status-chip-group mb-3">
+    <v-chip-group v-if="!isCompact" class="discord-header__chips">
       <v-chip
         v-for="chip in statusChips"
         :key="chip.status"
@@ -81,48 +81,65 @@ const statusChips = computed(() => {
 });
 </script>
 
-<style scoped>
-.discord-widget {
-  padding: 16px;
+<style scoped lang="scss">
+.discord-header {
+  padding: clamp(1rem, 2vw, 1.5rem);
+  display: grid;
+  gap: clamp(1rem, 3vw, 1.5rem);
 }
 
-.discord-widget--compact {
-  padding: 0;
+.discord-header--compact {
+  padding: clamp(0.5rem, 1.5vw, 0.75rem);
+  gap: clamp(0.75rem, 2vw, 1rem);
 }
 
-.widget-summary {
+.discord-header__summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+  gap: clamp(0.75rem, 2.5vw, 1.5rem);
+  align-items: end;
+}
+
+.discord-header__metric,
+.discord-header__meta {
+  display: grid;
+  gap: clamp(0.375rem, 1vw, 0.75rem);
+  min-width: 0;
+}
+
+.discord-header__meta {
+  justify-items: end;
+  text-align: end;
+}
+
+.discord-header__cache {
+  max-width: 22rem;
+}
+
+.discord-header__chips {
   display: flex;
-  justify-content: space-between;
-  align-items: flex-end;
-  gap: 16px;
-  margin-bottom: 16px;
+  flex-wrap: wrap;
+  gap: clamp(0.5rem, 1.5vw, 0.75rem);
 }
 
-.widget-summary__section {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.widget-summary__section--end {
-  text-align: right;
-}
-
-.status-chip-group {
-  display: flex;
-}
-
-:deep(.status-chip-group .v-slide-group__container) {
+:deep(.discord-header__chips .v-slide-group__container) {
   width: 100%;
 }
 
-:deep(.status-chip-group .v-slide-group__content) {
+:deep(.discord-header__chips .v-slide-group__content) {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: clamp(0.5rem, 1.5vw, 0.75rem);
 }
 
-:deep(.status-chip-group .v-slide-group__content > *) {
+:deep(.discord-header__chips .v-slide-group__content > *) {
   margin: 0;
+}
+
+@media (max-width: 640px) {
+  .discord-header__meta {
+    justify-items: start;
+    text-align: start;
+  }
 }
 </style>

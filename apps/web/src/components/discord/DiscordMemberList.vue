@@ -1,32 +1,29 @@
 <template>
-  <div class="member-list">
-    <div
-      class="text-subtitle-1 font-weight-medium mb-3"
-      :class="{ 'text-body-2': isCompact }"
-    >
+  <div class="discord-member-list">
+    <div class="discord-member-list__title text-subtitle-1 font-weight-medium" :class="{ 'text-body-2': isCompact }">
       Member List
     </div>
 
     <v-card
       elevation="2"
       rounded
-      class="member-list-card"
-      :class="{ 'member-list-card--compact': isCompact }"
+      class="discord-member-list__card"
+      :class="{ 'discord-member-list__card--compact': isCompact }"
     >
       <div
-        class="member-list-container"
-        :class="{ 'member-list-container--compact': isCompact }"
+        class="discord-member-list__items"
+        :class="{ 'discord-member-list__items--compact': isCompact }"
       >
         <div
           v-for="member in displayedMembers"
           :key="member.id"
-          class="member-item"
+          class="discord-member-list__item"
           :class="{
-            'member-bot': member.bot,
-            'member-item--compact': isCompact,
+            'discord-member-list__item--bot': member.bot,
+            'discord-member-list__item--compact': isCompact,
           }"
         >
-          <div class="member-avatar" v-if="showAvatars">
+          <div v-if="showAvatars" class="discord-member-list__avatar">
             <v-avatar
               :image="member.avatarUrl || undefined"
               :size="isCompact ? 20 : 32"
@@ -35,36 +32,36 @@
             </v-avatar>
           </div>
 
-          <div class="member-info">
-            <div class="member-name" :class="{ 'member-name--compact': isCompact }">
+          <div class="discord-member-list__details">
+            <div class="discord-member-list__name" :class="{ 'discord-member-list__name--compact': isCompact }">
               {{ member.displayName }}
               <v-chip
                 v-if="member.bot"
                 size="x-small"
                 color="purple"
                 variant="tonal"
-                class="ml-2"
+                class="discord-member-list__bot-chip"
               >
                 BOT
               </v-chip>
             </div>
             <div
-              class="member-username text-caption text-medium-emphasis"
-              :class="{ 'd-none': isCompact }"
+              v-if="!isCompact"
+              class="discord-member-list__username text-caption text-medium-emphasis"
             >
               @{{ member.username }}
             </div>
           </div>
 
-          <div class="member-status">
+          <div class="discord-member-list__status">
             <v-icon
               :icon="getStatusIcon(member.status)"
               :color="getStatusColor(member.status)"
               :size="isCompact ? 14 : 20"
             />
             <span
-              class="ml-1 text-caption"
-              :class="{ 'd-none': isCompact }"
+              v-if="!isCompact"
+              class="discord-member-list__status-label text-caption"
             >
               {{ member.status }}
             </span>
@@ -72,12 +69,8 @@
         </div>
       </div>
 
-      <div v-if="hasMoreMembers && !isCompact" class="pa-3 text-center">
-        <v-btn
-          variant="text"
-          size="small"
-          @click="toggleShowAll"
-        >
+      <div v-if="hasMoreMembers && !isCompact" class="discord-member-list__more">
+        <v-btn variant="text" size="small" @click="toggleShowAll">
           {{ showAll ? 'Show Less' : `Show ${remainingMembersCount} More` }}
         </v-btn>
       </div>
@@ -123,148 +116,143 @@ watch(
 );
 </script>
 
-<style scoped>
-.member-list {
-  margin-top: 16px;
+<style scoped lang="scss">
+.discord-member-list {
+  display: grid;
+  gap: clamp(0.75rem, 2vw, 1rem);
+  margin-block-start: clamp(1rem, 3vw, 1.5rem);
 }
 
-.member-list-card {
+.discord-member-list__title {
+  padding-inline: clamp(0.25rem, 1.5vw, 0.5rem);
+}
+
+.discord-member-list__card {
   overflow: hidden;
 }
 
-.member-list-card--compact {
+.discord-member-list__card--compact {
   overflow: visible;
 }
 
-.member-list-container {
-  max-height: 400px;
+.discord-member-list__items {
+  max-height: clamp(18rem, 40vh, 24rem);
   overflow-y: auto;
 }
 
-.member-list-container--compact {
-  max-height: 300px;
+.discord-member-list__items--compact {
+  max-height: clamp(14rem, 35vh, 20rem);
 }
 
-.member-item {
-  display: flex;
+.discord-member-list__item {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
   align-items: center;
-  padding: 12px 16px;
+  gap: clamp(0.75rem, 2vw, 1rem);
+  padding-block: clamp(0.75rem, 2vw, 1rem);
+  padding-inline: clamp(1rem, 3vw, 1.25rem);
   border-bottom: 1px solid rgba(var(--v-theme-surface-variant), 0.12);
   transition: background-color 0.2s ease-in-out;
 }
 
-.member-item--compact {
-  padding: 8px 12px;
-}
-
-.member-item:hover {
-  background-color: rgba(var(--v-theme-surface-variant), 0.04);
-}
-
-.member-item:last-child {
+.discord-member-list__item:last-child {
   border-bottom: none;
 }
 
-.member-item.member-bot {
+.discord-member-list__item:hover {
+  background-color: rgba(var(--v-theme-surface-variant), 0.04);
+}
+
+.discord-member-list__item--bot {
   background-color: rgba(var(--v-theme-purple), 0.04);
 }
 
-.member-avatar {
-  margin-right: 12px;
+.discord-member-list__item--compact {
+  padding-block: clamp(0.5rem, 1.5vw, 0.75rem);
+  padding-inline: clamp(0.75rem, 2vw, 1rem);
+  gap: clamp(0.5rem, 1.5vw, 0.75rem);
+}
+
+.discord-member-list__avatar {
   flex-shrink: 0;
 }
 
-.member-item--compact .member-avatar {
-  margin-right: 8px;
-}
-
-.member-info {
-  flex-grow: 1;
+.discord-member-list__details {
+  display: grid;
+  gap: 0.25rem;
   min-width: 0;
 }
 
-.member-name {
-  font-weight: 500;
-  font-size: 0.875rem;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.member-name--compact {
-  font-size: 0.8rem;
-}
-
-.member-username {
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.member-status {
-  display: flex;
+.discord-member-list__name {
+  display: inline-flex;
   align-items: center;
+  gap: 0.5rem;
+  font-weight: 500;
+  font-size: clamp(0.85rem, 0.3vw + 0.8rem, 0.95rem);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.discord-member-list__name--compact {
+  font-size: clamp(0.75rem, 0.3vw + 0.7rem, 0.85rem);
+}
+
+.discord-member-list__bot-chip {
+  padding-inline: 0.5rem;
+}
+
+.discord-member-list__username {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.discord-member-list__status {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
   flex-shrink: 0;
-  margin-left: 12px;
 }
 
-.member-item--compact .member-status {
-  margin-left: 8px;
+.discord-member-list__status-label {
+  letter-spacing: 0.01em;
 }
 
-.member-list-container::-webkit-scrollbar,
-.member-list-container--compact::-webkit-scrollbar {
-  width: 6px;
+.discord-member-list__more {
+  display: flex;
+  justify-content: center;
+  padding: clamp(0.75rem, 2vw, 1rem);
+  border-top: 1px solid rgba(var(--v-theme-surface-variant), 0.12);
 }
 
-.member-list-container::-webkit-scrollbar-track,
-.member-list-container--compact::-webkit-scrollbar-track {
+:deep(.discord-member-list__items::-webkit-scrollbar) {
+  width: 0.4rem;
+}
+
+:deep(.discord-member-list__items::-webkit-scrollbar-track) {
   background: rgba(var(--v-theme-surface-variant), 0.1);
-  border-radius: 3px;
+  border-radius: 999px;
 }
 
-.member-list-container::-webkit-scrollbar-thumb,
-.member-list-container--compact::-webkit-scrollbar-thumb {
+:deep(.discord-member-list__items::-webkit-scrollbar-thumb) {
   background: rgba(var(--v-theme-on-surface-variant), 0.3);
-  border-radius: 3px;
+  border-radius: 999px;
 }
 
-.member-list-container::-webkit-scrollbar-thumb:hover,
-.member-list-container--compact::-webkit-scrollbar-thumb:hover {
+:deep(.discord-member-list__items::-webkit-scrollbar-thumb:hover) {
   background: rgba(var(--v-theme-on-surface-variant), 0.5);
 }
 
-@media (max-width: 960px) {
-  .member-item {
-    padding: 8px 12px;
-  }
-
-  .member-avatar {
-    margin-right: 8px;
-  }
-
-  .member-name {
-    font-size: 0.8rem;
-  }
-
-  .member-username {
-    font-size: 0.7rem;
-  }
-}
-
 @media (max-width: 640px) {
-  .member-item {
-    flex-direction: column;
+  .discord-member-list__item {
+    grid-template-columns: minmax(0, 1fr);
     align-items: flex-start;
-    gap: 8px;
+    gap: clamp(0.5rem, 5vw, 0.75rem);
   }
 
-  .member-avatar {
-    margin-right: 0;
-  }
-
-  .member-status {
-    margin-left: 0;
+  .discord-member-list__status {
+    justify-content: flex-start;
   }
 }
 </style>
