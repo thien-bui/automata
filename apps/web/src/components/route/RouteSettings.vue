@@ -1,18 +1,21 @@
 <template>
   <div class="route-settings">
-    <div class="mb-6">
-      <v-list-subheader>Mode</v-list-subheader>
+    <section class="route-settings__group">
+      <v-list-subheader class="route-settings__heading">Mode</v-list-subheader>
       <RouteModeToggle
+        class="route-settings__toggle"
         :model-value="mode"
         density="default"
         color="primary"
-        class="my-2"
         aria-label="Toggle monitoring mode"
         @update:model-value="handleModeUpdate"
       />
+    </section>
 
-      <v-list-subheader class="mt-6">Refresh cadence</v-list-subheader>
+    <section class="route-settings__group">
+      <v-list-subheader class="route-settings__heading">Refresh cadence</v-list-subheader>
       <v-slider
+        class="route-settings__slider"
         :model-value="refreshInterval"
         :min="15"
         :max="300"
@@ -22,12 +25,15 @@
         aria-label="Polling interval in seconds"
         @update:model-value="handleRefreshIntervalUpdate"
       />
-      <div class="text-caption text-medium-emphasis px-2">
+      <div class="route-settings__note text-caption text-medium-emphasis">
         Polling every {{ refreshInterval }} seconds.
       </div>
+    </section>
 
-      <v-list-subheader class="mt-6">Alert threshold</v-list-subheader>
+    <section class="route-settings__group">
+      <v-list-subheader class="route-settings__heading">Alert threshold</v-list-subheader>
       <v-slider
+        class="route-settings__slider"
         :model-value="thresholdMinutes"
         :min="5"
         :max="180"
@@ -37,14 +43,16 @@
         aria-label="Alert threshold in minutes"
         @update:model-value="handleThresholdUpdate"
       />
-      <div class="text-caption text-medium-emphasis px-2 d-flex justify-space-between align-center">
+      <div class="route-settings__alert-note text-caption text-medium-emphasis">
         <span>Alerts fire above {{ thresholdMinutes }} minutes.</span>
-        <v-btn size="small" variant="text" @click="handleResetThreshold">Reset</v-btn>
+        <v-btn class="route-settings__reset" size="small" variant="text" @click="handleResetThreshold">
+          Reset
+        </v-btn>
       </div>
+    </section>
 
-      <v-divider class="my-4" />
-      <CompactModeControl widget-name="route-widget" />
-    </div>
+    <v-divider class="route-settings__divider" />
+    <CompactModeControl class="route-settings__compact-control" widget-name="route-widget" />
   </div>
 </template>
 
@@ -86,3 +94,53 @@ function handleResetThreshold(): void {
   emit('reset-threshold');
 }
 </script>
+
+<style scoped lang="scss">
+.route-settings {
+  display: grid;
+  gap: clamp(1.5rem, 3vw, 2rem);
+}
+
+.route-settings__group {
+  display: grid;
+  gap: clamp(0.75rem, 2vw, 1rem);
+}
+
+.route-settings__heading {
+  padding-inline: clamp(0.75rem, 2vw, 1.25rem);
+}
+
+.route-settings__toggle {
+  justify-content: flex-start;
+  padding-inline: clamp(0.75rem, 2vw, 1.25rem);
+}
+
+.route-settings__slider {
+  padding-inline: clamp(0.75rem, 3vw, 1.5rem);
+}
+
+.route-settings__note {
+  padding-inline: clamp(0.75rem, 2vw, 1.25rem);
+}
+
+.route-settings__alert-note {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding-inline: clamp(0.75rem, 2vw, 1.25rem);
+}
+
+.route-settings__reset {
+  align-self: center;
+}
+
+.route-settings__divider {
+  margin-block: clamp(0.5rem, 2vw, 1rem);
+}
+
+.route-settings__compact-control {
+  padding-inline: clamp(0.75rem, 2vw, 1.25rem);
+}
+</style>

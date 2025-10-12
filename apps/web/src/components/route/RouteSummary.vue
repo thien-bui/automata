@@ -1,15 +1,15 @@
 <template>
   <v-sheet class="pa-4" elevation="1" rounded>
-    <div class="widget-summary">
-      <div class="widget-summary__section">
-        <div class="text-overline text-medium-emphasis">Estimated duration</div>
-        <div class="text-h4 font-weight-medium" aria-live="polite">
+    <div class="route-summary">
+      <div class="route-summary__section">
+        <div class="route-summary__label text-overline text-medium-emphasis">Estimated duration</div>
+        <div class="route-summary__value text-h4 font-weight-medium" aria-live="polite">
           {{ durationDisplay }}
         </div>
       </div>
-      <div class="widget-summary__section widget-summary__section--end">
-        <div class="text-body-2 text-medium-emphasis">Distance: {{ distanceDisplay }}</div>
-        <div v-if="cacheDescription" class="text-caption text-medium-emphasis mt-1">
+      <div class="route-summary__section route-summary__section--meta">
+        <div class="route-summary__meta text-body-2 text-medium-emphasis">Distance: {{ distanceDisplay }}</div>
+        <div v-if="cacheDescription" class="route-summary__cache text-caption text-medium-emphasis">
           {{ cacheDescription }}
         </div>
       </div>
@@ -49,20 +49,33 @@ const distanceDisplay = computed(() => {
 });
 </script>
 
-<style scoped>
-.widget-summary {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 1rem;
+<style scoped lang="scss">
+.route-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+  gap: clamp(0.75rem, 2vw, 1.5rem);
+  align-items: end;
 }
 
-.widget-summary__section {
-  flex: 1;
+.route-summary__section {
+  display: grid;
+  gap: clamp(0.25rem, 1vw, 0.5rem);
+  min-width: 0;
 }
 
-.widget-summary__section--end {
-  text-align: right;
-  align-self: flex-end;
+.route-summary__section--meta {
+  justify-items: end;
+  text-align: end;
+}
+
+.route-summary__cache {
+  max-width: 22rem;
+}
+
+@media (max-width: 640px) {
+  .route-summary__section--meta {
+    justify-items: start;
+    text-align: start;
+  }
 }
 </style>

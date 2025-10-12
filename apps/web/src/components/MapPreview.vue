@@ -1,12 +1,12 @@
 <template>
-  <div v-if="showMap" class="map-preview-container">
-    <div ref="mapContainer" class="map-container"></div>
-    <div v-if="isLoading" class="map-loading-overlay">
+  <div v-if="showMap" class="map-preview">
+    <div ref="mapContainer" class="map-preview__canvas"></div>
+    <div v-if="isLoading" class="map-preview__overlay map-preview__overlay--loading">
       <v-progress-circular indeterminate color="primary" size="48" />
-      <div class="mt-2 text-body-2">Loading map...</div>
+      <div class="map-preview__message text-body-2">Loading map...</div>
     </div>
-    <div v-if="error" class="map-error-overlay">
-      <v-alert type="error" variant="tonal" class="ma-2">
+    <div v-if="error" class="map-preview__overlay map-preview__overlay--error">
+      <v-alert type="error" variant="tonal" class="map-preview__alert">
         {{ error }}
       </v-alert>
     </div>
@@ -217,45 +217,55 @@ onBeforeUnmount(() => {
 });
 </script>
 
-<style scoped>
-.map-preview-container {
+<style scoped lang="scss">
+.map-preview {
   position: relative;
   width: 100%;
-  height: 400px;
-  border-radius: 8px;
+  min-height: clamp(18rem, 40vw, 25rem);
+  border-radius: clamp(0.5rem, 1vw, 0.75rem);
   overflow: hidden;
-  margin-top: 16px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  margin-block-start: clamp(1rem, 3vw, 1.5rem);
+  box-shadow: 0 6px 20px rgba(17, 24, 39, 0.12);
 }
 
-.map-container {
+.map-preview__canvas {
   width: 100%;
   height: 100%;
   background-color: #f5f5f5;
 }
 
-.map-loading-overlay,
-.map-error-overlay {
+.map-preview__overlay {
   position: absolute;
   top: 0;
   left: 0;
   right: 0;
   bottom: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  background-color: rgba(255, 255, 255, 0.9);
+  display: grid;
+  place-items: center;
+  gap: 0.75rem;
   z-index: 10;
 }
 
-.map-error-overlay {
-  padding: 16px;
+.map-preview__overlay--loading {
+  background-color: rgba(255, 255, 255, 0.9);
+}
+
+.map-preview__overlay--error {
+  padding: clamp(1rem, 3vw, 1.5rem);
+  background-color: rgba(254, 242, 242, 0.92);
+}
+
+.map-preview__message {
+  text-align: center;
+}
+
+.map-preview__alert {
+  width: min(100%, 24rem);
 }
 
 @media (max-width: 960px) {
-  .map-preview-container {
-    height: 300px;
+  .map-preview {
+    min-height: clamp(16rem, 50vw, 22rem);
   }
 }
 </style>
