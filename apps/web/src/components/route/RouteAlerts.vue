@@ -20,7 +20,7 @@
     </v-alert>
     
     <!-- Compact mode alert indicator -->
-    <div v-else class="route-alerts__compact">
+    <div v-else class="route-alerts__compact mt-4 d-flex align-center gap-2">
       <v-icon class="route-alerts__icon" color="warning" icon="mdi-alert" size="small" />
       <span class="route-alerts__count text-body-2 text-medium-emphasis">
         {{ alerts.length }} alert{{ alerts.length > 1 ? 's' : '' }}

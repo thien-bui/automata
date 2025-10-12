@@ -49,8 +49,12 @@ describe('RouteSettings', () => {
             emits: ['update:modelValue'],
           }),
           'v-btn': createSlotStub('VBtnStub', 'button', {
-            props: ['size', 'variant'],
+            props: ['size', 'variant', 'value'],
             emits: ['click'],
+          }),
+          'v-btn-toggle': createSlotStub('VBtnToggleStub', 'div', {
+            props: ['modelValue', 'mandatory', 'density', 'color', 'class', 'ariaLabel'],
+            emits: ['update:modelValue'],
           }),
           'v-divider': createSlotStub('VDividerStub', 'hr'),
           CompactModeControl: createSlotStub('CompactModeControl', 'div', {

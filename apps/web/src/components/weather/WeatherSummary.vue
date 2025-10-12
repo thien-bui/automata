@@ -1,12 +1,12 @@
 <template>
   <v-sheet
-    class="weather-summary"
-    :class="{ 'weather-summary--compact': isCompact }"
+    class="weather-summary-card"
+    :class="{ 'weather-summary-card--compact': isCompact }"
     elevation="1"
     rounded
   >
     <div class="weather-summary__layout">
-      <div class="weather-summary__section">
+      <div class="widget-summary__section">
         <div class="weather-summary__label text-overline text-medium-emphasis">
           Current Temperature
         </div>
@@ -26,7 +26,7 @@
           :is-compact="isCompact"
         />
       </div>
-      <div v-if="!isCompact" class="weather-summary__section weather-summary__section--metrics">
+      <div v-if="!isCompact" class="widget-summary__section widget-summary__section--end">
         <WeatherMetrics
           class="weather-summary__metrics"
           v-bind="sanitizedMetrics"
@@ -67,12 +67,12 @@ const sanitizedMetrics = computed(() => ({
 </script>
 
 <style scoped lang="scss">
-.weather-summary {
+.weather-summary-card {
   padding: clamp(1rem, 2vw, 1.5rem);
   transition: padding 0.2s ease;
 }
 
-.weather-summary--compact {
+.weather-summary-card--compact {
   padding: clamp(0.75rem, 2vw, 1rem);
 }
 
@@ -83,13 +83,13 @@ const sanitizedMetrics = computed(() => ({
   align-items: end;
 }
 
-.weather-summary__section {
+.widget-summary__section {
   display: grid;
   gap: clamp(0.375rem, 1vw, 0.75rem);
   min-width: 0;
 }
 
-.weather-summary__section--metrics {
+.widget-summary__section--end {
   justify-items: end;
   text-align: end;
 }
@@ -98,7 +98,7 @@ const sanitizedMetrics = computed(() => ({
   width: 100%;
 }
 
-.weather-summary--compact .weather-summary__metrics {
+.weather-summary-card--compact .weather-summary__metrics {
   width: auto;
 }
 
@@ -107,7 +107,7 @@ const sanitizedMetrics = computed(() => ({
 }
 
 @media (max-width: 640px) {
-  .weather-summary__section--metrics {
+  .widget-summary__section--end {
     justify-items: start;
     text-align: start;
   }

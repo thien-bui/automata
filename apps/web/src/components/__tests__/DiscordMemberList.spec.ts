@@ -81,7 +81,7 @@ const mountList = (props: Record<string, unknown> = {}) =>
 describe('DiscordMemberList', () => {
   it('limits the number of rendered members', () => {
     const wrapper = mountList();
-    expect(wrapper.findAll('.member-item')).toHaveLength(2);
+    expect(wrapper.findAll('.discord-member-list__item')).toHaveLength(2);
   });
 
   it('reveals all members when "Show More" is clicked', async () => {
@@ -93,7 +93,7 @@ describe('DiscordMemberList', () => {
 
     await button.trigger('click');
 
-    expect(wrapper.findAll('.member-item')).toHaveLength(3);
+    expect(wrapper.findAll('.discord-member-list__item')).toHaveLength(3);
     expect(button.text()).toContain('Show Less');
   });
 
@@ -104,7 +104,7 @@ describe('DiscordMemberList', () => {
 
   it('decorates bot members with a label', () => {
     const wrapper = mountList({ members: baseMembers, maxMembersToShow: 3 });
-    const botRow = wrapper.findAll('.member-item').find(item => item.text().includes('Bot Three'));
+    const botRow = wrapper.findAll('.discord-member-list__item').find(item => item.text().includes('Bot Three'));
     expect(botRow?.text()).toContain('BOT');
   });
 });

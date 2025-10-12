@@ -1,5 +1,5 @@
 <template>
-  <div v-if="showMap" class="map-preview">
+  <div v-if="showMap" class="map-preview" data-test="map-preview">
     <div ref="mapContainer" class="map-preview__canvas"></div>
     <div v-if="isLoading" class="map-preview__overlay map-preview__overlay--loading">
       <v-progress-circular indeterminate color="primary" size="48" />
@@ -30,7 +30,7 @@ const props = withDefaults(defineProps<Props>(), {
   to: '',
 });
 
-const mapContainer = ref<HTMLElement>();
+const mapContainer = ref<HTMLDivElement>();
 const isLoading = ref(false);
 const error = ref<string | null>(null);
 let map: google.maps.Map | null = null;
@@ -219,9 +219,11 @@ onBeforeUnmount(() => {
 
 <style scoped lang="scss">
 .map-preview {
+  --map-preview-height: clamp(18rem, 40vw, 25rem);
   position: relative;
   width: 100%;
-  min-height: clamp(18rem, 40vw, 25rem);
+  min-height: var(--map-preview-height);
+  height: var(--map-preview-height);
   border-radius: clamp(0.5rem, 1vw, 0.75rem);
   overflow: hidden;
   margin-block-start: clamp(1rem, 3vw, 1.5rem);
@@ -231,6 +233,7 @@ onBeforeUnmount(() => {
 .map-preview__canvas {
   width: 100%;
   height: 100%;
+  min-height: var(--map-preview-height);
   background-color: #f5f5f5;
 }
 
@@ -265,7 +268,7 @@ onBeforeUnmount(() => {
 
 @media (max-width: 960px) {
   .map-preview {
-    min-height: clamp(16rem, 50vw, 22rem);
+    --map-preview-height: clamp(16rem, 50vw, 22rem);
   }
 }
 </style>

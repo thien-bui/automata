@@ -143,7 +143,8 @@ vi.mock('../PollingWidget.vue', () => ({
       'lastUpdatedIso',
       'isStale',
       'pollingSeconds',
-      'cacheDescription'
+      'cacheDescription',
+      'compact'
     ],
     emits: ['manual-refresh', 'hard-refresh', 'save-settings']
   }
@@ -288,7 +289,7 @@ describe('DiscordWidget', () => {
     it('renders member list with correct data', () => {
       const wrapper = mountComponent();
 
-      const memberItems = wrapper.findAll('.member-item');
+      const memberItems = wrapper.findAll('.discord-member-list__item');
       expect(memberItems).toHaveLength(5); // 5 members (bot filtered out)
 
       const firstMember = memberItems[0];
@@ -330,7 +331,7 @@ describe('DiscordWidget', () => {
 
       const wrapper = mountComponent();
 
-      const memberItems = wrapper.findAll('.member-item');
+      const memberItems = wrapper.findAll('.discord-member-list__item');
       expect(memberItems).toHaveLength(6); // All 6 members including bot
 
       const botMember = memberItems.find(item => item.text().includes('Bot One'));
@@ -368,7 +369,7 @@ describe('DiscordWidget', () => {
 
       const wrapper = mountComponent();
 
-      const memberItems = wrapper.findAll('.member-item');
+      const memberItems = wrapper.findAll('.discord-member-list__item');
       expect(memberItems).toHaveLength(4); // 4 members (bot and offline filtered out)
 
       const offlineMember = memberItems.find(item => item.text().includes('User Four'));
@@ -403,7 +404,7 @@ describe('DiscordWidget', () => {
 
       const wrapper = mountComponent();
 
-      const memberItems = wrapper.findAll('.member-item');
+      const memberItems = wrapper.findAll('.discord-member-list__item');
       const usernames = memberItems.map(item => item.text());
 
       // Should be sorted alphabetically by username
@@ -478,7 +479,7 @@ describe('DiscordWidget', () => {
       const wrapper = mountComponent();
 
       // Initially shows limited members
-      let memberItems = wrapper.findAll('.member-item');
+      let memberItems = wrapper.findAll('.discord-member-list__item');
       expect(memberItems).toHaveLength(3);
 
       // Click "Show More" button
@@ -486,7 +487,7 @@ describe('DiscordWidget', () => {
       await showMoreButton.trigger('click');
 
       // Should show all members
-      memberItems = wrapper.findAll('.member-item');
+      memberItems = wrapper.findAll('.discord-member-list__item');
       expect(memberItems).toHaveLength(5);
 
       // Button should now say "Show Less"
@@ -496,7 +497,7 @@ describe('DiscordWidget', () => {
       await showMoreButton.trigger('click');
 
       // Should show limited members again
-      memberItems = wrapper.findAll('.member-item');
+      memberItems = wrapper.findAll('.discord-member-list__item');
       expect(memberItems).toHaveLength(3);
     });
   });
@@ -529,47 +530,39 @@ describe('DiscordWidget', () => {
       expect(wrapper.text()).toContain('Offline: 1');
     });
 
-    it('hides usernames in compact mode', () => {
+    it('omits usernames in compact mode', () => {
       mockIsWidgetCompact.mockReturnValue(true);
       const wrapper = mountComponent();
 
-      // Check that the username element has the d-none class in compact mode
-      const usernameElements = wrapper.findAll('.member-username');
-      expect(usernameElements.length).toBeGreaterThan(0);
-      expect(usernameElements[0].classes()).toContain('d-none');
+      const memberItems = wrapper.findAll('.discord-member-list__item');
+      expect(memberItems.length).toBeGreaterThan(0);
+      expect(wrapper.findAll('.discord-member-list__username')).toHaveLength(0);
+      expect(memberItems[0].text()).toContain('User One');
     });
 
     it('shows usernames in full mode', () => {
       mockIsWidgetCompact.mockReturnValue(false);
       const wrapper = mountComponent();
 
-      const memberItems = wrapper.findAll('.member-item');
-      const firstMember = memberItems[0];
-      
-      // Should show both display name and username
-      expect(firstMember.text()).toContain('User One');
-      expect(firstMember.text()).toContain('@user1');
+      const usernames = wrapper.findAll('.discord-member-list__username');
+      expect(usernames.length).toBeGreaterThan(0);
+      expect(usernames[0].text()).toContain('@user1');
     });
 
-    it('hides status text in compact mode', () => {
+    it('omits status labels in compact mode', () => {
       mockIsWidgetCompact.mockReturnValue(true);
       const wrapper = mountComponent();
 
-      // Check that the status text span has the d-none class in compact mode
-      const statusTextElements = wrapper.findAll('.member-status span');
-      expect(statusTextElements.length).toBeGreaterThan(0);
-      expect(statusTextElements[0].classes()).toContain('d-none');
+      expect(wrapper.findAll('.discord-member-list__status-label')).toHaveLength(0);
     });
 
-    it('shows status text in full mode', () => {
+    it('shows status labels in full mode', () => {
       mockIsWidgetCompact.mockReturnValue(false);
       const wrapper = mountComponent();
 
-      const memberItems = wrapper.findAll('.member-item');
-      const firstMember = memberItems[0];
-      
-      // Should show status text in full mode
-      expect(firstMember.text()).toContain('online');
+      const statusLabels = wrapper.findAll('.discord-member-list__status-label');
+      expect(statusLabels.length).toBeGreaterThan(0);
+      expect(statusLabels[0].text()).toContain('online');
     });
 
     it('hides "Show More" button in compact mode', async () => {
@@ -607,36 +600,27 @@ describe('DiscordWidget', () => {
       expect(showMoreButton.exists()).toBe(false);
     });
 
-    it('applies compact CSS classes when in compact mode', () => {
+    it('passes compact flag to PollingWidget when compact mode is enabled', () => {
       mockIsWidgetCompact.mockReturnValue(true);
       const wrapper = mountComponent();
 
-      // Should have compact CSS classes
-      expect(wrapper.find('.discord-widget--compact').exists()).toBe(true);
-      // Widget summary is completely hidden in compact mode, so no compact class needed
-      expect(wrapper.find('.widget-summary--compact').exists()).toBe(false);
-      expect(wrapper.find('.member-list-card--compact').exists()).toBe(true);
-      expect(wrapper.find('.member-list-container--compact').exists()).toBe(true);
-      expect(wrapper.find('.member-item--compact').exists()).toBe(true);
+      const pollingWidget = wrapper.findComponent({ name: 'PollingWidget' });
+      expect(pollingWidget.props('compact')).toBe(true);
     });
 
-    it('does not apply compact CSS classes in full mode', () => {
+    it('passes compact flag to PollingWidget when compact mode is disabled', () => {
       mockIsWidgetCompact.mockReturnValue(false);
       const wrapper = mountComponent();
 
-      // Should not have compact CSS classes
-      expect(wrapper.find('.discord-widget--compact').exists()).toBe(false);
-      expect(wrapper.find('.widget-summary--compact').exists()).toBe(false);
-      expect(wrapper.find('.member-list-card--compact').exists()).toBe(false);
-      expect(wrapper.find('.member-list-container--compact').exists()).toBe(false);
-      expect(wrapper.find('.member-item--compact').exists()).toBe(false);
+      const pollingWidget = wrapper.findComponent({ name: 'PollingWidget' });
+      expect(pollingWidget.props('compact')).toBe(false);
     });
 
     it('still shows member list in compact mode', () => {
       mockIsWidgetCompact.mockReturnValue(true);
       const wrapper = mountComponent();
 
-      const memberItems = wrapper.findAll('.member-item');
+      const memberItems = wrapper.findAll('.discord-member-list__item');
       expect(memberItems).toHaveLength(5); // Should still show members
 
       const firstMember = memberItems[0];
