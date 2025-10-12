@@ -4,7 +4,7 @@
     "module": "ESNext",
     "target": "ES2022",
     "lib": ["ES2022", "DOM"],
-    "moduleResolution": "Node",
+    "moduleResolution": "Bundler",
     "types": ["vite/client", "vitest"],
     "jsx": "preserve",
     "allowJs": false
