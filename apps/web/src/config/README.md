@@ -1,6 +1,6 @@
 # AutoMode Configuration
 
-The AutoMode feature allows the RouteWidget to automatically switch between Simple and Navigation modes based on configurable time windows.
+The AutoMode feature allows the RouteWidget to automatically switch between Compact and Navigation modes based on configurable time windows.
 
 ## Configuration File
 
@@ -28,7 +28,7 @@ The AutoMode configuration is stored in `automode-config.json` and contains the 
         "description": "Evening commute window"
       }
     ],
-    "defaultMode": "Simple",
+    "defaultMode": "Compact",
     "navModeRefreshSeconds": 300
   }
 }
@@ -48,15 +48,15 @@ The AutoMode configuration is stored in `automode-config.json` and contains the 
 #### TimeWindow Properties
 
 - **name**: `string` - A descriptive name for the time window
-- **mode**: `'Simple' | 'Nav'` - The mode to activate during this time window
+- **mode**: `'Compact' | 'Nav'` - The mode to activate during this time window
 - **startTime**: `{ hour: number, minute: number }` - Start time (24-hour format)
 - **endTime**: `{ hour: number, minute: number }` - End time (24-hour format, exclusive)
 - **daysOfWeek**: `number[]` - Days of the week when this window applies (0 = Sunday, 1 = Monday, ..., 6 = Saturday)
 - **description**: `string` (optional) - Human-readable description
 
 ### defaultMode
-- **Type**: `'Simple' | 'Nav'`
-- **Default**: `'Simple'`
+- **Type**: `'Compact' | 'Nav'`
+- **Default**: `'Compact'`
 - **Description**: The mode to use when no time windows are active or when AutoMode is disabled.
 
 ### navModeRefreshSeconds

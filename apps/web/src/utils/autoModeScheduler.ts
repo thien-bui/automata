@@ -3,14 +3,14 @@ import type { AutoModeTimeWindow, AutoModeConfig } from '@automata/types';
 const isVitestEnvironment =
   typeof globalThis !== 'undefined' && 'vi' in globalThis;
 
-export type AutoModeCallback = (mode: 'Simple' | 'Nav') => void;
+export type AutoModeCallback = (mode: 'Compact' | 'Nav') => void;
 
 type Boundary = 'start' | 'end';
 type TimeoutHandle = ReturnType<typeof setTimeout>;
 
 interface ScheduledJob {
   timerId: TimeoutHandle;
-  mode: 'Simple' | 'Nav';
+  mode: 'Compact' | 'Nav';
   windowName: string;
   boundary: Boundary;
   executeAt: Date;

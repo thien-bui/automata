@@ -41,10 +41,10 @@ vi.mock('../route/index', () => ({
           'aria-label': props.ariaLabel,
           onClick: () => emit(
             'update:modelValue',
-            props.modelValue === MonitoringMode.Simple ? MonitoringMode.Nav : MonitoringMode.Simple,
+            props.modelValue === MonitoringMode.Compact ? MonitoringMode.Nav : MonitoringMode.Compact,
           ),
         },
-        props.modelValue === MonitoringMode.Simple ? 'Simple Mode' : 'Navigation Mode',
+        props.modelValue === MonitoringMode.Compact ? 'Compact Mode' : 'Navigation Mode',
       );
     },
   }),
@@ -149,7 +149,7 @@ function createMockRouteData(): RouteTimeResponse {
 }
 
 function createRoutePollingState() {
-  const modeRef = ref<MonitoringMode>(MonitoringMode.Simple);
+  const modeRef = ref<MonitoringMode>(MonitoringMode.Compact);
   const refreshIntervalRef = ref<number>(120);
   const pollingSecondsRef = ref<number>(120);
   const dataRef = ref<RouteTimeResponse | null>(createMockRouteData());
@@ -199,7 +199,7 @@ const createSlotStub = (tag: string) =>
 const MapPreviewStub = defineComponent({
   name: 'MapPreviewStub',
   props: {
-    mode: { type: String, default: 'Simple' },
+    mode: { type: String, default: 'Compact' },
     from: { type: String, default: '' },
     to: { type: String, default: '' },
   },
@@ -366,7 +366,7 @@ describe('RouteWidget Integration Tests', () => {
     const wrapper = mountComponent();
     await flushPendingUpdates();
 
-    // Initially in Simple mode, no map
+    // Initially in Compact mode, no map
     expect(wrapper.find('[data-test="map-preview"]').exists()).toBe(false);
 
     // Switch to Nav mode
@@ -384,8 +384,8 @@ describe('RouteWidget Integration Tests', () => {
 
     const modeToggle = wrapper.findComponent({ name: 'RouteModeToggle' });
     
-    // Initial state should be Simple
-    expect(modeToggle.text()).toBe('Simple Mode');
+    // Initial state should be Compact (formerly Compact)
+    expect(modeToggle.text()).toBe('Compact Mode');
 
     // Click to switch to Nav
     await modeToggle.trigger('click');
@@ -447,7 +447,7 @@ describe('RouteWidget Integration Tests', () => {
     await flushPendingUpdates();
 
     // Should show monitoring mode and route
-    expect(wrapper.text()).toContain('Simple Mode');
+    expect(wrapper.text()).toContain('Compact Mode');
     expect(wrapper.text()).toContain('Origin → Destination');
   });
 
@@ -500,7 +500,7 @@ describe('RouteWidget Integration Tests', () => {
       cacheHit: ref(false),
       from: ref('Origin'),
       to: ref('Destination'),
-      mode: ref(MonitoringMode.Simple),
+      mode: ref(MonitoringMode.Compact),
       refreshInterval: ref(120),
       pollingSeconds: ref(120),
       triggerPolling: vi.fn(),
@@ -530,26 +530,28 @@ describe('RouteWidget Integration Tests', () => {
       },
       setup(props) {
         const isNavMode = computed(() => props.mode === MonitoringMode.Nav);
-        const shouldShowMap = computed(() => !props.isCompact || isNavMode.value);
+        // New logic: Compact mode is always compact, map only shows in Nav mode when not compact
+        const effectiveCompact = computed(() => props.mode === MonitoringMode.Compact ? true : props.isCompact);
+        const shouldShowMap = computed(() => isNavMode.value && !effectiveCompact.value);
         
         return () => h('div', [
-          h('div', { 'data-test': 'compact-status' }, props.isCompact ? 'compact' : 'normal'),
+          h('div', { 'data-test': 'compact-status' }, effectiveCompact.value ? 'compact' : 'normal'),
           h('div', { 'data-test': 'mode-status' }, props.mode),
           h('div', { 'data-test': 'should-show-map' }, shouldShowMap.value ? 'show' : 'hide'),
           // Simulate the MapPreview condition
-          shouldShowMap.value && props.mode === MonitoringMode.Nav 
+          shouldShowMap.value 
             ? h('div', { 'data-test': 'map-preview' })
             : null,
         ]);
       },
     });
 
-    // Test all combinations
+    // Test all combinations - Compact mode is now always compact and never shows map
     const testCases = [
-      { isCompact: true, mode: MonitoringMode.Nav, shouldShow: true, description: 'Compact + Nav' },
-      { isCompact: true, mode: MonitoringMode.Simple, shouldShow: false, description: 'Compact + Simple' },
-      { isCompact: false, mode: MonitoringMode.Nav, shouldShow: true, description: 'Normal + Nav' },
-      { isCompact: false, mode: MonitoringMode.Simple, shouldShow: true, description: 'Normal + Simple' },
+      { isCompact: true, mode: MonitoringMode.Nav, shouldShow: false, description: 'Compact + Nav (no map when compact)' },
+      { isCompact: true, mode: MonitoringMode.Compact, shouldShow: false, description: 'Compact + Compact (always no map)' },
+      { isCompact: false, mode: MonitoringMode.Nav, shouldShow: true, description: 'Normal + Nav (shows map)' },
+      { isCompact: false, mode: MonitoringMode.Compact, shouldShow: false, description: 'Normal + Compact (now compact, no map)' },
     ];
 
     for (const testCase of testCases) {

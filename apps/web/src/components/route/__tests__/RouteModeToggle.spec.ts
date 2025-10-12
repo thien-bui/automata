@@ -23,7 +23,7 @@ describe('RouteModeToggle', () => {
     ariaLabel?: string;
   }> = {}) => {
     const defaultProps = {
-      modelValue: MonitoringMode.Simple,
+      modelValue: MonitoringMode.Compact,
       mandatory: true,
       density: 'default' as const,
       color: 'primary',
@@ -54,7 +54,7 @@ describe('RouteModeToggle', () => {
     
     const toggle = wrapper.findComponent({ name: 'VBtnToggleStub' });
     expect(toggle.exists()).toBe(true);
-    expect(toggle.props('modelValue')).toBe(MonitoringMode.Simple);
+    expect(toggle.props('modelValue')).toBe(MonitoringMode.Compact);
     expect(toggle.props('mandatory')).toBe(true);
     expect(toggle.props('density')).toBe('default');
     expect(toggle.props('color')).toBe('primary');
@@ -81,17 +81,17 @@ describe('RouteModeToggle', () => {
     expect(toggle.props('ariaLabel')).toBe('Custom aria label');
   });
 
-  it('renders two buttons for Simple and Nav modes', () => {
+  it('renders two buttons for Compact and Nav modes', () => {
     const wrapper = mountComponent();
     
     const buttons = wrapper.findAllComponents({ name: 'VBtnStub' });
     expect(buttons).toHaveLength(2);
-    expect(buttons[0].props('value')).toBe(MonitoringMode.Simple);
+    expect(buttons[0].props('value')).toBe(MonitoringMode.Compact);
     expect(buttons[1].props('value')).toBe(MonitoringMode.Nav);
   });
 
   it('emits update:modelValue when mode changes', async () => {
-    const wrapper = mountComponent({ modelValue: MonitoringMode.Simple });
+    const wrapper = mountComponent({ modelValue: MonitoringMode.Compact });
     
     const toggle = wrapper.findComponent({ name: 'VBtnToggleStub' });
     await toggle.vm.$emit('update:modelValue', MonitoringMode.Nav);
@@ -103,10 +103,10 @@ describe('RouteModeToggle', () => {
   });
 
   it('does not emit when value is the same', async () => {
-    const wrapper = mountComponent({ modelValue: MonitoringMode.Simple });
+    const wrapper = mountComponent({ modelValue: MonitoringMode.Compact });
     
     const toggle = wrapper.findComponent({ name: 'VBtnToggleStub' });
-    await toggle.vm.$emit('update:modelValue', MonitoringMode.Simple);
+    await toggle.vm.$emit('update:modelValue', MonitoringMode.Compact);
     
     const emitted = wrapper.emitted('update:modelValue');
     expect(emitted).toBeTruthy();
@@ -162,7 +162,7 @@ describe('RouteModeToggle', () => {
     const wrapper = mountComponent();
     
     const buttons = wrapper.findAllComponents({ name: 'VBtnStub' });
-    expect(buttons[0].props('value')).toBe(MonitoringMode.Simple);
+    expect(buttons[0].props('value')).toBe(MonitoringMode.Compact);
     expect(buttons[1].props('value')).toBe(MonitoringMode.Nav);
   });
 });

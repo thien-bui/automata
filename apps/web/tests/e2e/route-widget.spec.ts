@@ -12,7 +12,7 @@ const waitForToastsToClear = async (page: Page): Promise<void> => {
 };
 
 test.describe('Route Widget', () => {
-  test('renders simple mode by default', async ({ page }) => {
+  test('renders Compact mode by default', async ({ page }) => {
     await page.route('**/api/route-time?**', async (route) => {
       await route.fulfill({
         status: 200,
@@ -36,7 +36,7 @@ test.describe('Route Widget', () => {
     await waitForToastsToClear(page);
 
     const toggle = page.getByLabel('Select monitoring mode');
-    await expect(toggle.getByRole('button', { name: 'Simple' })).toBeVisible();
+    await expect(toggle.getByRole('button', { name: 'Compact' })).toBeVisible();
     await expect(toggle.getByRole('button', { name: 'Nav' })).toBeVisible();
     await expect(page.getByText(/Estimated duration/i)).toBeVisible();
     await expect(page.getByRole('button', { name: 'Refresh now' })).toBeVisible();
@@ -71,7 +71,7 @@ test.describe('Route Widget', () => {
     await expect(page.getByTestId('map-preview')).toBeVisible();
   });
 
-  test('switching back to Simple mode hides the map placeholder', async ({ page }) => {
+  test('switching back to Compact mode hides the map placeholder', async ({ page }) => {
     await page.route('**/api/route-time?**', async (route) => {
       await route.fulfill({
         status: 200,
@@ -101,7 +101,7 @@ test.describe('Route Widget', () => {
     await expect(mapCard).toBeVisible();
 
     await waitForToastsToClear(page);
-    await toggle.getByRole('button', { name: 'Simple' }).click();
+    await toggle.getByRole('button', { name: 'Compact' }).click();
 
     await expect(page.getByTestId('map-preview')).toHaveCount(0);
   });

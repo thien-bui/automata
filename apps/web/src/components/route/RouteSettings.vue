@@ -51,15 +51,12 @@
       </div>
     </section>
 
-    <v-divider class="route-settings__divider" />
-    <CompactModeControl class="route-settings__compact-control" widget-name="route-widget" />
   </div>
 </template>
 
 <script setup lang="ts">
 import { MonitoringMode } from '../monitoringMode';
 import RouteModeToggle from './RouteModeToggle.vue';
-import CompactModeControl from '../CompactModeControl.vue';
 
 interface Props {
   mode: MonitoringMode;
@@ -138,9 +135,5 @@ function handleResetThreshold(): void {
 
 .route-settings__divider {
   margin-block: clamp(0.5rem, 2vw, 1rem);
-}
-
-.route-settings__compact-control {
-  padding-inline: clamp(0.75rem, 2vw, 1.25rem);
 }
 </style>

@@ -139,7 +139,7 @@ interface Props {
   
   /** 
    * The main title displayed in the header
-   * @example 'Current Conditions' or 'Simple Mode'
+   * @example 'Current Conditions' or 'Compact Mode'
    */
   title: string;
   

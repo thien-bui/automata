@@ -24,7 +24,7 @@ const DEFAULT_CONFIG: AutoModeConfig = {
       description: 'Evening commute window',
     },
   ],
-  defaultMode: 'Simple',
+  defaultMode: 'Compact',
   navModeRefreshSeconds: 300,
 };
 
@@ -78,7 +78,7 @@ export function useAutoMode() {
     );
   }
 
-  function resolveModeForDate(date: Date): 'Simple' | 'Nav' {
+  function resolveModeForDate(date: Date): 'Compact' | 'Nav' {
     if (!isEnabled.value) {
       return config.value.defaultMode;
     }
@@ -104,7 +104,7 @@ export function useAutoMode() {
     const dayOfWeek = date.getDay();
 
     // Create array of all boundaries for today and tomorrow
-    const boundaries: Array<{ date: Date; mode: 'Simple' | 'Nav' }> = [];
+    const boundaries: Array<{ date: Date; mode: 'Compact' | 'Nav' }> = [];
 
     // Add boundaries for today
     config.value.timeWindows.forEach(window => {

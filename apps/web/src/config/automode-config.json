@@ -31,7 +31,7 @@
         "description": "Evening commute window"
       }
     ],
-    "defaultMode": "Simple",
+    "defaultMode": "Compact",
     "navModeRefreshSeconds": 300
   }
 }

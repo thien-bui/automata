@@ -79,7 +79,7 @@ const createDefaultAutoModeConfig = (): AutoModeConfig => ({
       description: 'Morning commute window',
     },
   ],
-  defaultMode: 'Simple',
+  defaultMode: 'Compact',
   navModeRefreshSeconds: 60,
 });
 
@@ -177,11 +177,11 @@ describe('useRoutePolling', () => {
     const result = useRoutePolling({
       from: 'Test Origin',
       to: 'Test Destination',
-      initialMode: MonitoringMode.Simple,
+      initialMode: MonitoringMode.Compact,
       initialRefreshInterval: 120,
     });
 
-    expect(result.mode.value).toBe(MonitoringMode.Simple);
+    expect(result.mode.value).toBe(MonitoringMode.Compact);
     expect(result.refreshInterval.value).toBe(120);
     expect(result.isPolling.value).toBe(false);
     expect(result.pollingSeconds.value).toBe(120);
@@ -207,7 +207,7 @@ describe('useRoutePolling', () => {
     useRoutePolling({
       from: 'Origin',
       to: 'Destination',
-      initialMode: MonitoringMode.Simple,
+      initialMode: MonitoringMode.Compact,
       initialRefreshInterval: 120,
     });
 
@@ -225,7 +225,7 @@ describe('useRoutePolling', () => {
     const result = useRoutePolling({
       from: 'Origin',
       to: 'Destination',
-      initialMode: MonitoringMode.Simple,
+      initialMode: MonitoringMode.Compact,
       initialRefreshInterval: 120,
     });
 
@@ -236,7 +236,7 @@ describe('useRoutePolling', () => {
     useRoutePolling({
       from: 'Origin',
       to: 'Destination',
-      initialMode: MonitoringMode.Simple,
+      initialMode: MonitoringMode.Compact,
       initialRefreshInterval: 60,
     });
 
@@ -255,7 +255,7 @@ describe('useRoutePolling', () => {
     const result = useRoutePolling({
       from: 'Origin',
       to: 'Destination',
-      initialMode: MonitoringMode.Simple,
+      initialMode: MonitoringMode.Compact,
       initialRefreshInterval: 120,
     });
 
@@ -279,7 +279,7 @@ describe('useRoutePolling', () => {
     const result = useRoutePolling({
       from: 'Origin',
       to: 'Destination',
-      initialMode: MonitoringMode.Simple,
+      initialMode: MonitoringMode.Compact,
       initialRefreshInterval: 120,
     });
 
@@ -303,7 +303,7 @@ describe('useRoutePolling', () => {
     const result = useRoutePolling({
       from: 'Origin',
       to: 'Destination',
-      initialMode: MonitoringMode.Simple,
+      initialMode: MonitoringMode.Compact,
       initialRefreshInterval: 120,
     });
 
@@ -329,7 +329,7 @@ describe('useRoutePolling', () => {
     useRoutePolling({
       from: 'Origin',
       to: 'Destination',
-      initialMode: MonitoringMode.Simple,
+      initialMode: MonitoringMode.Compact,
       initialRefreshInterval: 120,
     });
 
@@ -355,7 +355,7 @@ describe('useRoutePolling', () => {
     useRoutePolling({
       from: 'Origin',
       to: 'Destination',
-      initialMode: MonitoringMode.Simple,
+      initialMode: MonitoringMode.Compact,
       initialRefreshInterval: 120,
     });
 
@@ -371,7 +371,7 @@ describe('useRoutePolling', () => {
     useRoutePolling({
       from: 'Origin',
       to: 'Destination',
-      initialMode: MonitoringMode.Simple,
+      initialMode: MonitoringMode.Compact,
       initialRefreshInterval: 120,
     });
 
@@ -392,7 +392,7 @@ describe('useRoutePolling', () => {
     const result = useRoutePolling({
       from: 'Origin',
       to: 'Destination',
-      initialMode: MonitoringMode.Simple,
+      initialMode: MonitoringMode.Compact,
       initialRefreshInterval: 120,
     });
 
@@ -407,7 +407,7 @@ describe('useRoutePolling', () => {
     const result = useRoutePolling({
       from: 'Origin',
       to: 'Destination',
-      initialMode: MonitoringMode.Simple,
+      initialMode: MonitoringMode.Compact,
       initialRefreshInterval: 120,
     });
 
@@ -445,7 +445,7 @@ describe('useRoutePolling', () => {
     const result = useRoutePolling({
       from: 'Origin',
       to: 'Destination',
-      initialMode: MonitoringMode.Simple,
+      initialMode: MonitoringMode.Compact,
       initialRefreshInterval: 120,
     });
 
@@ -459,6 +459,6 @@ describe('useRoutePolling', () => {
 
     await vi.runAllTimersAsync();
 
-    expect(result.mode.value).toBe(MonitoringMode.Simple);
+    expect(result.mode.value).toBe(MonitoringMode.Compact);
   });
 });

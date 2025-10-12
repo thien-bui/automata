@@ -58,7 +58,7 @@ export interface TimeConfig {
 
 export interface AutoModeTimeWindow {
   name: string;
-  mode: 'Simple' | 'Nav';
+  mode: 'Compact' | 'Nav';
   startTime: TimeConfig;
   endTime: TimeConfig;
   daysOfWeek: number[]; // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
@@ -68,7 +68,7 @@ export interface AutoModeTimeWindow {
 export interface AutoModeConfig {
   enabled: boolean;
   timeWindows: AutoModeTimeWindow[];
-  defaultMode: 'Simple' | 'Nav';
+  defaultMode: 'Compact' | 'Nav';
   navModeRefreshSeconds: number;
 }
 

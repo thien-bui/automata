@@ -16,7 +16,7 @@
 - **Distance**: Route distance in kilometers (e.g., "18.5 km")
 - **Origin**: Starting address/location
 - **Destination**: Ending address/location
-- **Monitoring Mode**: Simple vs Navigation mode
+- **Monitoring Mode**: Compact vs Navigation mode
 
 ## Discord Widget
 

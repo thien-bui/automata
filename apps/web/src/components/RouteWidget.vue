@@ -32,8 +32,8 @@
         :cache-description="cacheDescription"
       />
 
-      <!-- Map preview - shown in Nav mode regardless of compact setting -->
-      <MapPreview v-if="!isCompact || isNavMode" :mode="mode" :from="origin" :to="destination"/>
+      <!-- Map preview - only shown in Nav mode, never in Compact mode (which is now compact) -->
+      <MapPreview v-if="isNavMode && !isCompact" :mode="mode" :from="origin" :to="destination"/>
 
       <!-- Alert display - detailed list in normal mode, compact icon in compact mode -->
       <RouteAlerts
@@ -106,7 +106,7 @@ const {
 } = useRoutePolling({
   from: DEFAULT_FROM,
   to: DEFAULT_TO,
-  initialMode: MonitoringMode.Simple,
+  initialMode: MonitoringMode.Compact,
   initialRefreshInterval: 120,
 });
 
@@ -114,11 +114,17 @@ const { thresholdMinutes, setThreshold, resetThreshold } = useAlertThreshold();
 const { push: pushToast } = useToasts();
 const { isWidgetCompact } = useUiPreferences();
 
-const isCompact = computed(() => isWidgetCompact('route-widget'));
+const isCompact = computed(() => {
+  // Compact mode is always compact regardless of widget compact setting
+  if (mode.value === MonitoringMode.Compact) {
+    return true;
+  }
+  return isWidgetCompact('route-widget');
+});
 const isNavMode = computed(() => mode.value === MonitoringMode.Nav);
 
 const currentModeLabel = computed(() =>
-  mode.value === MonitoringMode.Simple ? 'Simple Mode' : 'Navigation Mode',
+  mode.value === MonitoringMode.Compact ? 'Compact Mode' : 'Navigation Mode',
 );
 
 const cacheDescription = computed(() => {

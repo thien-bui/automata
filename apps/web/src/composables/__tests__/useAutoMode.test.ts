@@ -24,7 +24,7 @@ vi.mock('../../config/automode-config.json', () => ({
           description: 'Evening commute window',
         },
       ],
-      defaultMode: 'Simple',
+      defaultMode: 'Compact',
       navModeRefreshSeconds: 300,
     },
   },
@@ -67,40 +67,40 @@ describe('useAutoMode', () => {
     expect(resolveModeForDate(fridayLateEvening)).toBe('Nav');
   });
 
-  it('should resolve to Simple mode outside commute windows on weekdays', () => {
+  it('should resolve to Compact mode outside commute windows on weekdays', () => {
     const { resolveModeForDate } = useAutoMode();
     
     // Test Monday 8:00 AM (before morning window)
     const mondayEarly = new Date(2024, 5, 3, 8, 0, 0, 0); // Monday
-    expect(resolveModeForDate(mondayEarly)).toBe('Simple');
+    expect(resolveModeForDate(mondayEarly)).toBe('Compact');
     
     // Test Monday 10:00 AM (after morning window)
     const mondayLateMorning = new Date(2024, 5, 3, 10, 0, 0, 0); // Monday
-    expect(resolveModeForDate(mondayLateMorning)).toBe('Simple');
+    expect(resolveModeForDate(mondayLateMorning)).toBe('Compact');
     
     // Test Monday 4:00 PM (before evening window)
     const mondayAfternoon = new Date(2024, 5, 3, 16, 0, 0, 0); // Monday
-    expect(resolveModeForDate(mondayAfternoon)).toBe('Simple');
+    expect(resolveModeForDate(mondayAfternoon)).toBe('Compact');
     
     // Test Monday 8:00 PM (after evening window)
     const mondayNight = new Date(2024, 5, 3, 20, 0, 0, 0); // Monday
-    expect(resolveModeForDate(mondayNight)).toBe('Simple');
+    expect(resolveModeForDate(mondayNight)).toBe('Compact');
   });
 
-  it('should resolve to Simple mode on weekends', () => {
+  it('should resolve to Compact mode on weekends', () => {
     const { resolveModeForDate } = useAutoMode();
     
     // Test Saturday 8:30 AM (would be Nav on weekday)
     const saturdayMorning = new Date(2024, 5, 8, 8, 30, 0, 0); // Saturday
-    expect(resolveModeForDate(saturdayMorning)).toBe('Simple');
+    expect(resolveModeForDate(saturdayMorning)).toBe('Compact');
     
     // Test Saturday 6:00 PM (would be Nav on weekday)
     const saturdayEvening = new Date(2024, 5, 8, 18, 0, 0, 0); // Saturday
-    expect(resolveModeForDate(saturdayEvening)).toBe('Simple');
+    expect(resolveModeForDate(saturdayEvening)).toBe('Compact');
     
     // Test Sunday 9:00 AM (would be Nav on weekday)
     const sundayMorning = new Date(2024, 5, 9, 9, 0, 0, 0); // Sunday
-    expect(resolveModeForDate(sundayMorning)).toBe('Simple');
+    expect(resolveModeForDate(sundayMorning)).toBe('Compact');
   });
 
   it('should get the next boundary correctly', () => {
@@ -155,16 +155,16 @@ describe('useAutoMode', () => {
     const exactStart = new Date(2024, 5, 3, 8, 30, 0, 0); // Monday
     expect(resolveModeForDate(exactStart)).toBe('Nav');
     
-    // Test exactly at 9:30 AM - should be Simple (end is exclusive)
+    // Test exactly at 9:30 AM - should be Compact (end is exclusive)
     const exactEnd = new Date(2024, 5, 3, 9, 30, 0, 0); // Monday
-    expect(resolveModeForDate(exactEnd)).toBe('Simple');
+    expect(resolveModeForDate(exactEnd)).toBe('Compact');
     
     // Test exactly at 5:00 PM - should be Nav
     const eveningStart = new Date(2024, 5, 3, 17, 0, 0, 0); // Monday
     expect(resolveModeForDate(eveningStart)).toBe('Nav');
     
-    // Test exactly at 8:00 PM - should be Simple (end is exclusive)
+    // Test exactly at 8:00 PM - should be Compact (end is exclusive)
     const eveningEnd = new Date(2024, 5, 3, 20, 0, 0, 0); // Monday
-    expect(resolveModeForDate(eveningEnd)).toBe('Simple');
+    expect(resolveModeForDate(eveningEnd)).toBe('Compact');
   });
 });

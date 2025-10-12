@@ -25,7 +25,7 @@ interface Props {
 }
 
 const props = withDefaults(defineProps<Props>(), {
-  mode: MonitoringMode.Simple,
+  mode: MonitoringMode.Compact,
   from: '',
   to: '',
 });

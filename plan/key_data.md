@@ -30,7 +30,7 @@ This document identifies the most useful data points for the route, weather, and
 - **Distance**: Route distance in kilometers (e.g., "18.5 km")
 - **Origin**: Starting address/location
 - **Destination**: Ending address/location
-- **Monitoring Mode**: Simple vs Navigation mode
+- **Monitoring Mode**: Compact vs Navigation mode
 
 ### Secondary Data Points
 - **Alert Threshold**: Time threshold for alerts (e.g., 30 minutes)

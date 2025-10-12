@@ -33,7 +33,7 @@ describe('RouteSettings', () => {
     isNavMode: boolean;
   }> = {}) => {
     const defaultProps = {
-      mode: MonitoringMode.Simple,
+      mode: MonitoringMode.Compact,
       refreshInterval: 120,
       thresholdMinutes: 45,
       isNavMode: false,
@@ -120,7 +120,7 @@ describe('RouteSettings', () => {
   });
 
   it('emits update:mode when RouteModeToggle changes', async () => {
-    const wrapper = mountComponent({ mode: MonitoringMode.Simple });
+    const wrapper = mountComponent({ mode: MonitoringMode.Compact });
     
     const modeToggle = wrapper.findComponent({ name: 'RouteModeToggle' });
     await modeToggle.vm.$emit('update:modelValue', MonitoringMode.Nav);

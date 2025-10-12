@@ -8,7 +8,7 @@
     :aria-label="ariaLabel"
     @update:model-value="handleModeChange"
   >
-    <v-btn :value="MonitoringMode.Simple">Simple</v-btn>
+    <v-btn :value="MonitoringMode.Compact">Compact</v-btn>
     <v-btn :value="MonitoringMode.Nav">Nav</v-btn>
   </v-btn-toggle>
 </template>

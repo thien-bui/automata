@@ -42,7 +42,7 @@
 ## 7. Frontend Testing
 - [x] Configure Vitest for unit/component tests with `@vue/test-utils`.
 - [x] Write tests for `useRouteTime` handling of stale cache and alert triggers.
-- [x] Set up Playwright with Docker-friendly config; create E2E specs for Simple/Nav mode and alert flows.
+- [x] Set up Playwright with Docker-friendly config; create E2E specs for Compact/Nav mode and alert flows.
 
 ## 8. Shared Types Package (`packages/types`)
 - [ ] Define TypeScript interfaces matching API response and request query options.
@@ -75,7 +75,7 @@
 ## 13. QA & Sign-off
 - [ ] Run `npm run lint`, `npm run test`, `npm run build` across workspaces.
 - [ ] Execute Playwright E2E in Docker; capture screenshot/video artifacts.
-- [ ] Validate `docker-compose up` end-to-end; confirm widget behavior in Simple/Nav modes.
+- [ ] Validate `docker-compose up` end-to-end; confirm widget behavior in Compact/Nav modes.
 - [ ] Update delivery checklist in plan; prepare release notes for LAN demo.
 
 ## 14. Agent Workflow Automation Tips

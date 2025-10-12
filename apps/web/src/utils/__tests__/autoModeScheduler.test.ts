@@ -29,7 +29,7 @@ describe('AutoModeScheduler', () => {
           description: 'Evening commute window',
         },
       ],
-      defaultMode: 'Simple',
+      defaultMode: 'Compact',
       navModeRefreshSeconds: 300,
     };
   });
@@ -80,7 +80,7 @@ describe('AutoModeScheduler', () => {
     expect(mockCallback).toHaveBeenCalledWith('Nav');
 
     vi.advanceTimersByTime(60 * 60 * 1000); // advance to 9:30
-    expect(mockCallback).toHaveBeenCalledWith('Simple');
+    expect(mockCallback).toHaveBeenCalledWith('Compact');
   });
 
   it('applies current mode immediately', () => {
@@ -92,13 +92,13 @@ describe('AutoModeScheduler', () => {
     mockCallback.mockClear();
     vi.setSystemTime(new Date(2024, 5, 3, 10, 0, 0, 0)); // Monday 10:00
     scheduler.applyCurrentMode();
-    expect(mockCallback).toHaveBeenCalledWith('Simple');
+    expect(mockCallback).toHaveBeenCalledWith('Compact');
   });
 
   it('applies default mode when disabled', () => {
     const scheduler = createAutoModeScheduler(mockCallback, { ...testConfig, enabled: false });
     scheduler.applyCurrentMode();
-    expect(mockCallback).toHaveBeenCalledWith('Simple');
+    expect(mockCallback).toHaveBeenCalledWith('Compact');
   });
 
   it('reschedules and reapplies on config update', () => {
@@ -139,7 +139,7 @@ describe('AutoModeScheduler', () => {
           daysOfWeek: [1, 2, 3, 4, 5],
         },
       ],
-      defaultMode: 'Simple',
+      defaultMode: 'Compact',
       navModeRefreshSeconds: 300,
     };
 

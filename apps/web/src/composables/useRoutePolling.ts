@@ -97,8 +97,8 @@ export function useRoutePolling(options: UseRoutePollingOptions): UseRoutePollin
     }
   }
 
-  function applyAutoMode(newMode: 'Simple' | 'Nav'): void {
-    const targetMode = newMode === 'Nav' ? MonitoringMode.Nav : MonitoringMode.Simple;
+  function applyAutoMode(newMode: 'Compact' | 'Nav'): void {
+    const targetMode = newMode === 'Nav' ? MonitoringMode.Nav : MonitoringMode.Compact;
     if (mode.value !== targetMode) {
       mode.value = targetMode;
     }
@@ -110,7 +110,7 @@ export function useRoutePolling(options: UseRoutePollingOptions): UseRoutePollin
     }
 
     autoModeScheduler = createAutoModeScheduler(
-      (newMode: 'Simple' | 'Nav') => {
+      (newMode: 'Compact' | 'Nav') => {
         applyAutoMode(newMode);
       },
       autoModeConfig.value,

@@ -1,4 +1,4 @@
 export enum MonitoringMode {
-  Simple = 'simple',
+  Compact = 'compact',
   Nav = 'nav',
 }
