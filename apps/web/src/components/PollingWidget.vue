@@ -314,7 +314,7 @@ function handleSaveSettings() {
 
 .widget-header {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: 1fr auto;
   align-items: center;
   gap: clamp(0.75rem, 2vw, 1.25rem);
 }
@@ -324,6 +324,7 @@ function handleSaveSettings() {
   gap: 0.25rem;
   min-width: 0;
   align-content: start;
+  overflow: hidden;
 }
 
 .widget-header__actions {
@@ -333,6 +334,21 @@ function handleSaveSettings() {
   justify-content: flex-end;
   justify-self: end;
   gap: 0.5rem;
+  flex-shrink: 0;
+  min-width: fit-content;
+  max-width: 50%;
+}
+
+/* Ensure button toggles don't overflow */
+.widget-header__actions :deep(.v-btn-toggle) {
+  flex-shrink: 0;
+  min-width: fit-content;
+}
+
+.widget-header__actions :deep(.v-btn) {
+  flex-shrink: 0;
+  min-width: fit-content;
+  white-space: nowrap;
 }
 
 .widget-header__title,
