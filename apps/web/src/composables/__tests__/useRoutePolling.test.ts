@@ -174,6 +174,9 @@ describe('useRoutePolling', () => {
   });
 
   it('initializes with correct default values', () => {
+    // Set a time outside the auto mode window to avoid auto mode switching
+    vi.setSystemTime(new Date(2024, 5, 3, 10, 0, 0, 0)); // Monday 10:00 AM (outside 8:30-9:30 window)
+    
     const result = useRoutePolling({
       from: 'Test Origin',
       to: 'Test Destination',

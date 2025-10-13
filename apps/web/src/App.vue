@@ -30,14 +30,11 @@
     <v-main>
       <v-container class="py-8" fluid>
         <div class="widget-stack">
-          <section class="widget-stack__item" id="route-widget" aria-labelledby="route-widget-heading">
-            <h1 class="sr-only" id="route-widget-heading">
-              {{ pageTitle }} widget
+          <section class="widget-stack__item" id="discord-widget" aria-labelledby="discord-widget-heading">
+            <h1 class="sr-only" id="discord-widget-heading">
+              Discord widget
             </h1>
-            <RouteWidget
-              @alerts-acknowledged="onAlertsAcknowledged"
-              @alerts-updated="onAlertsUpdated"
-            />
+            <DiscordWidget />
           </section>
 
           <section class="widget-stack__item" id="weather-widget" aria-labelledby="weather-widget-heading">
@@ -47,11 +44,14 @@
             <WeatherWidget />
           </section>
 
-          <section class="widget-stack__item" id="discord-widget" aria-labelledby="discord-widget-heading">
-            <h1 class="sr-only" id="discord-widget-heading">
-              Discord widget
+          <section class="widget-stack__item" id="route-widget" aria-labelledby="route-widget-heading">
+            <h1 class="sr-only" id="route-widget-heading">
+              {{ pageTitle }} widget
             </h1>
-            <DiscordWidget />
+            <RouteWidget
+              @alerts-acknowledged="onAlertsAcknowledged"
+              @alerts-updated="onAlertsUpdated"
+            />
           </section>
         </div>
       </v-container>
