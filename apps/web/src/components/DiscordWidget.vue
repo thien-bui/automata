@@ -18,6 +18,7 @@
   >
     <template #main-content>
       <DiscordWidgetHeader
+        v-if="!isCompact"
         :total-count="totalCount"
         :online-count="onlineCount"
         :cache-description="cacheDescription"
