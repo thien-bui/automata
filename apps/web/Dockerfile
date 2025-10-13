@@ -2,10 +2,10 @@
 
 FROM node:20-alpine AS build
 WORKDIR /app
-COPY package.json ./
+COPY package.json package-lock.json ./
 COPY apps/web/package.json ./apps/web/package.json
 COPY packages/types/package.json ./packages/types/package.json
-RUN npm install --include=dev
+RUN npm ci
 COPY . .
 RUN npm run --workspace @automata/web build \
   || (echo 'Web workspace build not yet implemented; creating placeholder bundle' \
