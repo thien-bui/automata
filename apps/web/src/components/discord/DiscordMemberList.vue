@@ -5,7 +5,7 @@
     </div>
 
     <v-card
-      elevation="2"
+      elevation="1"
       rounded
       class="discord-member-list__card"
       :class="{ 'discord-member-list__card--compact': isCompact }"
