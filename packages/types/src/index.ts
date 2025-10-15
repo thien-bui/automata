@@ -165,3 +165,13 @@ export type UiPreferencesState = {
   compactMode: boolean;
   widgetCompactModes: WidgetCompactStates;
 };
+
+// Export all reminder types
+export type {
+  ReminderTimeWindow,
+  DailyReminder,
+  DailyReminderPayload,
+  ReminderRemovalPolicy,
+  ReminderResponse,
+  ReminderTemplate,
+} from './reminder';

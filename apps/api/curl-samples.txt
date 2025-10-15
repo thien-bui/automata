@@ -68,3 +68,71 @@ curl -G "http://localhost:4000/api/discord-status" \
 #     "staleWhileRevalidate": false
 #   }
 # }
+
+### Reminder API
+
+# Get reminders for today
+curl -G "http://localhost:4000/reminder" \
+  -H "accept: application/json" \
+  --data-urlencode "date=2025-10-15"
+
+# Get reminders for a specific date
+curl -G "http://localhost:4000/reminder" \
+  -H "accept: application/json" \
+  --data-urlencode "date=2025-10-16"
+
+# Get reminders for tomorrow
+curl -G "http://localhost:4000/reminder" \
+  -H "accept: application/json" \
+  --data-urlencode "date=2025-10-16"
+
+# Mark a reminder as completed for today
+curl -X POST "http://localhost:4000/reminder/complete" \
+  -H "accept: application/json" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "reminderId": "reminder-12345"
+  }'
+
+# Mark a reminder as completed for a specific date
+curl -X POST "http://localhost:4000/reminder/complete" \
+  -H "accept: application/json" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "reminderId": "reminder-12345",
+    "date": "2025-10-15"
+  }'
+
+# Get reminder scheduler status
+curl -G "http://localhost:4000/reminder/status" \
+  -H "accept: application/json"
+
+# Expected reminder response format:
+# {
+#   "reminders": [
+#     {
+#       "id": "reminder-12345",
+#       "title": "Morning Standup",
+#       "description": "Daily team standup meeting",
+#       "scheduledAt": "2025-10-15T14:00:00.000Z",
+#       "isRecurring": true,
+#       "isCompleted": false,
+#       "createdAt": "2025-10-14T12:00:00.000Z"
+#     }
+#   ],
+#   "expiresAfterMinutes": 60
+# }
+
+# Expected reminder completion response format:
+# {
+#   "success": true,
+#   "message": "Reminder marked as completed"
+# }
+
+# Expected scheduler status response format:
+# {
+#   "initialized": true,
+#   "todaySeeded": true,
+#   "tomorrowSeeded": true,
+#   "templateCount": 5
+# }
