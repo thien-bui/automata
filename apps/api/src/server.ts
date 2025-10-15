@@ -8,6 +8,8 @@ import { registerRouteTime } from './routes/routeTime';
 import { registerWeather } from './routes/weather';
 import { registerDiscord } from './routes/discord';
 import { registerReminder } from './routes/reminder';
+import { ReminderScheduler } from './services/reminderScheduler';
+import { ReminderRepository } from './adapters/reminderRepository';
 import { buildRateLimitError } from './utils/errors';
 
 export interface BuildServerOptions {
@@ -80,6 +82,13 @@ export async function start(): Promise<void> {
 
   try {
     await app.listen({ port, host });
+    
+    // Initialize reminder scheduler after server starts
+    const reminderRepository = new ReminderRepository(app.redis);
+    const reminderScheduler = new ReminderScheduler(reminderRepository);
+    await reminderScheduler.initialize();
+    
+    app.log.info('Reminder scheduler initialized successfully');
   } catch (error) {
     app.log.error({ err: error }, 'Failed to start Fastify server');
     process.exit(1);
