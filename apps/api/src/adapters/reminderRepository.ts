@@ -14,7 +14,8 @@ import {
   formatDateKey, 
   createUtcTimestamp, 
   filterExpiredReminders, 
-  sortRemindersByTime 
+  sortRemindersByTime,
+  getReminderExpireWindowMinutes, 
 } from '../config/reminder';
 
 export class ReminderRepository {
@@ -55,16 +56,21 @@ export class ReminderRepository {
         completedReminders = JSON.parse(completedRemindersJson);
       }
 
+      const expireWindowMinutes = getReminderExpireWindowMinutes();
+
       // Combine and filter out expired reminders
       const allReminders = [...activeReminders, ...completedReminders];
-      const nonExpiredReminders = filterExpiredReminders(allReminders) as DailyReminder[];
+      const nonExpiredReminders = filterExpiredReminders(
+        allReminders,
+        expireWindowMinutes,
+      ) as DailyReminder[];
       
       // Sort by scheduled time (earliest first)
       const sortedReminders = sortRemindersByTime(nonExpiredReminders);
 
       return {
         reminders: sortedReminders,
-        expiresAfterMinutes: 15 // This should match the config, but we'll hardcode for now
+        expiresAfterMinutes: expireWindowMinutes,
       };
     } catch (error) {
       console.error('Error fetching reminders for date:', dateKey, error);

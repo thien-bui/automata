@@ -51,7 +51,6 @@ playwright-report/
 
 # IDE files
 .idea/
-.vscode/
 
 # Deployment artifacts
 deploy/ollama/*

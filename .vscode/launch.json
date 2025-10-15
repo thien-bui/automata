@@ -1,0 +1,38 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Debug API (Local)",
+      "type": "node",
+      "request": "launch",
+      "program": "${workspaceFolder}/apps/api/src/server.ts",
+      "runtimeArgs": [
+        "--import",
+        "tsx"
+      ],
+      "env": {
+        "NODE_ENV": "development"
+      },
+      "console": "integratedTerminal",
+      "internalConsoleOptions": "neverOpen",
+      "skipFiles": [
+        "<node_internals>/**"
+      ],
+      "cwd": "${workspaceFolder}/apps/api",
+      "preLaunchTask": "start-redis-docker",
+      "postDebugTask": "stop-redis-docker"
+    },
+    {
+      "name": "Attach to API (Docker)",
+      "type": "node",
+      "request": "attach",
+      "address": "localhost",
+      "port": 9229,
+      "localRoot": "${workspaceFolder}/apps/api/src",
+      "remoteRoot": "/app/apps/api/src",
+      "skipFiles": [
+        "<node_internals>/**"
+      ]
+    }
+  ]
+}
