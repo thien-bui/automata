@@ -10,6 +10,7 @@ type CacheConfig = {
   routes: CacheEntryConfig;
   weather: CacheEntryConfig;
   discord: CacheEntryConfig;
+  reminder: CacheEntryConfig;
 };
 
 type CacheEnvKey =
@@ -18,7 +19,9 @@ type CacheEnvKey =
   | 'WEATHER_CACHE_TTL_SECONDS'
   | 'WEATHER_CACHE_STALE_GRACE_SECONDS'
   | 'DISCORD_CACHE_TTL_SECONDS'
-  | 'DISCORD_CACHE_STALE_GRACE_SECONDS';
+  | 'DISCORD_CACHE_STALE_GRACE_SECONDS'
+  | 'REMINDER_CACHE_TTL_SECONDS'
+  | 'REMINDER_CACHE_STALE_GRACE_SECONDS';
 
 const ttlSchema = z
   .coerce
@@ -79,6 +82,12 @@ export const cacheConfig: CacheConfig = {
   discord: makeEntry({
     ttlEnv: 'DISCORD_CACHE_TTL_SECONDS',
     staleEnv: 'DISCORD_CACHE_STALE_GRACE_SECONDS',
+    ttlFallback: 300,
+    staleFallback: 60,
+  }),
+  reminder: makeEntry({
+    ttlEnv: 'REMINDER_CACHE_TTL_SECONDS',
+    staleEnv: 'REMINDER_CACHE_STALE_GRACE_SECONDS',
     ttlFallback: 300,
     staleFallback: 60,
   }),

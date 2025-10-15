@@ -235,7 +235,7 @@ export class ReminderRepository {
           id: 'move-car',
           title: 'Move Car',
           description: 'Move car to new spot to avoid Kent Station parking enforcement',
-          time: '08:00',
+          time: '19:00',
           recurrence: 'daily',
           isActive: true,
           createdAt: new Date().toISOString(),

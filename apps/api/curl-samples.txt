@@ -1,14 +1,14 @@
 ### Route Time (Google Routes provider)
 
 # Driving directions between two addresses
-curl -G "http://localhost:4000/route-time" \
+curl -G "http://localhost:4000/api/route-time" \
   -H "accept: application/json" \
   --data-urlencode "from=1600 Amphitheatre Parkway, Mountain View, CA" \
   --data-urlencode "to=1 Infinite Loop, Cupertino, CA" \
   --data-urlencode "mode=driving"
 
 # Transit directions with explicit freshness window
-curl -G "http://localhost:4000/route-time" \
+curl -G "http://localhost:4000/api/route-time" \
   -H "accept: application/json" \
   --data-urlencode "from=Empire State Building, New York, NY" \
   --data-urlencode "to=John F. Kennedy International Airport" \
@@ -72,22 +72,28 @@ curl -G "http://localhost:4000/api/discord-status" \
 ### Reminder API
 
 # Get reminders for today
-curl -G "http://localhost:4000/reminder" \
+curl -G "http://localhost:4000/api/reminder" \
   -H "accept: application/json" \
   --data-urlencode "date=2025-10-15"
 
 # Get reminders for a specific date
-curl -G "http://localhost:4000/reminder" \
+curl -G "http://localhost:4000/api/reminder" \
   -H "accept: application/json" \
   --data-urlencode "date=2025-10-16"
 
 # Get reminders for tomorrow
-curl -G "http://localhost:4000/reminder" \
+curl -G "http://localhost:4000/api/reminder" \
   -H "accept: application/json" \
   --data-urlencode "date=2025-10-16"
 
+# Get reminders with cache refresh
+curl -G "http://localhost:4000/api/reminder" \
+  -H "accept: application/json" \
+  --data-urlencode "date=2025-10-15" \
+  --data-urlencode "forceRefresh=true"
+
 # Mark a reminder as completed for today
-curl -X POST "http://localhost:4000/reminder/complete" \
+curl -X POST "http://localhost:4000/api/reminder/complete" \
   -H "accept: application/json" \
   -H "Content-Type: application/json" \
   -d '{
@@ -95,7 +101,7 @@ curl -X POST "http://localhost:4000/reminder/complete" \
   }'
 
 # Mark a reminder as completed for a specific date
-curl -X POST "http://localhost:4000/reminder/complete" \
+curl -X POST "http://localhost:4000/api/reminder/complete" \
   -H "accept: application/json" \
   -H "Content-Type: application/json" \
   -d '{
@@ -104,7 +110,7 @@ curl -X POST "http://localhost:4000/reminder/complete" \
   }'
 
 # Get reminder scheduler status
-curl -G "http://localhost:4000/reminder/status" \
+curl -G "http://localhost:4000/api/reminder/status" \
   -H "accept: application/json"
 
 # Expected reminder response format:
@@ -120,7 +126,12 @@ curl -G "http://localhost:4000/reminder/status" \
 #       "createdAt": "2025-10-14T12:00:00.000Z"
 #     }
 #   ],
-#   "expiresAfterMinutes": 60
+#   "expiresAfterMinutes": 60,
+#   "cache": {
+#     "hit": false,
+#     "ageSeconds": 0,
+#     "staleWhileRevalidate": false
+#   }
 # }
 
 # Expected reminder completion response format:
