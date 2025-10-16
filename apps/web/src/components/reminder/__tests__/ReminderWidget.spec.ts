@@ -37,6 +37,12 @@ vi.mock('../../../composables/useToasts', () => ({
   }),
 }));
 
+vi.mock('../../../composables/useUiPreferences', () => ({
+  useUiPreferences: () => ({
+    isWidgetCompact: () => false,
+  }),
+}));
+
 const ReminderWidgetHeaderStub = defineComponent({
   name: 'ReminderWidgetHeader',
   props: {
@@ -109,6 +115,60 @@ const ReminderWidgetEmptyStub = defineComponent({
   },
 });
 
+const PollingWidgetStub = defineComponent({
+  name: 'PollingWidget',
+  props: {
+    overlineText: { type: String, required: true },
+    title: { type: String, required: true },
+    subtitle: { type: String, required: true },
+    errorTitle: { type: String, required: true },
+    settingsTitle: { type: String, required: true },
+    error: { type: String, default: null },
+    isPolling: { type: Boolean, default: false },
+    lastUpdatedIso: { type: String, default: null },
+    isStale: { type: Boolean, default: false },
+    pollingSeconds: { type: Number, required: true },
+    cacheDescription: { type: String, default: '' },
+    compact: { type: Boolean, default: false },
+  },
+  emits: ['manual-refresh', 'hard-refresh', 'save-settings'],
+  setup(props, { slots, emit }) {
+    return () =>
+      h('div', { class: 'polling-widget-stub' }, [
+        h('div', { class: 'polling-widget-title' }, props.title),
+        h('div', { class: 'polling-widget-subtitle' }, props.subtitle),
+        props.error ? h('div', { class: 'polling-widget-error' }, props.error) : null,
+        props.isPolling ? h('div', { class: 'polling-widget-loading' }, 'Loading reminders...') : null,
+        slots['title-actions']?.(),
+        slots['main-content']?.(),
+        slots['settings-content']?.(),
+        slots['status-extra']?.(),
+        h('button', {
+          class: 'manual-refresh-btn',
+          onClick: () => emit('manual-refresh'),
+        }, 'Refresh now'),
+        h('button', {
+          class: 'hard-refresh-btn',
+          onClick: () => emit('hard-refresh'),
+        }, 'Hard refresh'),
+        h('button', {
+          class: 'save-settings-btn',
+          onClick: () => emit('save-settings'),
+        }, 'Save'),
+      ]);
+  },
+});
+
+const CompactModeControlStub = defineComponent({
+  name: 'CompactModeControl',
+  props: {
+    widgetName: { type: String, required: true },
+  },
+  setup() {
+    return () => h('div', { class: 'compact-mode-control-stub' }, 'Compact Mode Control');
+  },
+});
+
 const vuetifyStubs = {
   'v-card': defineComponent({
     name: 'VCard',
@@ -173,6 +233,30 @@ const vuetifyStubs = {
       return () => h('hr', { class: 'v-divider-stub' });
     },
   }),
+  'v-row': defineComponent({
+    name: 'VRow',
+    setup(_, { slots }) {
+      return () => h('div', { class: 'v-row-stub' }, slots.default ? slots.default() : undefined);
+    },
+  }),
+  'v-col': defineComponent({
+    name: 'VCol',
+    setup(_, { slots }) {
+      return () => h('div', { class: 'v-col-stub' }, slots.default ? slots.default() : undefined);
+    },
+  }),
+  'v-text-field': defineComponent({
+    name: 'VTextField',
+    setup(_, { slots }) {
+      return () => h('div', { class: 'v-text-field-stub' }, slots.default ? slots.default() : undefined);
+    },
+  }),
+  'v-switch': defineComponent({
+    name: 'VSwitch',
+    setup(_, { slots }) {
+      return () => h('div', { class: 'v-switch-stub' }, slots.default ? slots.default() : undefined);
+    },
+  }),
   TransitionGroup: defineComponent({
     name: 'TransitionGroup',
     setup(_, { slots }) {
@@ -190,6 +274,8 @@ const mountWidget = () =>
     global: {
       stubs: {
         ...vuetifyStubs,
+        PollingWidget: PollingWidgetStub,
+        CompactModeControl: CompactModeControlStub,
         ReminderWidgetHeader: ReminderWidgetHeaderStub,
         ReminderListItem: ReminderListItemStub,
         ReminderWidgetEmpty: ReminderWidgetEmptyStub,
@@ -245,10 +331,10 @@ describe('ReminderWidget', () => {
 
     expect(wrapper.text()).toContain('Network error');
 
-    const retryButton = wrapper.findAll('button').find(btn => btn.text().includes('Retry'));
-    expect(retryButton).toBeDefined();
+    const refreshButton = wrapper.findAll('button').find(btn => btn.text().includes('Refresh now'));
+    expect(refreshButton).toBeDefined();
 
-    await retryButton!.trigger('click');
+    await refreshButton!.trigger('click');
     expect(refreshMock).toHaveBeenCalledTimes(1);
   });
 

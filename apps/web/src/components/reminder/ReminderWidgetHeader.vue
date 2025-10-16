@@ -1,19 +1,22 @@
 <template>
-  <v-card-title class="d-flex align-center pa-4">
+  <div class="reminder-widget-header" :class="{ 'reminder-widget-header--compact': compact }">
     <div class="d-flex align-center flex-grow-1">
       <v-icon
         icon="mdi-bell-ring"
         color="primary"
-        class="me-3"
+        :class="compact ? 'me-2' : 'me-3'"
+        :size="compact ? 'small' : 'default'"
       />
-      <span class="text-h6 font-weight-medium">Reminders</span>
+      <span :class="compact ? 'text-subtitle-1 font-weight-medium' : 'text-h6 font-weight-medium'">
+        Reminders
+      </span>
       
       <!-- Overdue indicator -->
       <v-chip
         v-if="overdueCount > 0"
         color="error"
         variant="elevated"
-        size="small"
+        :size="compact ? 'x-small' : 'small'"
         class="ms-2"
       >
         {{ overdueCount }} overdue
@@ -32,10 +35,14 @@
           <v-btn
             v-bind="props"
             variant="outlined"
-            size="small"
+            :size="compact ? 'x-small' : 'small'"
             :loading="isLoading"
           >
-            <v-icon start icon="mdi-calendar" />
+            <v-icon 
+              start 
+              icon="mdi-calendar" 
+              :size="compact ? 'small' : 'default'"
+            />
             {{ formattedDate }}
           </v-btn>
         </template>
@@ -50,14 +57,17 @@
       <!-- Refresh button -->
       <v-btn
         variant="outlined"
-        size="small"
+        :size="compact ? 'x-small' : 'small'"
         :loading="isLoading"
         @click="$emit('refresh')"
       >
-        <v-icon icon="mdi-refresh" />
+        <v-icon 
+          icon="mdi-refresh" 
+          :size="compact ? 'small' : 'default'"
+        />
       </v-btn>
     </div>
-  </v-card-title>
+  </div>
 </template>
 
 <script setup lang="ts">
@@ -77,6 +87,8 @@ interface Props {
   isLoading: boolean;
   /** Number of overdue reminders */
   overdueCount: number;
+  /** Enable compact mode for smaller display */
+  compact?: boolean;
 }
 
 interface Emits {

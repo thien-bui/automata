@@ -1,63 +1,41 @@
 <template>
-  <v-card
-    class="reminder-widget"
-    :class="{ 'reminder-widget--loading': isLoading }"
-    elevation="2"
+  <PollingWidget
+    overline-text="Reminders"
+    :title="widgetTitle"
+    :subtitle="widgetSubtitle"
+    error-title="Reminder Error"
+    settings-title="Reminder Settings"
+    :error="error"
+    :is-polling="isLoading"
+    :last-updated-iso="lastUpdatedIso"
+    :is-stale="isStale"
+    :polling-seconds="Math.floor(refreshInterval / 1000)"
+    :cache-description="cacheDescription"
+    :compact="compact"
+    @manual-refresh="handleManualRefresh"
+    @hard-refresh="handleHardRefresh"
+    @save-settings="handleSaveSettings"
   >
-    <!-- Widget Header -->
-    <ReminderWidgetHeader
-      :selected-date="selectedDate"
-      :is-loading="isLoading"
-      :overdue-count="overdueCount"
-      @date-change="handleDateChange"
-      @refresh="handleRefresh"
-    />
+    <template #title-actions>
+      <ReminderWidgetHeader
+        :selected-date="selectedDate"
+        :is-loading="isLoading"
+        :overdue-count="overdueCount"
+        :compact="true"
+        @date-change="handleDateChange"
+        @refresh="handleRefresh"
+      />
+    </template>
 
-    <!-- Widget Content -->
-    <v-card-text class="pa-4">
-      <!-- Loading State -->
-      <div v-if="isLoading" class="text-center py-8">
-        <v-progress-circular
-          indeterminate
-          color="primary"
-          size="40"
-          class="mb-3"
-        />
-        <div class="text-body-2 text-medium-emphasis">
-          Loading reminders...
-        </div>
-      </div>
-
-      <!-- Error State -->
-      <div v-else-if="error" class="text-center py-8">
-        <v-icon
-          icon="mdi-alert-circle"
-          color="error"
-          size="48"
-          class="mb-3"
-        />
-        <div class="text-body-2 text-error mb-3">
-          {{ error }}
-        </div>
-        <v-btn
-          variant="outlined"
-          color="primary"
-          size="small"
-          @click="handleRefresh"
-        >
-          <v-icon start icon="mdi-refresh" />
-          Retry
-        </v-btn>
-      </div>
-
+    <template #main-content>
       <!-- Empty State -->
       <ReminderWidgetEmpty
-        v-else-if="reminders.length === 0"
+        v-if="reminders.length === 0 && !isLoading"
         :selected-date="selectedDate"
       />
 
       <!-- Reminders List -->
-      <div v-else class="reminder-list">
+      <div v-else-if="reminders.length > 0" class="reminder-list">
         <v-list class="pa-0">
           <TransitionGroup name="reminder" tag="div">
             <ReminderListItem
@@ -71,7 +49,7 @@
         </v-list>
 
         <!-- Summary -->
-        <div v-if="reminders.length > 0" class="mt-4 pt-3 border-t">
+        <div class="mt-4 pt-3 border-t">
           <div class="d-flex justify-space-between align-center text-caption">
             <span class="text-medium-emphasis">
               {{ completedCount }} of {{ reminders.length }} completed
@@ -85,15 +63,54 @@
           </div>
         </div>
       </div>
-    </v-card-text>
-  </v-card>
+    </template>
+
+    <template #settings-content>
+      <v-row>
+        <v-col cols="12">
+          <v-text-field
+            v-model="settingsRefreshInterval"
+            label="Refresh Interval (seconds)"
+            type="number"
+            min="10"
+            max="3600"
+            hint="How often to check for new reminders"
+            persistent-hint
+          />
+        </v-col>
+        <v-col cols="12">
+          <v-switch
+            v-model="settingsAutoRefresh"
+            label="Auto-refresh"
+            hint="Automatically refresh reminders at the specified interval"
+            persistent-hint
+          />
+        </v-col>
+        <v-col cols="12">
+          <CompactModeControl widget-name="reminder-widget" />
+        </v-col>
+      </v-row>
+    </template>
+
+    <template #status-extra>
+      <div v-if="cacheDescription" class="text-body-2 text-medium-emphasis mb-2">
+        {{ cacheDescription }}
+      </div>
+      <div class="text-body-2 text-medium-emphasis">
+        Date: {{ selectedDate }}
+      </div>
+    </template>
+  </PollingWidget>
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, ref, watch } from 'vue';
 import type { DailyReminder } from '@automata/types';
 import { useDailyReminders } from '../../composables/useDailyReminders';
 import { useToasts } from '../../composables/useToasts';
+import { useUiPreferences } from '../../composables/useUiPreferences';
+import PollingWidget from '../PollingWidget.vue';
+import CompactModeControl from '../CompactModeControl.vue';
 import ReminderWidgetHeader from './ReminderWidgetHeader.vue';
 import ReminderListItem from './ReminderListItem.vue';
 import ReminderWidgetEmpty from './ReminderWidgetEmpty.vue';
@@ -120,12 +137,21 @@ const props = withDefaults(defineProps<Props>(), {
 const emit = defineEmits<Emits>();
 
 const { push: addToast } = useToasts();
+const { isWidgetCompact } = useUiPreferences();
 
-// Use the daily reminders composable
+// Settings state
+const settingsRefreshInterval = ref(Math.floor(props.refreshInterval / 1000));
+const settingsAutoRefresh = ref(props.autoRefresh);
+
+// Internal state for PollingWidget
+const refreshInterval = computed(() => settingsRefreshInterval.value * 1000);
+const compact = computed(() => isWidgetCompact('reminder-widget'));
+
+// Use the daily reminders composable with reactive settings
 const reminderState = useDailyReminders({
   date: props.date,
-  refreshInterval: props.refreshInterval,
-  autoRefresh: props.autoRefresh,
+  refreshInterval: refreshInterval.value,
+  autoRefresh: settingsAutoRefresh.value,
 });
 const {
   reminders,
@@ -136,9 +162,48 @@ const {
   refresh,
   setDate,
   completeReminder,
+  startAutoRefresh,
+  stopAutoRefresh,
 } = reminderState;
 
-// Computed properties
+// Watch for settings changes and update polling behavior
+watch([refreshInterval, settingsAutoRefresh], ([newInterval, newAutoRefresh]) => {
+  if (newAutoRefresh) {
+    stopAutoRefresh();
+    startAutoRefresh();
+  } else {
+    stopAutoRefresh();
+  }
+}, { immediate: false });
+
+// Computed properties for PollingWidget
+const widgetTitle = computed(() => {
+  const today = new Date().toISOString().split('T')[0];
+  if (selectedDate.value === today) {
+    return "Today's Reminders";
+  }
+  const date = new Date(selectedDate.value + 'T00:00:00');
+  return date.toLocaleDateString(undefined, { 
+    weekday: 'long', 
+    month: 'long', 
+    day: 'numeric' 
+  });
+});
+
+const widgetSubtitle = computed(() => {
+  if (reminders.value.length === 0) {
+    return 'No reminders scheduled';
+  }
+  const pending = reminders.value.filter(r => !r.isCompleted).length;
+  return `${pending} pending • ${reminders.value.length} total`;
+});
+
+// Mock values for PollingWidget compatibility
+const lastUpdatedIso = ref<string | null>(null);
+const isStale = ref(false);
+const cacheDescription = ref<string>('');
+
+// Computed properties for reminder list
 const sortedReminders = computed<DailyReminder[]>(() => {
   return [...reminders.value].sort((a, b) => {
     // Sort by completion status first (incomplete first), then by time
@@ -165,11 +230,37 @@ async function handleDateChange(date: string): Promise<void> {
 
 async function handleRefresh(): Promise<void> {
   try {
+    lastUpdatedIso.value = new Date().toISOString();
     await refresh();
   } catch (err) {
     console.error('Error refreshing reminders:', err);
     emit('error', 'Failed to refresh reminders');
   }
+}
+
+async function handleManualRefresh(): Promise<void> {
+  await handleRefresh();
+}
+
+async function handleHardRefresh(): Promise<void> {
+  try {
+    lastUpdatedIso.value = new Date().toISOString();
+    isStale.value = false;
+    cacheDescription.value = 'Live data';
+    await refresh();
+  } catch (err) {
+    console.error('Error hard refreshing reminders:', err);
+    emit('error', 'Failed to refresh reminders');
+  }
+}
+
+function handleSaveSettings(): void {
+  // Settings are already reactive, just show a toast
+  addToast({
+    text: 'Reminder settings updated',
+    variant: 'success',
+    timeout: 3000,
+  });
 }
 
 async function handleCompleteReminder(reminderId: string): Promise<void> {
