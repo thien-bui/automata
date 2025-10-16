@@ -157,7 +157,7 @@ export class ReminderRepository {
         id: `${template.id}-${dateKey}`,
         title: template.title,
         description: template.description,
-        scheduledAt: createUtcTimestamp(dateKey, template.time),
+        scheduledAt: this.resolveTemplateScheduledTimestamp(dateKey, template),
         isRecurring: true,
         isCompleted: false,
         createdAt: new Date().toISOString()
@@ -241,7 +241,8 @@ export class ReminderRepository {
           id: 'move-car',
           title: 'Move Car',
           description: 'Move car to new spot to avoid Kent Station parking enforcement',
-          time: '19:00',
+          localTime: '19:00',
+          timezone: 'America/Los_Angeles',
           recurrence: 'daily',
           isActive: true,
           createdAt: new Date().toISOString(),
@@ -255,5 +256,24 @@ export class ReminderRepository {
       console.error('Error initializing default reminder templates:', error);
       throw new Error('Failed to initialize default reminder templates');
     }
+  }
+
+  /**
+   * Resolve the UTC timestamp for a reminder template on a specific date.
+   * Falls back to legacy UTC time strings when timezone data is unavailable.
+   */
+  private resolveTemplateScheduledTimestamp(dateKey: string, template: ReminderTemplate): string {
+    const localTime = template.localTime?.trim();
+    const timeZone = template.timezone?.trim();
+
+    if (localTime && timeZone) {
+      return createUtcTimestamp(dateKey, localTime, timeZone);
+    }
+
+    if (template.time) {
+      return createUtcTimestamp(dateKey, template.time);
+    }
+
+    throw new Error(`Reminder template ${template.id} is missing time configuration`);
   }
 }

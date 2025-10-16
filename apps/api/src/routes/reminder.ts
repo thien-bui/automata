@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto';
 
 import type { FastifyInstance, FastifyPluginOptions, FastifyReply, FastifyRequest } from 'fastify';
 import { z } from 'zod';
+import { DateTime } from 'luxon';
 
 import { ReminderRepository } from '../adapters/reminderRepository';
 import { ReminderScheduler } from '../services/reminderScheduler';
@@ -107,29 +108,37 @@ export async function registerReminder(
       app.log.warn(meta, msg);
     });
 
-    const now = Date.now();
+    const now = DateTime.utc();
     let cachedAgeSeconds = 0;
+    let cachedTimestampValid = false;
 
     if (cachedRecord) {
-      cachedAgeSeconds = Math.max(
-        0,
-        Math.floor((now - new Date(cachedRecord.cachedAtIso).getTime()) / 1000),
-      );
+      const cachedAt = DateTime.fromISO(cachedRecord.cachedAtIso, { zone: 'utc' });
+      if (cachedAt.isValid) {
+        cachedTimestampValid = true;
+        const diffInSeconds = now.diff(cachedAt, 'seconds').seconds ?? 0;
+        cachedAgeSeconds = Math.max(0, Math.floor(diffInSeconds));
+      } else {
+        app.log.warn(
+          { cachedAtIso: cachedRecord.cachedAtIso },
+          'Encountered invalid cachedAtIso timestamp in reminder cache',
+        );
+      }
 
-      if (!forceRefresh && cachedAgeSeconds <= freshnessSeconds) {
+      if (cachedTimestampValid && !forceRefresh && cachedAgeSeconds <= freshnessSeconds) {
         return toResponse(cachedRecord, cachedAgeSeconds, true, false);
       }
     }
 
     try {
       // Validate date format and convert to Date object
-      const dateParts = date.split('-').map(Number);
-      const queryDate = new Date(Date.UTC(dateParts[0], dateParts[1] - 1, dateParts[2]));
-      
-      if (isNaN(queryDate.getTime())) {
+      const dateTime = DateTime.fromISO(date, { zone: 'utc' });
+      if (!dateTime.isValid) {
         const error = buildValidationError('The provided date is not valid');
         return reply.status(error.statusCode).send(error.payload);
       }
+
+      const queryDate = dateTime.toJSDate();
 
       // Ensure reminders are seeded for the requested date
       const reminderRepository = new ReminderRepository(app.redis);
@@ -141,7 +150,10 @@ export async function registerReminder(
       // Update expiresAfterMinutes from config
       reminderResponse.expiresAfterMinutes = getReminderExpireWindowMinutes();
 
-      const lastUpdatedIso = new Date(now).toISOString();
+      const lastUpdatedIso = now.toISO();
+      if (!lastUpdatedIso) {
+        throw new Error('Failed to generate ISO timestamp for reminder payload');
+      }
 
       const payload: Omit<ReminderResponse, 'cache'> = {
         reminders: reminderResponse.reminders,
@@ -175,7 +187,7 @@ export async function registerReminder(
     } catch (error) {
       app.log.error({ err: error }, 'Failed to retrieve reminder data');
 
-      if (cachedRecord && cachedAgeSeconds <= maxAcceptableAgeSeconds) {
+      if (cachedRecord && cachedTimestampValid && cachedAgeSeconds <= maxAcceptableAgeSeconds) {
         return toResponse(cachedRecord, cachedAgeSeconds, true, true);
       }
 
@@ -202,15 +214,15 @@ export async function registerReminder(
     try {
       let targetDate: Date;
       if (date) {
-        const dateParts = date.split('-').map(Number);
-        targetDate = new Date(Date.UTC(dateParts[0], dateParts[1] - 1, dateParts[2]));
-        
-        if (isNaN(targetDate.getTime())) {
+        const dateTime = DateTime.fromISO(date, { zone: 'utc' });
+        if (!dateTime.isValid) {
           const error = buildValidationError('The provided date is not valid');
           return reply.status(error.statusCode).send(error.payload);
         }
+
+        targetDate = dateTime.toJSDate();
       } else {
-        targetDate = new Date();
+        targetDate = DateTime.utc().toJSDate();
       }
 
       const reminderRepository = new ReminderRepository(app.redis);

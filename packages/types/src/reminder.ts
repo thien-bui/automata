@@ -64,8 +64,21 @@ export type ReminderTemplate = {
   id: string;
   title: string;
   description?: string;
-  /** Time of day in HH:MM format (UTC) */
-  time: string;
+  /**
+   * Local time of day in HH:MM format (24-hour).
+   * Required for new templates but optional to support legacy records.
+   */
+  localTime?: string;
+  /**
+   * IANA timezone identifier associated with the local time.
+   * Required for new templates but optional to support legacy records.
+   */
+  timezone?: string;
+  /**
+   * Optional legacy UTC time of day in HH:MM format.
+   * Retained for backward compatibility and may be undefined for new templates.
+   */
+  time?: string;
   /** Recurrence pattern - currently only 'daily' supported */
   recurrence: 'daily';
   isActive: boolean;

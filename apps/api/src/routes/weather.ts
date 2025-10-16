@@ -8,6 +8,7 @@ import type {
   FastifyRequest,
 } from 'fastify';
 import { z } from 'zod';
+import { DateTime } from 'luxon';
 
 import { fetchGoogleWeather } from '../adapters/googleWeather';
 import { cacheConfig } from '../config/cache';
@@ -112,23 +113,34 @@ export async function registerWeather(
       app.log.warn(meta, msg);
     });
 
-    const now = Date.now();
+    const now = DateTime.utc();
     let cachedAgeSeconds = 0;
+    let cachedTimestampValid = false;
 
     if (cachedRecord) {
-      cachedAgeSeconds = Math.max(
-        0,
-        Math.floor((now - new Date(cachedRecord.cachedAtIso).getTime()) / 1000),
-      );
+      const cachedAt = DateTime.fromISO(cachedRecord.cachedAtIso, { zone: 'utc' });
+      if (cachedAt.isValid) {
+        cachedTimestampValid = true;
+        const diffInSeconds = now.diff(cachedAt, 'seconds').seconds ?? 0;
+        cachedAgeSeconds = Math.max(0, Math.floor(diffInSeconds));
+      } else {
+        app.log.warn(
+          { cachedAtIso: cachedRecord.cachedAtIso },
+          'Encountered invalid cachedAtIso timestamp in weather cache',
+        );
+      }
 
-      if (!forceRefresh && cachedAgeSeconds <= freshnessSeconds) {
+      if (cachedTimestampValid && !forceRefresh && cachedAgeSeconds <= freshnessSeconds) {
         return toResponse(cachedRecord, cachedAgeSeconds, true, false);
       }
     }
 
     try {
       const providerResult = await fetchGoogleWeather({ location });
-      const lastUpdatedIso = new Date(now).toISOString();
+      const lastUpdatedIso = now.toISO();
+      if (!lastUpdatedIso) {
+        throw new Error('Failed to generate ISO timestamp for weather payload');
+      }
 
       const payload: Omit<WeatherResponse, 'cache'> = {
         hourlyData: providerResult.hourlyData,
@@ -165,7 +177,7 @@ export async function registerWeather(
     } catch (error) {
       app.log.error({ err: error }, 'Failed to retrieve weather data from provider');
 
-      if (cachedRecord && cachedAgeSeconds <= maxAcceptableAgeSeconds) {
+      if (cachedRecord && cachedTimestampValid && cachedAgeSeconds <= maxAcceptableAgeSeconds) {
         return toResponse(cachedRecord, cachedAgeSeconds, true, true);
       }
 

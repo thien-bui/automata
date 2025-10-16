@@ -1,3 +1,5 @@
+import { DateTime } from 'luxon';
+
 /**
  * Reminder widget configuration
  * Handles environment variables and provides helper utilities
@@ -36,11 +38,13 @@ export function isReminderExpired(
   scheduledAt: string,
   expireWindowMinutes: number = getReminderExpireWindowMinutes()
 ): boolean {
-  const scheduledTime = new Date(scheduledAt);
-  const now = new Date();
-  const expireTime = new Date(scheduledTime.getTime() + expireWindowMinutes * 60 * 1000);
-  
-  return now > expireTime;
+  const scheduledTime = DateTime.fromISO(scheduledAt, { zone: 'utc' });
+  if (!scheduledTime.isValid) {
+    throw new Error(`Invalid scheduledAt timestamp: ${scheduledAt}`);
+  }
+
+  const expireTime = scheduledTime.plus({ minutes: expireWindowMinutes });
+  return DateTime.utc().toMillis() > expireTime.toMillis();
 }
 
 /**
@@ -65,7 +69,7 @@ export function sortRemindersByTime<T extends { scheduledAt: string }>(
   reminders: T[]
 ): T[] {
   return [...reminders].sort((a, b) => 
-    new Date(a.scheduledAt).getTime() - new Date(b.scheduledAt).getTime()
+    DateTime.fromISO(a.scheduledAt).toMillis() - DateTime.fromISO(b.scheduledAt).toMillis()
   );
 }
 
@@ -83,32 +87,31 @@ export function formatDateKey(date: Date = new Date()): string {
 }
 
 /**
- * Parse a time string in HH:MM format and return minutes since midnight
- * @param timeString - Time in HH:MM format (24-hour, UTC)
- * @returns Minutes since midnight
- */
-export function parseTimeString(timeString: string): number {
-  const [hours, minutes] = timeString.split(':').map(Number);
-  if (isNaN(hours) || isNaN(minutes) || hours < 0 || hours > 23 || minutes < 0 || minutes > 59) {
-    throw new Error(`Invalid time format: ${timeString}. Expected HH:MM in 24-hour format.`);
-  }
-  
-  return hours * 60 + minutes;
-}
-
-/**
  * Create a UTC ISO-8601 timestamp for a specific date and time
  * @param dateKey - Date in YYYY-MM-DD format
- * @param timeString - Time in HH:MM format (24-hour, UTC)
+ * @param timeString - Time in HH:MM format (24-hour). Interpreted as UTC when no timezone is provided.
+ * @param timeZone - Optional IANA timezone identifier for interpreting the time string
  * @returns UTC ISO-8601 timestamp
  */
-export function createUtcTimestamp(dateKey: string, timeString: string): string {
-  const [year, month, day] = dateKey.split('-').map(Number);
-  const minutesSinceMidnight = parseTimeString(timeString);
-  
-  const hours = Math.floor(minutesSinceMidnight / 60);
-  const minutes = minutesSinceMidnight % 60;
-  
-  const date = new Date(Date.UTC(year, month - 1, day, hours, minutes, 0, 0));
-  return date.toISOString();
+export function createUtcTimestamp(
+  dateKey: string,
+  timeString: string,
+  timeZone?: string
+): string {
+  const seed = `${dateKey}T${timeString}`;
+  const zone = timeZone ?? 'UTC';
+  const dateTime = DateTime.fromISO(seed, { zone });
+
+  if (!dateTime.isValid) {
+    throw new Error(`Invalid date/time combination: ${seed} (${zone})`);
+  }
+
+  const utcValue = dateTime.toUTC();
+  const isoString = utcValue.toISO({ suppressMilliseconds: false });
+
+  if (!isoString) {
+    throw new Error(`Failed to create ISO timestamp for: ${seed} (${zone})`);
+  }
+
+  return isoString;
 }
