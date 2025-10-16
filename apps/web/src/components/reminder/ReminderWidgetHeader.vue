@@ -62,6 +62,13 @@
 
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue';
+import {
+  addDays,
+  formatDateKey,
+  getFriendlyDateLabel,
+  isValidDateKey,
+  type DateKey,
+} from '../../utils/dateOnly';
 
 interface Props {
   /** Currently selected date in YYYY-MM-DD format */
@@ -82,43 +89,46 @@ const emit = defineEmits<Emits>();
 
 // Local state
 const dateMenu = ref(false);
-const selectedDateInternal = ref<Date>(new Date(props.selectedDate));
+const selectedDateInternal = ref<DateKey>(
+  isValidDateKey(props.selectedDate) ? (props.selectedDate as DateKey) : formatDateKey(new Date())
+);
 
 // Computed properties
 const formattedDate = computed(() => {
-  const date = new Date(props.selectedDate);
-  const today = new Date();
-  const tomorrow = new Date(today);
-  tomorrow.setDate(tomorrow.getDate() + 1);
-
-  if (date.toDateString() === today.toDateString()) {
-    return 'Today';
-  } else if (date.toDateString() === tomorrow.toDateString()) {
-    return 'Tomorrow';
-  } else {
-    return date.toLocaleDateString(undefined, {
-      month: 'short',
-      day: 'numeric',
-    });
+  if (!isValidDateKey(props.selectedDate)) {
+    return getFriendlyDateLabel(formatDateKey(new Date()));
   }
+
+  return getFriendlyDateLabel(props.selectedDate as DateKey);
 });
 
 const maxDate = computed(() => {
-  const max = new Date();
-  max.setDate(max.getDate() + 7); // Allow selecting up to 7 days in advance
-  return max.toISOString().split('T')[0];
+  const max = addDays(new Date(), 7); // Allow selecting up to 7 days in advance
+  return formatDateKey(max);
 });
 
 // Watch for external date changes
 watch(() => props.selectedDate, (newDate) => {
-  selectedDateInternal.value = new Date(newDate);
+  if (isValidDateKey(newDate)) {
+    selectedDateInternal.value = newDate as DateKey;
+  }
 });
 
 // Event handlers
-function handleDateChange(date: Date | string): void {
-  const dateStr = typeof date === 'string' ? date : date.toISOString().split('T')[0];
-  emit('date-change', dateStr);
-  dateMenu.value = false;
+function handleDateChange(date: Date | string | null): void {
+  if (typeof date === 'string' && isValidDateKey(date)) {
+    selectedDateInternal.value = date as DateKey;
+    emit('date-change', date);
+    dateMenu.value = false;
+    return;
+  }
+
+  if (date instanceof Date) {
+    const formatted = formatDateKey(date);
+    selectedDateInternal.value = formatted;
+    emit('date-change', formatted);
+    dateMenu.value = false;
+  }
 }
 </script>
 

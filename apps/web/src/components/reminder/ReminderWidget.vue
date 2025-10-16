@@ -91,8 +91,8 @@
 
 <script setup lang="ts">
 import { computed } from 'vue';
-import { DailyReminder } from '@automata/types';
-import { useDailyReminders, formatReminderTime, isReminderOverdue } from '../../composables/useDailyReminders';
+import type { DailyReminder } from '@automata/types';
+import { useDailyReminders } from '../../composables/useDailyReminders';
 import { useToasts } from '../../composables/useToasts';
 import ReminderWidgetHeader from './ReminderWidgetHeader.vue';
 import ReminderListItem from './ReminderListItem.vue';
@@ -122,6 +122,11 @@ const emit = defineEmits<Emits>();
 const { push: addToast } = useToasts();
 
 // Use the daily reminders composable
+const reminderState = useDailyReminders({
+  date: props.date,
+  refreshInterval: props.refreshInterval,
+  autoRefresh: props.autoRefresh,
+});
 const {
   reminders,
   overdueCount,
@@ -131,15 +136,11 @@ const {
   refresh,
   setDate,
   completeReminder,
-} = useDailyReminders({
-  date: props.date,
-  refreshInterval: props.refreshInterval,
-  autoRefresh: props.autoRefresh,
-});
+} = reminderState;
 
 // Computed properties
-const sortedReminders = computed(() => {
-  return [...reminders].sort((a, b) => {
+const sortedReminders = computed<DailyReminder[]>(() => {
+  return [...reminders.value].sort((a, b) => {
     // Sort by completion status first (incomplete first), then by time
     if (a.isCompleted !== b.isCompleted) {
       return a.isCompleted ? 1 : -1;
@@ -149,7 +150,7 @@ const sortedReminders = computed(() => {
 });
 
 const completedCount = computed(() => {
-  return reminders.filter((r: DailyReminder) => r.isCompleted).length;
+  return reminders.value.filter(reminder => reminder.isCompleted).length;
 });
 
 // Event handlers
@@ -176,7 +177,7 @@ async function handleCompleteReminder(reminderId: string): Promise<void> {
     await completeReminder(reminderId);
     
     // Find the reminder to show in toast
-    const reminder = reminders.find(r => r.id === reminderId);
+    const reminder = reminders.value.find(r => r.id === reminderId);
     if (reminder) {
       addToast({
         text: `Completed: ${reminder.title}`,

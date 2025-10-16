@@ -4,7 +4,13 @@
  */
 
 import { ref, computed, onMounted, onUnmounted } from 'vue';
-import { DailyReminder, ReminderResponse } from '@automata/types';
+import type { ComputedRef } from 'vue';
+import type { DailyReminder, ReminderResponse } from '@automata/types';
+import {
+  getTodayDateKey,
+  isValidDateKey,
+  type DateKey,
+} from '../utils/dateOnly';
 
 export interface UseDailyRemindersOptions {
   /** Date to fetch reminders for (defaults to today) */
@@ -15,17 +21,17 @@ export interface UseDailyRemindersOptions {
   autoRefresh?: boolean;
 }
 
-export interface UseDailyRemindersReturn {
+export type UseDailyRemindersReturn = {
   /** Array of reminders for the selected date */
-  reminders: DailyReminder[];
+  reminders: ComputedRef<DailyReminder[]>;
   /** Number of overdue reminders */
-  overdueCount: number;
+  overdueCount: ComputedRef<number>;
   /** Loading state */
-  isLoading: boolean;
+  isLoading: ComputedRef<boolean>;
   /** Error state */
-  error: string | null;
+  error: ComputedRef<string | null>;
   /** Selected date in YYYY-MM-DD format */
-  selectedDate: string;
+  selectedDate: ComputedRef<DateKey>;
   /** Refresh reminders for current date */
   refresh: () => Promise<void>;
   /** Change the selected date */
@@ -36,7 +42,7 @@ export interface UseDailyRemindersReturn {
   startAutoRefresh: () => void;
   /** Stop auto-refresh */
   stopAutoRefresh: () => void;
-}
+};
 
 /**
  * Composable for managing daily reminders
@@ -56,10 +62,13 @@ export function useDailyReminders(
   const reminders = ref<DailyReminder[]>([]);
   const isLoading = ref(false);
   const error = ref<string | null>(null);
-  const selectedDate = ref(initialDate || formatDateKey(new Date()));
+  const selectedDate = ref<DateKey>(
+    initialDate && isValidDateKey(initialDate) ? initialDate : getTodayDateKey()
+  );
 
   // Auto-refresh timer
-  let refreshTimer: NodeJS.Timeout | null = null;
+  let refreshTimer: ReturnType<typeof setInterval> | null = null;
+  let activeFetchId = 0;
 
   // Computed properties
   const overdueCount = computed(() => {
@@ -72,26 +81,19 @@ export function useDailyReminders(
   });
 
   /**
-   * Format date as YYYY-MM-DD string
-   */
-  function formatDateKey(date: Date): string {
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
-  }
-
-  /**
    * Fetch reminders for the selected date
    */
   async function fetchReminders(): Promise<void> {
-    if (!selectedDate.value) return;
+    const targetDate = selectedDate.value;
+    const requestId = ++activeFetchId;
 
     isLoading.value = true;
-    error.value = null;
+    if (requestId === activeFetchId) {
+      error.value = null;
+    }
 
     try {
-      const response = await fetch(`/api/reminder?date=${encodeURIComponent(selectedDate.value)}`);
+      const response = await fetch(`/api/reminder?date=${encodeURIComponent(targetDate)}`);
       
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
@@ -99,13 +101,20 @@ export function useDailyReminders(
       }
 
       const data: ReminderResponse = await response.json();
-      reminders.value = data.reminders;
+      if (requestId === activeFetchId) {
+        reminders.value = data.reminders;
+        error.value = null;
+      }
     } catch (err) {
       console.error('Error fetching reminders:', err);
-      error.value = err instanceof Error ? err.message : 'Failed to fetch reminders';
-      reminders.value = [];
+      if (requestId === activeFetchId) {
+        error.value = err instanceof Error ? err.message : 'Failed to fetch reminders';
+        reminders.value = [];
+      }
     } finally {
-      isLoading.value = false;
+      if (requestId === activeFetchId) {
+        isLoading.value = false;
+      }
     }
   }
 
@@ -120,6 +129,12 @@ export function useDailyReminders(
    * Change the selected date and fetch reminders
    */
   async function setDate(date: string): Promise<void> {
+    if (!isValidDateKey(date)) {
+      const message = 'Date must be in YYYY-MM-DD format';
+      error.value = message;
+      throw new Error(message);
+    }
+
     selectedDate.value = date;
     await fetchReminders();
   }
@@ -163,7 +178,9 @@ export function useDailyReminders(
     }
 
     refreshTimer = setInterval(() => {
-      fetchReminders();
+      fetchReminders().catch(err => {
+        console.error('Error during reminder auto-refresh:', err);
+      });
     }, refreshInterval);
   }
 
@@ -191,11 +208,11 @@ export function useDailyReminders(
   });
 
   return {
-    reminders: reminders.value,
-    overdueCount: overdueCount.value,
-    isLoading: isLoading.value,
-    error: error.value,
-    selectedDate: selectedDate.value,
+    reminders: computed(() => reminders.value),
+    overdueCount,
+    isLoading: computed(() => isLoading.value),
+    error: computed(() => error.value),
+    selectedDate: computed(() => selectedDate.value),
     refresh,
     setDate,
     completeReminder,

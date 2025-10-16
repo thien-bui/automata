@@ -55,6 +55,12 @@
 
 <script setup lang="ts">
 import { computed } from 'vue';
+import {
+  getTodayDateKey,
+  isValidDateKey,
+  parseDateKey,
+  type DateKey,
+} from '../../utils/dateOnly';
 
 interface Props {
   /** Selected date in YYYY-MM-DD format */
@@ -75,16 +81,20 @@ const props = withDefaults(defineProps<Props>(), {
   showTips: true,
 });
 
-const emit = defineEmits<Emits>();
+defineEmits<Emits>();
 
 // Computed properties
-const selectedDateObj = computed(() => new Date(props.selectedDate));
-const today = computed(() => new Date());
-const todayStr = computed(() => today.value.toISOString().split('T')[0]);
+const todayKey = getTodayDateKey();
+const selectedDateKey = computed<DateKey>(() => {
+  return isValidDateKey(props.selectedDate) ? (props.selectedDate as DateKey) : todayKey;
+});
 
-const isToday = computed(() => props.selectedDate === todayStr.value);
-const isPast = computed(() => selectedDateObj.value < today.value && !isToday.value);
-const isFuture = computed(() => selectedDateObj.value > today.value);
+const todayStart = computed(() => parseDateKey(todayKey));
+const selectedDateStart = computed(() => parseDateKey(selectedDateKey.value));
+
+const isToday = computed(() => selectedDateKey.value === todayKey);
+const isPast = computed(() => selectedDateStart.value.getTime() < todayStart.value.getTime() && !isToday.value);
+const isFuture = computed(() => selectedDateStart.value.getTime() > todayStart.value.getTime());
 
 const title = computed(() => {
   if (isToday.value) {

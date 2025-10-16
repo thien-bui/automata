@@ -44,6 +44,16 @@
             <WeatherWidget />
           </section>
 
+          <section class="widget-stack__item" id="reminder-widget" aria-labelledby="reminder-widget-heading">
+            <h1 class="sr-only" id="reminder-widget-heading">
+              Reminder widget
+            </h1>
+            <ReminderWidget 
+              @reminder-completed="onReminderCompleted"
+              @error="onReminderError"
+            />
+          </section>
+
           <section class="widget-stack__item" id="route-widget" aria-labelledby="route-widget-heading">
             <h1 class="sr-only" id="route-widget-heading">
               {{ pageTitle }} widget
@@ -66,6 +76,7 @@ import { computed, ref } from 'vue';
 
 import AlertBell from './components/AlertBell.vue';
 import DiscordWidget from './components/DiscordWidget.vue';
+import ReminderWidget from './components/reminder/ReminderWidget.vue';
 import RouteWidget from './components/RouteWidget.vue';
 import ToastHost from './components/ToastHost.vue';
 import WeatherWidget from './components/WeatherWidget.vue';
@@ -114,6 +125,22 @@ const onAlertsUpdated = (count: number) => {
       variant: 'warning',
     });
   }
+};
+
+const onReminderCompleted = (reminderId: string) => {
+  pushToast({
+    text: 'Reminder completed successfully!',
+    variant: 'success',
+    timeout: 3000,
+  });
+};
+
+const onReminderError = (error: string) => {
+  pushToast({
+    text: `Reminder error: ${error}`,
+    variant: 'error',
+    timeout: 5000,
+  });
 };
 
 </script>
