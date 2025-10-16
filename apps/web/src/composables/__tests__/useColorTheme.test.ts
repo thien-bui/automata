@@ -17,6 +17,9 @@ const createThemeStub = (initial: 'light' | 'dark' = 'light') => {
     global: {
       name,
     },
+    change: vi.fn((theme: 'light' | 'dark') => {
+      name.value = theme;
+    }),
   };
 };
 

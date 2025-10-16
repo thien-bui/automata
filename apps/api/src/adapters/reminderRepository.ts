@@ -186,28 +186,41 @@ export class ReminderRepository {
     try {
       // Get current reminders
       const remindersJson = await this.redis.get(remindersKey);
-      if (!remindersJson) {
-        throw new Error('No reminders found for this date');
+      const completedRemindersJson = await this.redis.get(completedKey);
+      
+      let reminders: DailyReminder[] = [];
+      let completedReminders: DailyReminder[] = [];
+      
+      if (remindersJson) {
+        reminders = JSON.parse(remindersJson);
+      }
+      
+      if (completedRemindersJson) {
+        completedReminders = JSON.parse(completedRemindersJson);
       }
 
-      const reminders: DailyReminder[] = JSON.parse(remindersJson);
+      // Check if reminder is already in completed list
+      const alreadyCompleted = completedReminders.find(r => r.id === reminderId);
+      if (alreadyCompleted) {
+        console.log(`Reminder ${reminderId} is already completed for ${dateKey}`);
+        return; // Already completed, no action needed
+      }
+
+      // Check if reminder exists in active list
       const reminderIndex = reminders.findIndex(r => r.id === reminderId);
       
       if (reminderIndex === -1) {
+        // Check if there are any reminders at all for this date
+        if (reminders.length === 0 && completedReminders.length === 0) {
+          throw new Error('No reminders found for this date');
+        }
         throw new Error('Reminder not found');
       }
 
       // Mark as completed
       reminders[reminderIndex].isCompleted = true;
-
+      
       // Move to completed list
-      const completedRemindersJson = await this.redis.get(completedKey);
-      let completedReminders: DailyReminder[] = [];
-      
-      if (completedRemindersJson) {
-        completedReminders = JSON.parse(completedRemindersJson);
-      }
-      
       completedReminders.push(reminders[reminderIndex]);
 
       // Remove from active and add to completed

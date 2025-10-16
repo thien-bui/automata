@@ -54,7 +54,7 @@ export function useColorTheme(): UseColorThemeResult {
   const isDark = computed(() => currentTheme.value === 'dark');
 
   const applyTheme = (nextTheme: ColorThemeName, persist: boolean) => {
-    theme.global.name.value = nextTheme;
+    theme.change(nextTheme);
 
     if (persist && typeof window !== 'undefined') {
       window.localStorage.setItem(THEME_STORAGE_KEY, nextTheme);
