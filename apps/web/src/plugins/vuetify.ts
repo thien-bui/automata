@@ -30,7 +30,7 @@ export const vuetify = createVuetify({
         colors: {
           primary: '#007acc',
           secondary: '#ff7858',
-          surface: '#2d2d30',
+          surface: '#252526',
           background: '#1e1e1e',
         },
       },

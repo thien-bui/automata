@@ -68,15 +68,15 @@
 <script setup lang="ts">
 import { computed, watch } from 'vue';
 
-import PollingWidget from './PollingWidget.vue';
-import MapPreview from './MapPreview.vue';
-import { RouteSummary, RouteAlerts, RouteModeToggle, RouteSettings } from './route';
-import { useRoutePolling } from '../composables/useRoutePolling';
-import { useRouteAlerts } from '../composables/useRouteAlerts';
-import { useAlertThreshold } from '../composables/useAlertThreshold';
-import { useToasts } from '../composables/useToasts';
-import { useUiPreferences } from '../composables/useUiPreferences';
-import { MonitoringMode } from './monitoringMode';
+import PollingWidget from '../PollingWidget.vue';
+import MapPreview from '../MapPreview.vue';
+import { RouteSummary, RouteAlerts, RouteModeToggle, RouteSettings } from './index';
+import { useRoutePolling } from '../../composables/useRoutePolling';
+import { useRouteAlerts } from '../../composables/useRouteAlerts';
+import { useAlertThreshold } from '../../composables/useAlertThreshold';
+import { useToasts } from '../../composables/useToasts';
+import { useUiPreferences } from '../../composables/useUiPreferences';
+import { MonitoringMode } from '../monitoringMode';
 
 const emit = defineEmits<{
   (e: 'alerts-acknowledged'): void;

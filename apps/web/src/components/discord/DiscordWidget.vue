@@ -59,15 +59,15 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import type { DiscordDisplaySettings, DiscordMemberStatus } from '@automata/types';
-import PollingWidget from './PollingWidget.vue';
-import { useDiscord, type DiscordFetchReason } from '../composables/useDiscord';
-import { useToasts } from '../composables/useToasts';
-import { useDiscordConfig } from '../composables/useDiscordConfig';
-import { useUiPreferences } from '../composables/useUiPreferences';
-import DiscordWidgetHeader from './discord/DiscordWidgetHeader.vue';
-import DiscordMemberList from './discord/DiscordMemberList.vue';
-import DiscordWidgetSettings from './discord/DiscordWidgetSettings.vue';
-import { compareStatus } from './discord/status';
+import PollingWidget from '../PollingWidget.vue';
+import { useDiscord, type DiscordFetchReason } from '../../composables/useDiscord';
+import { useToasts } from '../../composables/useToasts';
+import { useDiscordConfig } from '../../composables/useDiscordConfig';
+import { useUiPreferences } from '../../composables/useUiPreferences';
+import DiscordWidgetHeader from './DiscordWidgetHeader.vue';
+import DiscordMemberList from './DiscordMemberList.vue';
+import DiscordWidgetSettings from './DiscordWidgetSettings.vue';
+import { compareStatus } from './status';
 
 const {
   defaultRefreshSeconds,

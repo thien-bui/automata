@@ -7,9 +7,9 @@
         :class="compact ? 'me-2' : 'me-3'"
         :size="compact ? 'small' : 'default'"
       />
-      <span :class="compact ? 'text-subtitle-1 font-weight-medium' : 'text-h6 font-weight-medium'">
+      <!-- <span :class="compact ? 'text-subtitle-1 font-weight-medium' : 'text-h6 font-weight-medium'">
         Reminders
-      </span>
+      </span> -->
       
       <!-- Overdue indicator -->
       <v-chip

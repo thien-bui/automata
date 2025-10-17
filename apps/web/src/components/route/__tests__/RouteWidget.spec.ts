@@ -2,8 +2,8 @@ import { mount } from '@vue/test-utils';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { computed, defineComponent, h, nextTick, readonly, ref } from 'vue';
 import RouteWidget from '../RouteWidget.vue';
-import { MonitoringMode } from '../monitoringMode';
-import { provideToasts } from '../../composables/useToasts';
+import { MonitoringMode } from '../../monitoringMode';
+import { provideToasts } from '../../../composables/useToasts';
 import type { RouteTimeResponse } from '@automata/types';
 
 // Mock all the new route components

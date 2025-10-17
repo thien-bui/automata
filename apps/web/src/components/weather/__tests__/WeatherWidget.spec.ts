@@ -3,7 +3,7 @@ import { mount } from '@vue/test-utils';
 import { defineComponent, h } from 'vue';
 import { ref, computed } from 'vue';
 import WeatherWidget from '../WeatherWidget.vue';
-import { provideToasts } from '../../composables/useToasts';
+import { provideToasts } from '../../../composables/useToasts';
 
 const createSlotStub = (tag: string) =>
   defineComponent({

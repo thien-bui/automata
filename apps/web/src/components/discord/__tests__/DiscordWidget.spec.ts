@@ -3,7 +3,7 @@ import type { Mock } from 'vitest';
 import { mount } from '@vue/test-utils';
 import { defineComponent, h, ref, computed } from 'vue';
 import DiscordWidget from '../DiscordWidget.vue';
-import { provideToasts } from '../../composables/useToasts';
+import { provideToasts } from '../../../composables/useToasts';
 import type { DiscordResponse } from '@automata/types';
 
 const createSlotStub = (tag: string) =>
@@ -156,7 +156,7 @@ describe('DiscordWidget', () => {
   beforeEach(async () => {
     vi.useFakeTimers();
 
-    const module = await import('../../composables/useDiscordConfig');
+    const module = await import('../../../composables/useDiscordConfig');
     mockUseDiscordConfig = module.useDiscordConfig as Mock;
     mockUseDiscordConfig.mockReset();
     

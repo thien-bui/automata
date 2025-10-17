@@ -74,14 +74,14 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import type { HourlyWeatherData } from '@automata/types';
-import PollingWidget from './PollingWidget.vue';
-import WeatherSummary from './weather/WeatherSummary.vue';
-import HourlyForecast from './weather/HourlyForecast.vue';
-import { useWeather, type WeatherFetchReason } from '../composables/useWeather';
-import { useToasts } from '../composables/useToasts';
-import { useWeatherConfig } from '../composables/useWeatherConfig';
-import { useUiPreferences } from '../composables/useUiPreferences';
-import CompactModeControl from './CompactModeControl.vue';
+import PollingWidget from '../PollingWidget.vue';
+import WeatherSummary from './WeatherSummary.vue';
+import HourlyForecast from './HourlyForecast.vue';
+import { useWeather, type WeatherFetchReason } from '../../composables/useWeather';
+import { useToasts } from '../../composables/useToasts';
+import { useWeatherConfig } from '../../composables/useWeatherConfig';
+import { useUiPreferences } from '../../composables/useUiPreferences';
+import CompactModeControl from '../CompactModeControl.vue';
 
 const {
   defaultLocation,

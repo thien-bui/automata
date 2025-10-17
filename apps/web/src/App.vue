@@ -75,11 +75,11 @@
 import { computed, ref } from 'vue';
 
 import AlertBell from './components/AlertBell.vue';
-import DiscordWidget from './components/DiscordWidget.vue';
+import DiscordWidget from './components/discord/DiscordWidget.vue';
 import ReminderWidget from './components/reminder/ReminderWidget.vue';
-import RouteWidget from './components/RouteWidget.vue';
+import RouteWidget from './components/route/RouteWidget.vue';
 import ToastHost from './components/ToastHost.vue';
-import WeatherWidget from './components/WeatherWidget.vue';
+import WeatherWidget from './components/weather/WeatherWidget.vue';
 import { provideToasts } from './composables/useToasts';
 import { useColorTheme } from './composables/useColorTheme';
 import { useUiPreferences } from './composables/useUiPreferences';
