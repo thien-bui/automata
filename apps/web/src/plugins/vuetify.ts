@@ -28,10 +28,10 @@ export const vuetify = createVuetify({
       dark: {
         dark: true,
         colors: {
-          primary: '#90caf9',
-          secondary: '#ffb74d',
-          surface: '#121212',
-          background: '#0f172a',
+          primary: '#007acc',
+          secondary: '#ff7858',
+          surface: '#2d2d30',
+          background: '#1e1e1e',
         },
       },
     },

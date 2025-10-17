@@ -5,7 +5,7 @@ import { DateTime } from 'luxon';
  * Handles environment variables and provides helper utilities
  */
 
-const DEFAULT_EXPIRE_WINDOW_MINUTES = 15;
+const DEFAULT_EXPIRE_WINDOW_MINUTES = 60;
 
 /**
  * Get the reminder expiration window in minutes
