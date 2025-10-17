@@ -4,12 +4,9 @@
       <v-icon
         icon="mdi-bell-ring"
         color="primary"
-        :class="compact ? 'me-2' : 'me-3'"
+        :class="[compact ? 'me-2' : 'me-3', 'mb-1']"
         :size="compact ? 'small' : 'default'"
       />
-      <!-- <span :class="compact ? 'text-subtitle-1 font-weight-medium' : 'text-h6 font-weight-medium'">
-        Reminders
-      </span> -->
       
       <!-- Overdue indicator -->
       <v-chip
