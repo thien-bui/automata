@@ -309,7 +309,7 @@ function handleSaveSettings() {
 }
 
 .polling-widget--compact {
-  width: min(45rem, calc(100% - clamp(1.5rem, 5vw, 2.5rem)));
+  width: min(40rem, calc(100% - clamp(1rem, 4vw, 2rem)));
 }
 
 .widget-header {
@@ -358,29 +358,29 @@ function handleSaveSettings() {
 }
 
 .polling-widget--compact .widget-header {
-  gap: clamp(0.5rem, 2vw, 0.75rem);
-  padding-block: 0.625rem;
-  padding-inline: clamp(1rem, 3vw, 1.5rem);
+  gap: clamp(0.375rem, 1.5vw, 0.5rem);
+  padding-block: clamp(0.5rem, 1.5vw, 0.625rem);
+  padding-inline: clamp(0.875rem, 2.5vw, 1.25rem);
 }
 
 .polling-widget--compact .widget-header__actions {
-  gap: 0.25rem;
+  gap: clamp(0.125rem, 1vw, 0.25rem);
 }
 
 .polling-widget--compact .widget-header__titles {
-  gap: 0.125rem;
+  gap: clamp(0.0625rem, 0.5vw, 0.125rem);
 }
 
 .polling-widget--compact .widget-header__title {
-  font-size: clamp(1.05rem, 1vw + 1rem, 1.15rem);
+  font-size: clamp(0.95rem, 0.8vw + 0.9rem, 1.05rem);
 }
 
 .polling-widget--compact .widget-header__subtitle {
-  font-size: clamp(0.85rem, 0.5vw + 0.8rem, 0.95rem);
+  font-size: clamp(0.8rem, 0.4vw + 0.75rem, 0.875rem);
 }
 
 .polling-widget--compact .widget-header__timestamp {
-  font-size: clamp(0.75rem, 0.4vw + 0.7rem, 0.875rem);
+  font-size: clamp(0.7rem, 0.3vw + 0.65rem, 0.75rem);
 }
 
 .widget-summary {
@@ -407,13 +407,41 @@ function handleSaveSettings() {
 .polling-widget--compact .widget-summary {
   grid-template-columns: 1fr;
   align-items: stretch;
-  gap: 0.75rem;
+  gap: clamp(0.5rem, 1.5vw, 0.625rem);
 }
 
 .polling-widget--compact .widget-summary__section--end {
   justify-self: start;
   justify-content: flex-start;
   text-align: start;
+}
+
+/* Compact mode card content styling */
+.polling-widget--compact .v-card-text {
+  padding-block: clamp(0.75rem, 2vw, 1rem);
+  padding-inline: clamp(0.875rem, 2.5vw, 1.25rem);
+}
+
+/* Compact mode dialog styling */
+.polling-widget--compact .v-dialog .v-card {
+  max-width: min(90vw, 450px);
+}
+
+.polling-widget--compact .v-dialog .v-card-text {
+  padding-block: clamp(1rem, 3vw, 1.25rem);
+  padding-inline: clamp(1rem, 3vw, 1.25rem);
+}
+
+.polling-widget--compact .v-dialog .v-sheet {
+  padding: clamp(0.75rem, 2vw, 1rem) !important;
+}
+
+.polling-widget--compact .v-dialog .v-btn {
+  font-size: clamp(0.8rem, 0.4vw + 0.75rem, 0.875rem);
+}
+
+.polling-widget--compact .v-dialog .v-progress-circular {
+  size: 28px !important;
 }
 
 @media (max-width: 640px) {
