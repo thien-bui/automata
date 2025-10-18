@@ -31,7 +31,7 @@
       </div>
     </div>
 
-    <v-chip-group v-if="!isCompact" class="discord-header__chips">
+    <v-chip-group v-if="!isCompact" class="discord-header__chips" :class="{ 'discord-header__chips--compact': isCompact }">
       <v-chip
         v-for="chip in statusChips"
         :key="chip.status"
@@ -89,8 +89,8 @@ const statusChips = computed(() => {
 }
 
 .discord-header--compact {
-  padding: clamp(0.5rem, 1.5vw, 0.75rem);
-  gap: clamp(0.75rem, 2vw, 1rem);
+  padding: clamp(0.375rem, 1vw, 0.5rem);
+  gap: clamp(0.5rem, 1.5vw, 0.75rem);
 }
 
 .discord-header__summary {
@@ -122,6 +122,10 @@ const statusChips = computed(() => {
   gap: clamp(0.5rem, 1.5vw, 0.75rem);
 }
 
+.discord-header__chips--compact {
+  gap: clamp(0.375rem, 1vw, 0.5rem);
+}
+
 :deep(.discord-header__chips .v-slide-group__container) {
   width: 100%;
 }
@@ -130,6 +134,10 @@ const statusChips = computed(() => {
   display: flex;
   flex-wrap: wrap;
   gap: clamp(0.5rem, 1.5vw, 0.75rem);
+}
+
+:deep(.discord-header__chips--compact .v-slide-group__content) {
+  gap: clamp(0.375rem, 1vw, 0.5rem);
 }
 
 :deep(.discord-header__chips .v-slide-group__content > *) {

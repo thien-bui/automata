@@ -1,5 +1,5 @@
 <template>
-  <div class="discord-member-list">
+  <div class="discord-member-list" :class="{ 'discord-member-list--compact': isCompact }">
     <div class="discord-member-list__title text-subtitle-1 font-weight-medium" :class="{ 'text-body-2': isCompact }">
       Member List
     </div>
@@ -41,6 +41,7 @@
                 color="purple"
                 variant="tonal"
                 class="discord-member-list__bot-chip"
+                :class="{ 'discord-member-list__bot-chip--compact': isCompact }"
               >
                 BOT
               </v-chip>
@@ -123,6 +124,11 @@ watch(
   margin-block-start: clamp(1rem, 3vw, 1.5rem);
 }
 
+.discord-member-list--compact {
+  gap: clamp(0.5rem, 1.5vw, 0.75rem);
+  margin-block-start: clamp(0.5rem, 2vw, 0.75rem);
+}
+
 .discord-member-list__title {
   padding-inline: clamp(0.25rem, 1.5vw, 0.5rem);
 }
@@ -141,7 +147,7 @@ watch(
 }
 
 .discord-member-list__items--compact {
-  max-height: clamp(14rem, 35vh, 20rem);
+  max-height: clamp(12rem, 30vh, 18rem);
 }
 
 .discord-member-list__item {
@@ -168,9 +174,9 @@ watch(
 }
 
 .discord-member-list__item--compact {
-  padding-block: clamp(0.5rem, 1.5vw, 0.75rem);
-  padding-inline: clamp(0.75rem, 2vw, 1rem);
-  gap: clamp(0.5rem, 1.5vw, 0.75rem);
+  padding-block: clamp(0.375rem, 1vw, 0.5rem);
+  padding-inline: clamp(0.625rem, 1.5vw, 0.875rem);
+  gap: clamp(0.375rem, 1vw, 0.5rem);
 }
 
 .discord-member-list__avatar {
@@ -195,11 +201,17 @@ watch(
 }
 
 .discord-member-list__name--compact {
-  font-size: clamp(0.75rem, 0.3vw + 0.7rem, 0.85rem);
+  font-size: clamp(0.7rem, 0.25vw + 0.65rem, 0.8rem);
 }
 
 .discord-member-list__bot-chip {
   padding-inline: 0.5rem;
+}
+
+.discord-member-list__bot-chip--compact {
+  padding-inline: 0.375rem;
+  font-size: 0.7rem;
+  height: 1.25rem;
 }
 
 .discord-member-list__username {

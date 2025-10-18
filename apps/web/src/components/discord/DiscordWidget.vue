@@ -37,7 +37,7 @@
     </template>
 
     <template #settings-content>
-      <div class="discord-widget__settings">
+      <div class="discord-widget__settings" :class="{ 'discord-widget__settings--compact': isCompact }">
         <DiscordWidgetSettings
           v-model:refresh-interval="refreshIntervalInput"
           v-model:show-bots="showBotsInput"
@@ -308,5 +308,9 @@ watch(isStale, (value) => {
 .discord-widget__settings {
   display: grid;
   gap: clamp(1rem, 3vw, 1.5rem);
+}
+
+.discord-widget__settings--compact {
+  gap: clamp(0.75rem, 2vw, 1rem);
 }
 </style>
