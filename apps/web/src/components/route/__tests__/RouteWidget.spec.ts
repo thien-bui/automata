@@ -67,7 +67,7 @@ vi.mock('../index', () => ({
 // Mock composables
 const useRoutePollingMock = vi.hoisted(() => vi.fn(() => createRoutePollingState()));
 
-vi.mock('../../composables/useRoutePolling', () => ({
+vi.mock('../../../composables/useRoutePolling', () => ({
   useRoutePolling: useRoutePollingMock,
 }));
 
@@ -81,11 +81,11 @@ const useRouteAlertsMock = vi.hoisted(() =>
   })),
 );
 
-vi.mock('../../composables/useRouteAlerts', () => ({
+vi.mock('../../../composables/useRouteAlerts', () => ({
   useRouteAlerts: useRouteAlertsMock,
 }));
 
-vi.mock('../../composables/useAlertThreshold', () => ({
+vi.mock('../../../composables/useAlertThreshold', () => ({
   useAlertThreshold: () => ({
     thresholdMinutes: ref(45),
     setThreshold: vi.fn(),
@@ -129,7 +129,7 @@ function createUiPreferencesMock(compact = false) {
 
 const useUiPreferencesMock = vi.hoisted(() => vi.fn(() => createUiPreferencesMock(false)));
 
-vi.mock('../../composables/useUiPreferences', () => ({
+vi.mock('../../../composables/useUiPreferences', () => ({
   useUiPreferences: useUiPreferencesMock,
 }));
 

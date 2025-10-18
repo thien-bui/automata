@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { mount } from '@vue/test-utils';
 import { defineComponent, h } from 'vue';
-import DiscordWidgetHeader from '../discord/DiscordWidgetHeader.vue';
+import DiscordWidgetHeader from '../DiscordWidgetHeader.vue';
 
 const createSlotStub = (tag: string) =>
   defineComponent({

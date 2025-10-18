@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { mount } from '@vue/test-utils';
 import { defineComponent, h } from 'vue';
-import DiscordMemberList from '../discord/DiscordMemberList.vue';
+import DiscordMemberList from '../DiscordMemberList.vue';
 import type { DiscordMemberStatus } from '@automata/types';
 
 const createSlotStub = (tag: string) =>

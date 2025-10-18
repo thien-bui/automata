@@ -14,7 +14,7 @@ const createSlotStub = (tag: string) =>
   });
 
 // Mock the useWeather composable
-vi.mock('../../composables/useWeather', () => ({
+vi.mock('../../../composables/useWeather', () => ({
   useWeather: vi.fn(() => ({
     data: ref({
       hourlyData: [
@@ -139,7 +139,7 @@ vi.mock('../../composables/useWeather', () => ({
 }));
 
 // Mock the useToasts composable
-vi.mock('../../composables/useToasts', () => ({
+vi.mock('../../../composables/useToasts', () => ({
   useToasts: () => ({
     push: vi.fn()
   }),
@@ -147,14 +147,14 @@ vi.mock('../../composables/useToasts', () => ({
 }));
 
 // Mock the useUiPreferences composable
-vi.mock('../../composables/useUiPreferences', () => ({
+vi.mock('../../../composables/useUiPreferences', () => ({
   useUiPreferences: () => ({
     isWidgetCompact: vi.fn(() => false) // Default to non-compact for tests
   })
 }));
 
 // Mock the useWeatherConfig composable
-vi.mock('../../composables/useWeatherConfig', () => ({
+vi.mock('../../../composables/useWeatherConfig', () => ({
   useWeatherConfig: () => ({
     defaultLocation: ref('Kent, WA'),
     defaultRefreshSeconds: ref(300),
@@ -199,6 +199,10 @@ const PollingWidgetMock = defineComponent({
   },
 });
 
+vi.mock('../PollingWidget.vue', () => ({
+  default: PollingWidgetMock,
+}));
+
 // Mock weather components
 vi.mock('./WeatherSummary.vue', () => ({
   default: defineComponent({
@@ -225,10 +229,6 @@ vi.mock('./HourlyForecast.vue', () => ({
       ]);
     },
   }),
-}));
-
-vi.mock('../PollingWidget.vue', () => ({
-  default: PollingWidgetMock,
 }));
 
 describe('WeatherWidget', () => {

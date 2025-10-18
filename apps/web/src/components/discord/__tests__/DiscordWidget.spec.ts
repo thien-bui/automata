@@ -78,7 +78,7 @@ const mockDiscordData: DiscordResponse = {
   }
 };
 
-vi.mock('../../composables/useDiscord', () => ({
+vi.mock('../../../composables/useDiscord', () => ({
   useDiscord: vi.fn(() => ({
     data: ref(mockDiscordData),
     error: ref(null),
@@ -101,13 +101,18 @@ vi.mock('../../composables/useDiscord', () => ({
 }));
 
 // Mock the useDiscordConfig composable
-const mockUseDiscordConfigFn = vi.fn();
-vi.mock('../../composables/useDiscordConfig', () => ({
-  useDiscordConfig: mockUseDiscordConfigFn
+let mockUseDiscordConfigImpl: Mock | undefined;
+vi.mock('../../../composables/useDiscordConfig', () => ({
+  useDiscordConfig: (...args: unknown[]) => {
+    if (!mockUseDiscordConfigImpl) {
+      throw new Error('mockUseDiscordConfig is not initialised');
+    }
+    return mockUseDiscordConfigImpl(...args);
+  }
 }));
 
 // Mock the useToasts composable
-vi.mock('../../composables/useToasts', () => ({
+vi.mock('../../../composables/useToasts', () => ({
   useToasts: () => ({
     push: vi.fn()
   }),
@@ -117,7 +122,7 @@ vi.mock('../../composables/useToasts', () => ({
 // Mock the useUiPreferences composable
 const mockIsWidgetCompact = vi.fn(() => false); // Default to non-compact for tests
 
-vi.mock('../../composables/useUiPreferences', () => ({
+vi.mock('../../../composables/useUiPreferences', () => ({
   useUiPreferences: () => ({
     isWidgetCompact: mockIsWidgetCompact
   })
@@ -163,8 +168,8 @@ describe('DiscordWidget', () => {
   beforeEach(() => {
     vi.useFakeTimers();
 
-    mockUseDiscordConfig = mockUseDiscordConfigFn as Mock;
-    mockUseDiscordConfig.mockReset();
+    mockUseDiscordConfigImpl = vi.fn();
+    mockUseDiscordConfig = mockUseDiscordConfigImpl as Mock;
     
     // Setup default mock for useDiscordConfig
     mockUseDiscordConfig.mockReturnValue({
@@ -196,6 +201,7 @@ describe('DiscordWidget', () => {
   afterEach(() => {
     vi.useRealTimers();
     vi.clearAllMocks();
+    mockUseDiscordConfigImpl = undefined;
   });
 
   const mountComponent = () => {
@@ -459,7 +465,7 @@ describe('DiscordWidget', () => {
 
       const wrapper = mountComponent();
 
-      const showMoreButton = wrapper.find('button');
+      const showMoreButton = wrapper.find('.discord-member-list__more button');
       expect(showMoreButton.exists()).toBe(true);
       expect(showMoreButton.text()).toContain('Show 2 More');
     });
@@ -497,7 +503,7 @@ describe('DiscordWidget', () => {
       expect(memberItems).toHaveLength(3);
 
       // Click "Show More" button
-      const showMoreButton = wrapper.find('button');
+      const showMoreButton = wrapper.find('.discord-member-list__more button');
       await showMoreButton.trigger('click');
 
       // Should show all members
@@ -610,7 +616,7 @@ describe('DiscordWidget', () => {
       const wrapper = mountComponent();
 
       // Should not show "Show More" button in compact mode
-      const showMoreButton = wrapper.find('button');
+      const showMoreButton = wrapper.find('.discord-member-list__more button');
       expect(showMoreButton.exists()).toBe(false);
     });
 
