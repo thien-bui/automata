@@ -212,8 +212,11 @@ describe('DiscordWidget', () => {
         stubs: {
           'v-sheet': createSlotStub('div'),
           'v-card': createSlotStub('div'),
+          'v-card-title': createSlotStub('div'),
+          'v-card-text': createSlotStub('div'),
+          'v-card-actions': createSlotStub('div'),
           'v-chip-group': createSlotStub('div'),
-          'v-chip': createSlotStub('div'),
+          'v-chip': createSlotStub('span'),
           'v-icon': defineComponent({
             name: 'VIconStub',
             setup(_, { attrs }) {
@@ -252,6 +255,11 @@ describe('DiscordWidget', () => {
               return () => h('button', { ...attrs }, slots.default ? slots.default() : undefined);
             },
           }),
+          'v-alert': createSlotStub('div'),
+          'v-progress-circular': createSlotStub('div'),
+          'v-btn-group': createSlotStub('div'),
+          'v-spacer': createSlotStub('div'),
+          'v-dialog': createSlotStub('div'),
           'CompactModeControl': createSlotStub('div'),
         },
       },

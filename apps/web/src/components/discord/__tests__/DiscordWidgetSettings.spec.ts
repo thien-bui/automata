@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { mount } from '@vue/test-utils';
 import { defineComponent, h, ref } from 'vue';
-import DiscordWidgetSettings from '../discord/DiscordWidgetSettings.vue';
+import DiscordWidgetSettings from '../DiscordWidgetSettings.vue';
 
 const VTextFieldStub = defineComponent({
   name: 'VTextFieldStub',

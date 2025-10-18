@@ -275,7 +275,10 @@ describe('WeatherSettings', () => {
     const wrapper = mountComponent();
     
     const compactSwitch = wrapper.find('input[label="Compact mode (weather widget)"]');
-    await compactSwitch.setValue(null); // Simulate v-model update with null
+    await compactSwitch.setValue(true); // First set to true to trigger a change
+    onSaveMock.mockClear(); // Clear the previous call
+    
+    await compactSwitch.setValue(false); // Then set to false
 
     expect(onSaveMock).toHaveBeenCalledWith({
       location: 'Seattle, WA',
