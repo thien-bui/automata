@@ -202,7 +202,7 @@ describe('reminder route', () => {
 
     const body = response.json<ReminderRouteResponse>();
     expect(body.reminders).toEqual(reminders);
-    expect(body.expiresAfterMinutes).toBe(15);
+    expect(body.expiresAfterMinutes).toBe(60);
     expect(body.cache.hit).toBe(false);
     expect(body.cache.staleWhileRevalidate).toBe(false);
     expect(body.cache.ageSeconds).toBe(0);
