@@ -101,8 +101,9 @@ vi.mock('../../composables/useDiscord', () => ({
 }));
 
 // Mock the useDiscordConfig composable
+const mockUseDiscordConfigFn = vi.fn();
 vi.mock('../../composables/useDiscordConfig', () => ({
-  useDiscordConfig: vi.fn()
+  useDiscordConfig: mockUseDiscordConfigFn
 }));
 
 // Mock the useToasts composable
@@ -159,11 +160,10 @@ vi.mock('../PollingWidget.vue', () => ({
 describe('DiscordWidget', () => {
   let mockUseDiscordConfig: Mock;
   
-  beforeEach(async () => {
+  beforeEach(() => {
     vi.useFakeTimers();
 
-    const module = await import('../../../composables/useDiscordConfig');
-    mockUseDiscordConfig = module.useDiscordConfig as Mock;
+    mockUseDiscordConfig = mockUseDiscordConfigFn as Mock;
     mockUseDiscordConfig.mockReset();
     
     // Setup default mock for useDiscordConfig

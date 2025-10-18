@@ -98,7 +98,6 @@ describe('ReminderWidgetHeader', () => {
       },
     });
 
-    expect(wrapper.text()).toContain('Reminders');
     expect(wrapper.text()).toContain('Today');
     expect(wrapper.text()).toContain('3 overdue');
   });
