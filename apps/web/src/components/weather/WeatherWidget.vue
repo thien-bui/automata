@@ -41,10 +41,10 @@
     </template>
 
     <template #settings-content>
-      <div class="weather-widget__settings">
-        <div class="weather-widget__fields">
+      <div class="weather-widget__settings" :class="{ 'weather-widget__settings--compact': isCompact }">
+        <div class="weather-widget__fields" :class="{ 'weather-widget__fields--compact': isCompact }">
           <v-text-field
-            class="weather-widget__field"
+            class="weather-widget__field" :class="{ 'weather-widget__field--compact': isCompact }"
             v-model="locationInput"
             label="Location"
             placeholder="Enter city or address"
@@ -53,7 +53,7 @@
             @keyup.enter="updateLocation"
           />
           <v-text-field
-            class="weather-widget__field"
+            class="weather-widget__field" :class="{ 'weather-widget__field--compact': isCompact }"
             v-model.number="refreshIntervalInput"
             label="Refresh Interval (seconds)"
             type="number"
@@ -64,8 +64,8 @@
             @keyup.enter="updateRefreshInterval"
           />
         </div>
-        <v-divider class="weather-widget__divider" />
-        <CompactModeControl class="weather-widget__compact-control" widget-name="weather-widget" />
+        <v-divider class="weather-widget__divider" :class="{ 'weather-widget__divider--compact': isCompact }" />
+        <CompactModeControl class="weather-widget__compact-control" :class="{ 'weather-widget__compact-control--compact': isCompact }" widget-name="weather-widget" />
       </div>
     </template>
   </PollingWidget>
@@ -417,20 +417,40 @@ watch(isStale, (value) => {
   gap: clamp(1.25rem, 3vw, 1.75rem);
 }
 
+.weather-widget__settings--compact {
+  gap: clamp(0.75rem, 2vw, 1rem);
+}
+
 .weather-widget__fields {
   display: grid;
   gap: clamp(0.75rem, 2vw, 1rem);
+}
+
+.weather-widget__fields--compact {
+  gap: clamp(0.5rem, 1.5vw, 0.75rem);
 }
 
 .weather-widget__field :deep(.v-field) {
   border-radius: 0.75rem;
 }
 
+.weather-widget__field--compact :deep(.v-field) {
+  border-radius: 0.5rem;
+}
+
 .weather-widget__divider {
   margin-block: 0;
 }
 
+.weather-widget__divider--compact {
+  margin-block: clamp(-0.25rem, 0.5vw, 0rem);
+}
+
 .weather-widget__compact-control {
   margin-inline: clamp(0rem, 1vw, 0.5rem);
+}
+
+.weather-widget__compact-control--compact {
+  margin-inline: clamp(0rem, 0.5vw, 0.25rem);
 }
 </style>

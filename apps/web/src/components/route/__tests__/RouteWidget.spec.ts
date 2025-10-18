@@ -7,10 +7,10 @@ import { provideToasts } from '../../../composables/useToasts';
 import type { RouteTimeResponse } from '@automata/types';
 
 // Mock all the new route components
-vi.mock('../route/index', () => ({
+vi.mock('../index', () => ({
   RouteSummary: defineComponent({
     name: 'RouteSummary',
-    props: ['routeData', 'isPolling', 'cacheDescription'],
+    props: ['routeData', 'isPolling', 'cacheDescription', 'isCompact'],
     setup(props) {
       return () => h('div', { 'data-test': 'route-summary' }, [
         h('div', { 'data-test': 'duration' }, props.routeData?.durationMinutes || '—'),
@@ -159,8 +159,8 @@ function createRoutePollingState() {
   const lastUpdatedIsoRef = ref<string | null>('2024-06-01T12:00:00Z');
   const cacheAgeSecondsRef = ref<number | null>(0);
   const cacheHitRef = ref(false);
-  const fromRef = ref('Origin');
-  const toRef = ref('Destination');
+  const fromRef = ref('443 Ramsay Way, Kent, WA 98032');
+  const toRef = ref('35522 21st Ave SW ste B, Federal Way, WA 98023');
 
   return {
     data: dataRef,
@@ -358,6 +358,7 @@ describe('RouteWidget Integration Tests', () => {
     const wrapper = mountComponent();
     await flushPendingUpdates();
 
+    // The mock data should be passed through the composables
     expect(wrapper.find('[data-test="duration"]').text()).toBe('25.5');
     expect(wrapper.find('[data-test="distance"]').text()).toBe('12.3');
   });
@@ -448,7 +449,7 @@ describe('RouteWidget Integration Tests', () => {
 
     // Should show monitoring mode and route
     expect(wrapper.text()).toContain('Compact Mode');
-    expect(wrapper.text()).toContain('Origin → Destination');
+    expect(wrapper.text()).toContain('443 Ramsay Way, Kent, WA 98032 → 35522 21st Ave SW ste B, Federal Way, WA 98023');
   });
 
   it('handles cache description', async () => {

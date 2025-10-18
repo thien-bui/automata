@@ -35,22 +35,23 @@
       />
 
       <!-- Reminders List -->
-      <div v-else-if="reminders.length > 0" class="reminder-list">
-        <v-list class="pa-0">
+      <div v-else-if="reminders.length > 0" class="reminder-list" :class="{ 'reminder-list--compact': compact }">
+        <v-list class="pa-0" :class="{ 'pa-1': compact }">
           <TransitionGroup name="reminder" tag="div">
             <ReminderListItem
               v-for="(reminder, index) in sortedReminders"
               :key="reminder.id"
               :reminder="reminder"
               :is-last="index === sortedReminders.length - 1"
+              :compact="compact"
               @complete="handleCompleteReminder"
             />
           </TransitionGroup>
         </v-list>
 
         <!-- Summary -->
-        <div class="mt-4 pt-3 border-t">
-          <div class="d-flex justify-space-between align-center text-caption">
+        <div class="mt-4 pt-3 border-t" :class="{ 'mt-2 pt-2': compact }">
+          <div class="d-flex justify-space-between align-center text-caption" :class="{ 'text-caption': !compact, 'text-caption--compact': compact }">
             <span class="text-medium-emphasis">
               {{ completedCount }} of {{ reminders.length }} completed
             </span>
@@ -66,30 +67,34 @@
     </template>
 
     <template #settings-content>
-      <v-row>
-        <v-col cols="12">
-          <v-text-field
-            v-model="settingsRefreshInterval"
-            label="Refresh Interval (seconds)"
-            type="number"
-            min="10"
-            max="3600"
-            hint="How often to check for new reminders"
-            persistent-hint
-          />
-        </v-col>
-        <v-col cols="12">
-          <v-switch
-            v-model="settingsAutoRefresh"
-            label="Auto-refresh"
-            hint="Automatically refresh reminders at the specified interval"
-            persistent-hint
-          />
-        </v-col>
-        <v-col cols="12">
-          <CompactModeControl widget-name="reminder-widget" />
-        </v-col>
-      </v-row>
+      <div class="reminder-widget__settings" :class="{ 'reminder-widget__settings--compact': compact }">
+        <v-row :class="{ 'ma-0': compact }">
+          <v-col cols="12" :class="{ 'pa-2': compact, 'pb-1': compact }">
+            <v-text-field
+              v-model="settingsRefreshInterval"
+              label="Refresh Interval (seconds)"
+              type="number"
+              min="10"
+              max="3600"
+              hint="How often to check for new reminders"
+              persistent-hint
+              :density="compact ? 'compact' : 'default'"
+            />
+          </v-col>
+          <v-col cols="12" :class="{ 'pa-2': compact, 'py-1': compact }">
+            <v-switch
+              v-model="settingsAutoRefresh"
+              label="Auto-refresh"
+              hint="Automatically refresh reminders at the specified interval"
+              persistent-hint
+              :density="compact ? 'compact' : 'default'"
+            />
+          </v-col>
+          <v-col cols="12" :class="{ 'pa-2': compact, 'pt-1': compact }">
+            <CompactModeControl widget-name="reminder-widget" />
+          </v-col>
+        </v-row>
+      </div>
     </template>
 
     <template #status-extra>
@@ -306,6 +311,10 @@ async function handleCompleteReminder(reminderId: string): Promise<void> {
   min-height: 200px;
 }
 
+.reminder-list--compact {
+  min-height: 150px;
+}
+
 /* Transition animations for reminder items */
 .reminder-enter-active,
 .reminder-leave-active {
@@ -328,5 +337,17 @@ async function handleCompleteReminder(reminderId: string): Promise<void> {
 
 .border-t {
   border-top: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
+}
+
+.text-caption--compact {
+  font-size: clamp(0.65rem, 0.3vw + 0.6rem, 0.75rem) !important;
+}
+
+.reminder-widget__settings {
+  padding: clamp(1rem, 3vw, 1.5rem);
+}
+
+.reminder-widget__settings--compact {
+  padding: clamp(0.75rem, 2vw, 1rem);
 }
 </style>

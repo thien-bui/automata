@@ -183,13 +183,52 @@ vi.mock('../../composables/useWeatherConfig', () => ({
 }));
 
 // Mock PollingWidget component
+const PollingWidgetMock = defineComponent({
+  name: 'PollingWidget',
+  props: ['overlineText', 'title', 'subtitle', 'errorTitle', 'settingsTitle', 'error', 'isPolling', 'lastUpdatedIso', 'isStale', 'pollingSeconds', 'cacheDescription', 'compact'],
+  emits: ['manual-refresh', 'hard-refresh', 'save-settings'],
+  setup(props, { slots }) {
+    return () => h('div', { 'data-test': 'polling-widget' }, [
+      h('div', { 'data-test': 'overline-text' }, props.overlineText),
+      h('div', { 'data-test': 'title' }, props.title),
+      h('div', { 'data-test': 'subtitle' }, props.subtitle),
+      h('div', { 'data-test': 'last-updated-iso' }, props.lastUpdatedIso),
+      slots['main-content']?.(),
+      slots['settings-content']?.(),
+    ]);
+  },
+});
+
+// Mock weather components
+vi.mock('./WeatherSummary.vue', () => ({
+  default: defineComponent({
+    name: 'WeatherSummary',
+    props: ['temperature', 'condition', 'humidity', 'windSpeed', 'isCompact', 'showMetrics', 'showHumidity', 'showWindSpeed', 'showPrecipitation'],
+    setup(props) {
+      return () => h('div', { 'data-test': 'weather-summary' }, [
+        h('div', { 'data-test': 'temperature' }, props.temperature),
+        h('div', { 'data-test': 'condition' }, props.condition),
+        h('div', { 'data-test': 'humidity' }, props.humidity),
+        h('div', { 'data-test': 'wind-speed' }, props.windSpeed),
+      ]);
+    },
+  }),
+}));
+
+vi.mock('./HourlyForecast.vue', () => ({
+  default: defineComponent({
+    name: 'HourlyForecast',
+    props: ['data', 'isCompact', 'showHourlyForecast', 'currentHourHighlight', 'showHumidity', 'showWindSpeed'],
+    setup(props) {
+      return () => h('div', { 'data-test': 'hourly-forecast' }, [
+        h('div', { 'data-test': 'hourly-data-length' }, props.data?.length || 0),
+      ]);
+    },
+  }),
+}));
+
 vi.mock('../PollingWidget.vue', () => ({
-  default: {
-    name: 'PollingWidget',
-    template: '<div><slot name="main-content"></slot><slot name="settings-content"></slot></div>',
-    props: ['overlineText', 'title', 'subtitle', 'errorTitle', 'settingsTitle', 'error', 'isPolling', 'lastUpdatedIso', 'isStale', 'pollingSeconds', 'cacheDescription'],
-    emits: ['manual-refresh', 'hard-refresh', 'save-settings']
-  }
+  default: PollingWidgetMock,
 }));
 
 describe('WeatherWidget', () => {

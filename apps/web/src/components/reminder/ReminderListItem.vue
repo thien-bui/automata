@@ -6,6 +6,7 @@
         {
           'reminder-list-item--completed': reminder.isCompleted,
           'reminder-list-item--overdue': isOverdue,
+          'reminder-list-item--compact': compact,
         }
       ]"
       :disabled="reminder.isCompleted"
@@ -15,15 +16,15 @@
         <v-icon
           :icon="statusIcon"
           :color="statusColor"
-          size="24"
-          class="me-3"
+          :size="compact ? 20 : 24"
+          :class="compact ? 'me-2' : 'me-3'"
         />
       </template>
 
       <!-- Content -->
       <v-list-item-title
         :class="[
-          'text-body-1',
+          compact ? 'text-body-2' : 'text-body-1',
           {
             'text-decoration-line-through text-medium-emphasis': reminder.isCompleted,
           }
@@ -33,7 +34,7 @@
       </v-list-item-title>
 
       <v-list-item-subtitle
-        v-if="reminder.description"
+        v-if="reminder.description && !compact"
         :class="[
           'text-body-2 mt-1',
           {
@@ -46,11 +47,11 @@
 
       <!-- Time and badges -->
       <template #append>
-        <div class="d-flex flex-column align-end ga-1">
+        <div class="d-flex flex-column align-end" :class="compact ? 'ga-0' : 'ga-1'">
           <!-- Time display -->
           <div
             :class="[
-              'text-caption',
+              compact ? 'text-caption--compact' : 'text-caption',
               {
                 'text-medium-emphasis': reminder.isCompleted,
                 'text-error': isOverdue && !reminder.isCompleted,
@@ -62,10 +63,10 @@
           </div>
 
           <!-- Badges -->
-          <div class="d-flex ga-1">
+          <div class="d-flex" :class="compact ? 'ga-0' : 'ga-1'">
             <!-- Recurring badge -->
             <v-chip
-              v-if="reminder.isRecurring"
+              v-if="reminder.isRecurring && !compact"
               color="primary"
               variant="outlined"
               size="x-small"
@@ -79,9 +80,9 @@
               v-if="isOverdue && !reminder.isCompleted"
               color="error"
               variant="flat"
-              size="x-small"
+              :size="compact ? 'x-small' : 'x-small'"
             >
-              Overdue
+              {{ compact ? '!' : 'Overdue' }}
             </v-chip>
           </div>
 
@@ -90,10 +91,10 @@
             v-if="!reminder.isCompleted"
             variant="text"
             color="success"
-            size="small"
+            :size="compact ? 'x-small' : 'small'"
             @click="handleComplete"
           >
-            <v-icon icon="mdi-check" />
+            <v-icon :icon="compact ? 'mdi-check' : 'mdi-check'" :size="compact ? 16 : 20" />
           </v-btn>
         </div>
       </template>
@@ -114,6 +115,8 @@ interface Props {
   reminder: DailyReminder;
   /** Whether this is the last item in the list */
   isLast?: boolean;
+  /** Whether to display in compact mode */
+  compact?: boolean;
 }
 
 interface Emits {
@@ -122,6 +125,7 @@ interface Emits {
 
 const props = withDefaults(defineProps<Props>(), {
   isLast: false,
+  compact: false,
 });
 
 const emit = defineEmits<Emits>();
@@ -165,6 +169,10 @@ function handleComplete(): void {
   padding: 12px 16px;
 }
 
+.reminder-list-item--compact {
+  padding: 8px 12px;
+}
+
 .reminder-list-item:hover {
   background-color: rgba(var(--v-theme-primary), 0.04);
 }
@@ -187,5 +195,9 @@ function handleComplete(): void {
 
 .v-list-item__subtitle {
   line-height: 1.3;
+}
+
+.text-caption--compact {
+  font-size: clamp(0.65rem, 0.3vw + 0.6rem, 0.75rem) !important;
 }
 </style>

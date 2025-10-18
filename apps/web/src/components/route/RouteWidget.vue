@@ -30,15 +30,17 @@
         :route-data="data"
         :is-polling="isPolling"
         :cache-description="cacheDescription"
+        :is-compact="isCompact"
       />
 
       <!-- Map preview - shown in Nav mode, even in compact mode -->
-      <MapPreview v-if="isNavMode" :mode="mode" :from="origin" :to="destination"/>
+      <MapPreview v-if="isNavMode" :mode="mode" :from="origin" :to="destination" data-test="map-preview"/>
 
       <!-- Alert display - detailed list in normal mode, compact icon in compact mode -->
       <RouteAlerts
         :alerts="activeAlerts"
         :compact="isCompact"
+        data-test="route-alerts"
         @acknowledge-alerts="handleAcknowledgeAlerts"
       />
     </template>

@@ -123,31 +123,37 @@ vi.mock('../../composables/useUiPreferences', () => ({
 }));
 
 // Mock PollingWidget component
+const PollingWidgetMock = defineComponent({
+  name: 'PollingWidget',
+  props: [
+    'overlineText',
+    'title',
+    'subtitle',
+    'errorTitle',
+    'settingsTitle',
+    'error',
+    'isPolling',
+    'lastUpdatedIso',
+    'isStale',
+    'pollingSeconds',
+    'cacheDescription',
+    'compact'
+  ],
+  emits: ['manual-refresh', 'hard-refresh', 'save-settings'],
+  setup(props, { slots }) {
+    return () => h('div', { 'data-test': 'polling-widget' }, [
+      h('div', { 'data-test': 'overline-text' }, props.overlineText),
+      h('div', { 'data-test': 'title' }, props.title),
+      h('div', { 'data-test': 'subtitle' }, props.subtitle),
+      h('div', { 'data-test': 'compact' }, props.compact),
+      slots['main-content']?.(),
+      slots['settings-content']?.(),
+    ]);
+  },
+});
+
 vi.mock('../PollingWidget.vue', () => ({
-  default: {
-    name: 'PollingWidget',
-    template: `
-      <div>
-        <slot name="main-content"></slot>
-        <slot name="settings-content"></slot>
-      </div>
-    `,
-    props: [
-      'overlineText',
-      'title',
-      'subtitle',
-      'errorTitle',
-      'settingsTitle',
-      'error',
-      'isPolling',
-      'lastUpdatedIso',
-      'isStale',
-      'pollingSeconds',
-      'cacheDescription',
-      'compact'
-    ],
-    emits: ['manual-refresh', 'hard-refresh', 'save-settings']
-  }
+  default: PollingWidgetMock,
 }));
 
 describe('DiscordWidget', () => {
