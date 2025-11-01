@@ -70,8 +70,8 @@ export const cacheConfig: CacheConfig = {
   routes: makeEntry({
     ttlEnv: 'ROUTE_CACHE_TTL_SECONDS',
     staleEnv: 'ROUTE_CACHE_STALE_GRACE_SECONDS',
-    ttlFallback: 300,
-    staleFallback: 120,
+    ttlFallback: 500,
+    staleFallback: 300,
   }),
   weather: makeEntry({
     ttlEnv: 'WEATHER_CACHE_TTL_SECONDS',

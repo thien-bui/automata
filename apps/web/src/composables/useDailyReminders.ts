@@ -11,6 +11,7 @@ import {
   isValidDateKey,
   type DateKey,
 } from '../utils/dateOnly';
+import { scheduleMidnightTask } from '../utils/midnightScheduler';
 
 export interface UseDailyRemindersOptions {
   /** Date to fetch reminders for (defaults to today) */
@@ -19,6 +20,8 @@ export interface UseDailyRemindersOptions {
   refreshInterval?: number;
   /** Enable auto-refresh (defaults to true) */
   autoRefresh?: boolean;
+  /** Enable midnight auto-update to today (defaults to true) */
+  midnightUpdate?: boolean;
 }
 
 export type UseDailyRemindersReturn = {
@@ -56,6 +59,7 @@ export function useDailyReminders(
     date: initialDate,
     refreshInterval = 60000, // 1 minute
     autoRefresh = true,
+    midnightUpdate = true,
   } = options;
 
   // Reactive state
@@ -68,6 +72,7 @@ export function useDailyReminders(
 
   // Auto-refresh timer
   let refreshTimer: ReturnType<typeof setInterval> | null = null;
+  let midnightCleanup: (() => void) | null = null;
   let activeFetchId = 0;
 
   // Computed properties
@@ -194,6 +199,22 @@ export function useDailyReminders(
     }
   }
 
+  /**
+   * Handle midnight update - switch to today's date and refresh
+   */
+  async function handleMidnightUpdate(): Promise<void> {
+    const today = getTodayDateKey();
+    
+    // Only update if we're not already on today's date
+    if (selectedDate.value !== today) {
+      selectedDate.value = today;
+      await fetchReminders();
+    } else {
+      // Even if we're on today's date, refresh to get any new reminders
+      await fetchReminders();
+    }
+  }
+
   // Initialize
   onMounted(async () => {
     await fetchReminders();
@@ -201,10 +222,25 @@ export function useDailyReminders(
     if (autoRefresh) {
       startAutoRefresh();
     }
+
+    // Set up midnight update if enabled
+    if (midnightUpdate) {
+      midnightCleanup = scheduleMidnightTask(() => {
+        handleMidnightUpdate().catch(err => {
+          console.error('Error during midnight update:', err);
+        });
+      });
+    }
   });
 
   onUnmounted(() => {
     stopAutoRefresh();
+    
+    // Clean up midnight scheduler
+    if (midnightCleanup) {
+      midnightCleanup();
+      midnightCleanup = null;
+    }
   });
 
   return {

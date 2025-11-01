@@ -90,6 +90,15 @@
               :density="compact ? 'compact' : 'default'"
             />
           </v-col>
+          <v-col cols="12" :class="{ 'pa-2': compact, 'py-1': compact }">
+            <v-switch
+              v-model="settingsMidnightUpdate"
+              label="Midnight Auto-update"
+              hint="Automatically switch to today's reminders at midnight"
+              persistent-hint
+              :density="compact ? 'compact' : 'default'"
+            />
+          </v-col>
           <v-col cols="12" :class="{ 'pa-2': compact, 'pt-1': compact }">
             <CompactModeControl widget-name="reminder-widget" />
           </v-col>
@@ -127,6 +136,8 @@ interface Props {
   refreshInterval?: number;
   /** Enable auto-refresh */
   autoRefresh?: boolean;
+  /** Enable midnight auto-update to today */
+  midnightUpdate?: boolean;
 }
 
 interface Emits {
@@ -137,6 +148,7 @@ interface Emits {
 const props = withDefaults(defineProps<Props>(), {
   refreshInterval: 60000, // 1 minute
   autoRefresh: true,
+  midnightUpdate: true,
 });
 
 const emit = defineEmits<Emits>();
@@ -147,6 +159,7 @@ const { isWidgetCompact } = useUiPreferences();
 // Settings state
 const settingsRefreshInterval = ref(Math.floor(props.refreshInterval / 1000));
 const settingsAutoRefresh = ref(props.autoRefresh);
+const settingsMidnightUpdate = ref(props.midnightUpdate);
 
 // Internal state for PollingWidget
 const refreshInterval = computed(() => settingsRefreshInterval.value * 1000);
@@ -157,6 +170,7 @@ const reminderState = useDailyReminders({
   date: props.date,
   refreshInterval: refreshInterval.value,
   autoRefresh: settingsAutoRefresh.value,
+  midnightUpdate: settingsMidnightUpdate.value,
 });
 const {
   reminders,
