@@ -11,7 +11,7 @@ import { z } from 'zod';
 import { DateTime } from 'luxon';
 
 import { fetchGoogleDirections } from '../adapters/googleDirections';
-import { cacheConfig } from '../config/cache';
+import { cacheConfig, getEffectiveTtlSeconds } from '../config/cache';
 import { buildProviderError, buildValidationError } from '../utils/errors';
 
 const routeCacheConfig = cacheConfig.routes;
@@ -102,15 +102,16 @@ export async function registerRouteTime(
       freshnessSeconds: freshnessOverride,
       forceRefresh = false,
     } = validation.data;
-    const freshnessSeconds = freshnessOverride ?? routeCacheConfig.baseTtlSeconds;
-    const maxAcceptableAgeSeconds = freshnessSeconds + routeCacheConfig.staleGraceSeconds;
+    const now = DateTime.utc();
+    const effectiveTtl = getEffectiveTtlSeconds(routeCacheConfig, now);
+    const freshnessSeconds = freshnessOverride ?? effectiveTtl.ttlSeconds;
+    const maxAcceptableAgeSeconds = freshnessSeconds + effectiveTtl.staleGraceSeconds;
     const cacheKey = buildCacheKey({ from, to, mode });
 
     const cachedRecord = coerceCachedRecord(await app.redis.get(cacheKey), (msg, meta) => {
       app.log.warn(meta, msg);
     });
 
-    const now = DateTime.utc();
     let cachedAgeSeconds = 0;
     let cachedTimestampValid = false;
 
