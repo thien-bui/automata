@@ -197,7 +197,6 @@ This document provides a step-by-step implementation plan for migrating business
 ### Testing Strategy
 - **Unit Tests**: Test each new API endpoint with Vitest
 - **Integration Tests**: Test API endpoints with Fastify test server
-- **E2E Tests**: Verify client integration with Playwright
 - **Migration Tests**: Ensure backward compatibility during transition
 
 ### Success Criteria

@@ -72,7 +72,6 @@ This is a TypeScript monorepo with:
 
 ### Testing
 - Co-locate component unit tests next to components using `*.spec.ts`
-- Exercise primary user flows with Playwright E2E tests
 
 ## Modern Web Fundamentals
 
@@ -105,9 +104,6 @@ This is a TypeScript monorepo with:
 ### Integration Tests
 - Spin up Fastify via `buildServer` and hit the HTTP layer
 - Assert against full responses, not internals
-
-### E2E Tests
-- Capture regression cases in Playwright scenarios
 
 ## Testing Commands
 
