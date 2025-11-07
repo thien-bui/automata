@@ -7,30 +7,30 @@ This document provides a step-by-step implementation plan for migrating business
 ## Phase 1: Core Business Logic Migration (High Priority)
 
 ### 1.1 Alert Management Migration
-- [ ] **Task 1.1.1**: Create alert threshold API endpoint
-  - File: `apps/api/src/routeUpdate the md files/alert.ts`
+- [x] **Task 1.1.1**: Create alert threshold API endpoint
+  - File: `apps/api/src/routes/alert.ts`
   - Endpoint: `GET /api/alerts/threshold`
   - Interface: `AlertThresholdResponse`
   - Dependencies: None
 
-- [ ] **Task 1.1.2**: Create route alerts API endpoint
+- [x] **Task 1.1.2**: Create route alerts API endpoint
   - File: `apps/api/src/routes/alert.ts`
   - Endpoint: `GET /api/alerts/route`
   - Interface: `RouteAlertResponse`
   - Dependencies: Task 1.1.1
 
-- [ ] **Task 1.1.3**: Create alert acknowledgment API endpoint
+- [x] **Task 1.1.3**: Create alert acknowledgment API endpoint
   - File: `apps/api/src/routes/alert.ts`
   - Endpoint: `POST /api/alerts/acknowledge`
   - Interface: `AlertAcknowledgeRequest`
   - Dependencies: Task 1.1.2
 
-- [ ] **Task 1.1.4**: Update client composable to use new API
+- [x] **Task 1.1.4**: Update client composable to use new API
   - File: `apps/web/src/composables/useAlertThreshold.ts`
   - Replace localStorage with API calls
   - Dependencies: Task 1.1.1
 
-- [ ] **Task 1.1.5**: Update route alerts composable to use new API
+- [x] **Task 1.1.5**: Update route alerts composable to use new API
   - File: `apps/web/src/composables/useRouteAlerts.ts`
   - Replace client-side calculations with API calls
   - Dependencies: Task 1.1.2, Task 1.1.3

@@ -397,6 +397,123 @@ export async function registerAlert(
       return reply.status(statusCode).send(payload);
     }
   });
+
+  // POST /alerts/acknowledge - Acknowledge route alerts
+  app.post<{ Body: AlertAcknowledgeRequest }>('/alerts/acknowledge', {
+    schema: {
+      body: {
+        type: 'object',
+        properties: {
+          alertIds: {
+            type: 'array',
+            items: { type: 'number' },
+          },
+          acknowledgeAll: { type: 'boolean' },
+        },
+        additionalProperties: false,
+      },
+      response: {
+        200: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean' },
+            message: { type: 'string' },
+            acknowledgedCount: { type: 'number' },
+            lastUpdatedIso: { type: 'string' },
+          },
+          required: ['success', 'message', 'acknowledgedCount', 'lastUpdatedIso'],
+        },
+        400: {
+          type: 'object',
+          properties: {
+            error: { type: 'string' },
+            code: { type: 'string' },
+            message: { type: 'string' },
+          },
+          required: ['error', 'code', 'message'],
+        },
+        500: {
+          type: 'object',
+          properties: {
+            error: { type: 'string' },
+            code: { type: 'string' },
+            message: { type: 'string' },
+          },
+          required: ['error', 'code', 'message'],
+        },
+      },
+    },
+  }, async (
+    request: FastifyRequest<{ Body: AlertAcknowledgeRequest }>,
+    reply: FastifyReply,
+  ) => {
+    const validation = alertAcknowledgeSchema.safeParse(request.body);
+    if (!validation.success) {
+      const { statusCode, payload } = buildValidationError('Invalid request body', {
+        issues: validation.error.flatten(),
+      });
+      return reply.status(statusCode).send(payload);
+    }
+
+    const { alertIds, acknowledgeAll } = validation.data;
+
+    try {
+      let acknowledgedCount = 0;
+      const now = DateTime.utc();
+      const lastUpdatedIso = now.toISO();
+
+      if (!lastUpdatedIso) {
+        throw new Error('Failed to generate ISO timestamp for alert acknowledgment response');
+      }
+
+      if (acknowledgeAll) {
+        // Clear all acknowledged alerts
+        try {
+          const keys = await app.redis.keys('alert:acknowledged:*');
+          if (keys.length > 0) {
+            await app.redis.del(...keys);
+            acknowledgedCount = keys.length;
+          }
+        } catch (error) {
+          app.log.warn({ err: error }, 'Failed to clear acknowledged alerts from Redis');
+        }
+      } else if (alertIds && alertIds.length > 0) {
+        // Acknowledge specific alerts by storing their keys
+        for (const alertId of alertIds) {
+          try {
+            // For now, we'll store a generic acknowledgment for each alert ID
+            // In a more sophisticated implementation, we might want to store
+            // the actual alert details for better tracking
+            const alertKey = `alert:acknowledged:generic:${alertId}`;
+            await app.redis.set(alertKey, 'true', 'EX', 86400); // 24 hours
+            acknowledgedCount++;
+          } catch (error) {
+            app.log.warn({ err: error }, `Failed to acknowledge alert ${alertId}`);
+          }
+        }
+      } else {
+        const { statusCode, payload } = buildValidationError('Either alertIds or acknowledgeAll must be provided');
+        return reply.status(statusCode).send(payload);
+      }
+
+      app.log.info(`Acknowledged ${acknowledgedCount} alerts`);
+      
+      return {
+        success: true,
+        message: `Successfully acknowledged ${acknowledgedCount} alert${acknowledgedCount === 1 ? '' : 's'}`,
+        acknowledgedCount,
+        lastUpdatedIso,
+      };
+    } catch (error) {
+      app.log.error({ err: error }, 'Failed to acknowledge alerts');
+
+      const { statusCode, payload } = buildProviderError(
+        'Failed to acknowledge alerts.',
+        error instanceof Error ? { message: error.message } : error,
+      );
+      return reply.status(statusCode).send(payload);
+    }
+  });
 }
 
 export default registerAlert;

@@ -1,21 +1,42 @@
-import { computed, ref, watch, type Ref, type ComputedRef } from 'vue';
+import { computed, ref, watch, type Ref } from 'vue';
 import { useToasts } from './useToasts';
 import { useUiPreferences } from './useUiPreferences';
-
-interface RouteAlert {
-  id: number;
-  message: string;
-}
+import type { RouteAlert, RouteAlertResponse, RouteTimeResponse, AlertAcknowledgeRequest } from '@automata/types';
 
 interface UseRouteAlertsOptions {
-  routeData: Ref<import('@automata/types').RouteTimeResponse | null>;
+  routeData: Ref<RouteTimeResponse | null>;
   thresholdMinutes: Ref<number>;
 }
 
 interface UseRouteAlertsResult {
   activeAlerts: Ref<RouteAlert[]>;
-  acknowledgeAlerts: () => void;
+  totalCount: Ref<number>;
+  unacknowledgedCount: Ref<number>;
+  lastUpdatedIso: Ref<string | null>;
+  loading: Ref<boolean>;
+  error: Ref<string | null>;
+  acknowledgeAlerts: (alertIds?: number[]) => Promise<void>;
+  acknowledgeAllAlerts: () => Promise<void>;
+  refreshAlerts: () => Promise<void>;
   emitAlertCount: (count: number) => void;
+}
+
+async function apiCall<T>(endpoint: string, options?: RequestInit): Promise<T> {
+  const baseUrl = import.meta.env.VITE_API_BASE_URL || '/api';
+  const response = await fetch(`${baseUrl}${endpoint}`, {
+    headers: {
+      'Content-Type': 'application/json',
+      ...options?.headers,
+    },
+    ...options,
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({ message: 'Unknown error' }));
+    throw new Error(errorData.message || `HTTP ${response.status}: ${response.statusText}`);
+  }
+
+  return response.json();
 }
 
 export function useRouteAlerts(options: UseRouteAlertsOptions): UseRouteAlertsResult {
@@ -23,13 +44,16 @@ export function useRouteAlerts(options: UseRouteAlertsOptions): UseRouteAlertsRe
   const { isWidgetCompact } = useUiPreferences();
 
   const activeAlerts = ref<RouteAlert[]>([]);
-  let lastAlertKey: string | null = null;
-  let acknowledgedAlertKey: string | null = null;
+  const totalCount = ref(0);
+  const unacknowledgedCount = ref(0);
+  const lastUpdatedIso = ref<string | null>(null);
+  const loading = ref(false);
+  const error = ref<string | null>(null);
+  
   let lastEmittedAlertCount = 0;
+  let emitHandler: (count: number) => void = () => {};
 
   const isCompact = computed(() => isWidgetCompact('route-widget'));
-
-  let emitHandler: (count: number) => void = () => {};
 
   const emitAlertCountImpl = (count: number): void => {
     if (count === lastEmittedAlertCount) {
@@ -40,9 +64,140 @@ export function useRouteAlerts(options: UseRouteAlertsOptions): UseRouteAlertsRe
     emitHandler(count);
   };
 
+  const refreshAlerts = async (): Promise<void> => {
+    if (!options.routeData.value) {
+      activeAlerts.value = [];
+      totalCount.value = 0;
+      unacknowledgedCount.value = 0;
+      lastUpdatedIso.value = null;
+      emitAlertCountImpl(0);
+      return;
+    }
+
+    loading.value = true;
+    error.value = null;
+
+    try {
+      const routeDataJson = JSON.stringify(options.routeData.value);
+      const params = new URLSearchParams({
+        routeData: routeDataJson,
+        thresholdMinutes: String(options.thresholdMinutes.value),
+        compactMode: String(isCompact.value),
+      });
+
+      const response = await apiCall<RouteAlertResponse>(`/alerts/route?${params}`);
+      
+      activeAlerts.value = response.alerts;
+      totalCount.value = response.totalCount;
+      unacknowledgedCount.value = response.unacknowledgedCount;
+      lastUpdatedIso.value = response.lastUpdatedIso;
+      
+      emitAlertCountImpl(response.unacknowledgedCount);
+
+      // Show toast for new alerts (only when count increases)
+      if (response.unacknowledgedCount > 0 && lastEmittedAlertCount < response.unacknowledgedCount) {
+        const latestAlert = response.alerts[response.alerts.length - 1];
+        if (latestAlert) {
+          pushToast({
+            text: latestAlert.message || `Travel time exceeds threshold of ${options.thresholdMinutes.value} min.`,
+            variant: 'warning',
+            timeout: 7000,
+          });
+        }
+      }
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to fetch route alerts';
+      error.value = errorMessage;
+      console.error('Failed to fetch route alerts:', err);
+      
+      // Clear alerts on error
+      activeAlerts.value = [];
+      totalCount.value = 0;
+      unacknowledgedCount.value = 0;
+      emitAlertCountImpl(0);
+    } finally {
+      loading.value = false;
+    }
+  };
+
+  const acknowledgeAlerts = async (alertIds?: number[]): Promise<void> => {
+    try {
+      const requestBody: AlertAcknowledgeRequest = {
+        alertIds: alertIds || activeAlerts.value.map(alert => alert.id),
+      };
+
+      const response = await apiCall<{
+        success: boolean;
+        message: string;
+        acknowledgedCount: number;
+        lastUpdatedIso: string;
+      }>('/alerts/acknowledge', {
+        method: 'POST',
+        body: JSON.stringify(requestBody),
+      });
+
+      // Refresh alerts after acknowledgment
+      await refreshAlerts();
+
+      if (response.acknowledgedCount > 0) {
+        pushToast({
+          text: response.message,
+          variant: 'success',
+          timeout: 3000,
+        });
+      }
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to acknowledge alerts';
+      error.value = errorMessage;
+      console.error('Failed to acknowledge alerts:', err);
+      throw err;
+    }
+  };
+
+  const acknowledgeAllAlerts = async (): Promise<void> => {
+    try {
+      const requestBody: AlertAcknowledgeRequest = {
+        acknowledgeAll: true,
+      };
+
+      const response = await apiCall<{
+        success: boolean;
+        message: string;
+        acknowledgedCount: number;
+        lastUpdatedIso: string;
+      }>('/alerts/acknowledge', {
+        method: 'POST',
+        body: JSON.stringify(requestBody),
+      });
+
+      // Refresh alerts after acknowledgment
+      await refreshAlerts();
+
+      if (response.acknowledgedCount > 0) {
+        pushToast({
+          text: response.message,
+          variant: 'success',
+          timeout: 3000,
+        });
+      }
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to acknowledge all alerts';
+      error.value = errorMessage;
+      console.error('Failed to acknowledge all alerts:', err);
+      throw err;
+    }
+  };
+
   const result = {
     activeAlerts,
+    totalCount,
+    unacknowledgedCount,
+    lastUpdatedIso,
+    loading,
+    error,
     acknowledgeAlerts,
+    acknowledgeAllAlerts,
+    refreshAlerts,
   } as UseRouteAlertsResult;
 
   Object.defineProperty(result, 'emitAlertCount', {
@@ -57,72 +212,11 @@ export function useRouteAlerts(options: UseRouteAlertsOptions): UseRouteAlertsRe
     },
   });
 
-  function dispatchAlertCount(count: number): void {
-    emitAlertCountImpl(count);
-  }
-
-  function acknowledgeAlerts(): void {
-    acknowledgedAlertKey = lastAlertKey;
-    activeAlerts.value = [];
-    dispatchAlertCount(0);
-  }
-
+  // Watch for changes and refresh alerts
   watch(
     [options.routeData, options.thresholdMinutes, isCompact],
-    ([payload, threshold, compact]) => {
-      if (!payload) {
-        activeAlerts.value = [];
-        lastAlertKey = null;
-        acknowledgedAlertKey = null;
-        dispatchAlertCount(0);
-        return;
-      }
-
-      const overThreshold = payload.durationMinutes > threshold;
-      const alertKey = `${payload.lastUpdatedIso}:${threshold}:${payload.durationMinutes.toFixed(1)}`;
-
-      if (!overThreshold) {
-        activeAlerts.value = [];
-        lastAlertKey = null;
-        acknowledgedAlertKey = null;
-        dispatchAlertCount(0);
-        return;
-      }
-
-      if (acknowledgedAlertKey === alertKey) {
-        activeAlerts.value = [];
-        dispatchAlertCount(0);
-        return;
-      }
-
-      // Only construct detailed message if not in compact mode or if we need it for toasts
-      const needsDetailedMessage = !compact || lastAlertKey !== alertKey;
-      const message = needsDetailedMessage 
-        ? `Travel time ${payload.durationMinutes.toFixed(1)} min exceeds threshold of ${threshold} min.`
-        : '';
-
-      if (acknowledgedAlertKey && acknowledgedAlertKey !== alertKey) {
-        acknowledgedAlertKey = null;
-      }
-
-      // In compact mode, we only need minimal alert data for the count
-      activeAlerts.value = [
-        {
-          id: Date.now(),
-          message,
-        },
-      ];
-      dispatchAlertCount(activeAlerts.value.length);
-
-      if (lastAlertKey !== alertKey) {
-        pushToast({
-          text: message || `Travel time exceeds threshold of ${threshold} min.`,
-          variant: 'warning',
-          timeout: 7000,
-        });
-      }
-
-      lastAlertKey = alertKey;
+    () => {
+      refreshAlerts();
     },
     { immediate: true, flush: 'sync' },
   );
