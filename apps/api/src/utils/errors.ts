@@ -6,6 +6,7 @@ export type ApiErrorCode =
   | 'INTERNAL_ERROR';
 
 export interface ApiErrorPayload {
+  error?: string;
   code: ApiErrorCode;
   message: string;
   details?: unknown;
@@ -60,6 +61,7 @@ export function buildValidationError(message: string, details?: unknown): ApiErr
   return {
     statusCode: 400,
     payload: {
+      error: 'Validation failed',
       code: 'INVALID_REQUEST',
       message,
       details,

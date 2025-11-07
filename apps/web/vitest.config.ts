@@ -17,6 +17,6 @@ export default defineConfig({
     coverage: {
       reporter: ['text', 'html'],
     },
-    exclude: ['tests/e2e/**', 'playwright.config.ts'],
+    exclude: [],
   },
 });

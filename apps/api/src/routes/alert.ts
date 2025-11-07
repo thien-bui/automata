@@ -249,79 +249,24 @@ export async function registerAlert(
   });
 
   // GET /alerts/route - Get route alerts based on current threshold and route data
-  app.get<{ Querystring: RouteAlertQueryParams }>('/alerts/route', {
-    schema: {
-      querystring: {
-        type: 'object',
-        properties: {
-          routeData: { type: 'string' },
-          thresholdMinutes: { type: 'number', minimum: MIN_THRESHOLD_MINUTES, maximum: MAX_THRESHOLD_MINUTES },
-          compactMode: { type: 'boolean' },
-        },
-        required: ['routeData'],
-        additionalProperties: false,
-      },
-      response: {
-        200: {
-          type: 'object',
-          properties: {
-            alerts: {
-              type: 'array',
-              items: {
-                type: 'object',
-                properties: {
-                  id: { type: 'number' },
-                  message: { type: 'string' },
-                  routeData: { type: 'object' },
-                  thresholdMinutes: { type: 'number' },
-                  acknowledged: { type: 'boolean' },
-                  createdAtIso: { type: 'string' },
-                },
-                required: ['id', 'message', 'routeData', 'thresholdMinutes', 'acknowledged', 'createdAtIso'],
-              },
-            },
-            totalCount: { type: 'number' },
-            unacknowledgedCount: { type: 'number' },
-            lastUpdatedIso: { type: 'string' },
-          },
-          required: ['alerts', 'totalCount', 'unacknowledgedCount', 'lastUpdatedIso'],
-        },
-        400: {
-          type: 'object',
-          properties: {
-            error: { type: 'string' },
-            code: { type: 'string' },
-            message: { type: 'string' },
-          },
-          required: ['error', 'code', 'message'],
-        },
-        500: {
-          type: 'object',
-          properties: {
-            error: { type: 'string' },
-            code: { type: 'string' },
-            message: { type: 'string' },
-          },
-          required: ['error', 'code', 'message'],
-        },
-      },
-    },
-  }, async (
-    request: FastifyRequest<{ Querystring: RouteAlertQueryParams }>,
+  app.get('/alerts/route', async (
+    request: FastifyRequest,
     reply: FastifyReply,
   ) => {
-    const validation = routeAlertQuerySchema.safeParse(request.query);
-    if (!validation.success) {
-      const { statusCode, payload } = buildValidationError('Invalid query parameters', {
-        issues: validation.error.flatten(),
-      });
-      return reply.status(statusCode).send(payload);
-    }
-
-    const { routeData: routeDataJson, thresholdMinutes: queryThresholdMinutes, compactMode = false } = validation.data;
-
     try {
-      // Parse route data
+      // Manual validation to ensure we control error responses
+      const query = request.query as any;
+      const routeDataJson = query.routeData;
+      const queryThresholdMinutes = query.thresholdMinutes ? Number(query.thresholdMinutes) : undefined;
+      const compactMode = query.compactMode === 'true' || query.compactMode === true;
+
+      // Validate required routeData parameter
+      if (!routeDataJson) {
+        const { statusCode, payload } = buildValidationError('Missing required routeData parameter');
+        return reply.status(statusCode).send(payload);
+      }
+
+      // Parse route data with proper error handling
       let routeData: RouteTimeResponse;
       try {
         routeData = JSON.parse(routeDataJson) as RouteTimeResponse;
@@ -334,6 +279,18 @@ export async function registerAlert(
       if (!routeData.durationMinutes || !routeData.lastUpdatedIso) {
         const { statusCode, payload } = buildValidationError('Invalid routeData structure: missing required fields');
         return reply.status(statusCode).send(payload);
+      }
+
+      // Validate thresholdMinutes if provided
+      if (queryThresholdMinutes !== undefined) {
+        if (typeof queryThresholdMinutes !== 'number' || 
+            queryThresholdMinutes < MIN_THRESHOLD_MINUTES || 
+            queryThresholdMinutes > MAX_THRESHOLD_MINUTES) {
+          const { statusCode, payload } = buildValidationError(
+            `Threshold must be between ${MIN_THRESHOLD_MINUTES} and ${MAX_THRESHOLD_MINUTES} minutes`
+          );
+          return reply.status(statusCode).send(payload);
+        }
       }
 
       // Get current threshold (from query param or Redis/default)
@@ -362,7 +319,8 @@ export async function registerAlert(
       const lastUpdatedIso = now.toISO();
 
       if (!lastUpdatedIso) {
-        throw new Error('Failed to generate ISO timestamp for route alerts response');
+        const { statusCode, payload } = buildInternalError('Failed to generate ISO timestamp for route alerts response');
+        return reply.status(statusCode).send(payload);
       }
 
       const alerts: RouteAlert[] = [];
@@ -417,8 +375,21 @@ export async function registerAlert(
       
       return response;
     } catch (error) {
-      app.log.error({ err: error }, 'Failed to generate route alerts');
+      // Check if this is a validation-related error that should return 400
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      const isValidationError = 
+        errorMessage.includes('Invalid routeData JSON format') ||
+        errorMessage.includes('Invalid routeData structure') ||
+        errorMessage.includes('Missing required routeData parameter') ||
+        errorMessage.includes('Threshold must be between');
+      
+      if (isValidationError) {
+        const { statusCode, payload } = buildValidationError(errorMessage);
+        return reply.status(statusCode).send(payload);
+      }
 
+      // For other errors, return 500
+      app.log.error({ err: error }, 'Failed to generate route alerts');
       const { statusCode, payload } = buildProviderError(
         'Failed to generate route alerts.',
         error instanceof Error ? { message: error.message } : error,
