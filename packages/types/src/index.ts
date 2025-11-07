@@ -175,3 +175,38 @@ export type {
   ReminderResponse,
   ReminderTemplate,
 } from './reminder';
+
+// Alert threshold types
+export interface AlertThresholdResponse {
+  thresholdMinutes: number;
+  defaultThresholdMinutes: number;
+  minThresholdMinutes: number;
+  maxThresholdMinutes: number;
+  lastUpdatedIso: string;
+}
+
+export interface AlertThresholdUpdateRequest {
+  thresholdMinutes: number;
+}
+
+// Route alert types
+export interface RouteAlert {
+  id: number;
+  message: string;
+  routeData: RouteTimeResponse;
+  thresholdMinutes: number;
+  acknowledged: boolean;
+  createdAtIso: string;
+}
+
+export interface RouteAlertResponse {
+  alerts: RouteAlert[];
+  totalCount: number;
+  unacknowledgedCount: number;
+  lastUpdatedIso: string;
+}
+
+export interface AlertAcknowledgeRequest {
+  alertIds?: number[];
+  acknowledgeAll?: boolean;
+}
