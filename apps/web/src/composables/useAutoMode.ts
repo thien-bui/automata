@@ -1,167 +1,148 @@
 import { computed, ref } from 'vue';
-import type { AutoModeConfig, AutoModeTimeWindow } from '@automata/types';
+import type { AutoModeConfig, AutoModeStatusResponse } from '@automata/types';
 
-// Import the configuration file
-import autoModeConfigJson from '../config/automode-config.json';
-
-const DEFAULT_CONFIG: AutoModeConfig = {
-  enabled: true,
-  timeWindows: [
-    {
-      name: 'morning-commute',
-      mode: 'Nav',
-      startTime: { hour: 8, minute: 30 },
-      endTime: { hour: 9, minute: 30 },
-      daysOfWeek: [1, 2, 3, 4, 5],
-      description: 'Morning commute window',
-    },
-    {
-      name: 'evening-commute',
-      mode: 'Nav',
-      startTime: { hour: 17, minute: 0 },
-      endTime: { hour: 20, minute: 0 },
-      daysOfWeek: [1, 2, 3, 4, 5],
-      description: 'Evening commute window',
-    },
-  ],
-  defaultMode: 'Compact',
-  navModeRefreshSeconds: 300,
-};
+const API_BASE = '/api';
 
 export function useAutoMode() {
-  // Use the imported config or fall back to default
-  const config = ref<AutoModeConfig>(
-    (autoModeConfigJson as any).autoMode || DEFAULT_CONFIG,
-  );
+  const status = ref<AutoModeStatusResponse | null>(null);
+  const isLoading = ref(false);
+  const error = ref<string | null>(null);
 
-  const isEnabled = computed(() => config.value.enabled);
+  // Computed properties based on API response
+  const config = computed(() => status.value?.config || null);
+  const isEnabled = computed(() => config.value?.enabled || false);
+  const currentMode = computed(() => status.value?.currentMode || 'Compact');
+  const nextBoundary = computed(() => {
+    if (!status.value?.nextBoundaryIso) return null;
+    return new Date(status.value.nextBoundaryIso);
+  });
 
-  function isTimeInRange(
-    currentHour: number,
-    currentMinute: number,
-    startHour: number,
-    startMinute: number,
-    endHour: number,
-    endMinute: number,
-  ): boolean {
-    // Convert times to minutes since midnight for easier comparison
-    const currentTotalMinutes = currentHour * 60 + currentMinute;
-    const startTotalMinutes = startHour * 60 + startMinute;
-    const endTotalMinutes = endHour * 60 + endMinute;
+  // Fetch current auto-mode status from API
+  async function fetchStatus(forceRefresh = false): Promise<void> {
+    isLoading.value = true;
+    error.value = null;
 
-    // Handle cases where the time range spans midnight (not needed for current config but good practice)
-    if (startTotalMinutes > endTotalMinutes) {
-      return currentTotalMinutes >= startTotalMinutes || currentTotalMinutes < endTotalMinutes;
+    try {
+      const params = new URLSearchParams();
+      if (forceRefresh) {
+        params.set('forceRefresh', 'true');
+      }
+
+      const response = await fetch(`${API_BASE}/auto-mode/status?${params}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || `HTTP ${response.status}`);
+      }
+
+      const data: AutoModeStatusResponse = await response.json();
+      status.value = data;
+    } catch (err) {
+      error.value = err instanceof Error ? err.message : 'Unknown error';
+      throw err;
+    } finally {
+      isLoading.value = false;
     }
-
-    return currentTotalMinutes >= startTotalMinutes && currentTotalMinutes < endTotalMinutes;
   }
 
-  function isActiveTimeWindow(window: AutoModeTimeWindow, date: Date): boolean {
-    const dayOfWeek = date.getDay(); // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
-    const hour = date.getHours();
-    const minute = date.getMinutes();
+  // Update auto-mode configuration via API
+  async function updateConfig(newConfig: AutoModeConfig): Promise<void> {
+    isLoading.value = true;
+    error.value = null;
 
-    // Check if current day is in the window's days of week
-    if (!window.daysOfWeek.includes(dayOfWeek)) {
-      return false;
+    try {
+      const response = await fetch(`${API_BASE}/auto-mode/config`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ config: newConfig }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || `HTTP ${response.status}`);
+      }
+
+      const data = await response.json();
+
+      // Refresh status after config update
+      await fetchStatus(true);
+    } catch (err) {
+      error.value = err instanceof Error ? err.message : 'Unknown error';
+      throw err;
+    } finally {
+      isLoading.value = false;
     }
-
-    // Check if current time is within the window's time range
-    return isTimeInRange(
-      hour,
-      minute,
-      window.startTime.hour,
-      window.startTime.minute,
-      window.endTime.hour,
-      window.endTime.minute,
-    );
   }
 
+  // Legacy methods for backward compatibility (now use API data)
   function resolveModeForDate(date: Date): 'Compact' | 'Nav' {
-    if (!isEnabled.value) {
-      return config.value.defaultMode;
-    }
-
-    // Find the first active time window for the current date/time
-    const activeWindow = config.value.timeWindows.find(window =>
-      isActiveTimeWindow(window, date),
-    );
-
-    return activeWindow ? activeWindow.mode : config.value.defaultMode;
+    if (!config.value) return 'Compact';
+    // This is now handled server-side, but we can provide a client-side fallback
+    // In practice, this should use the current status from the API
+    return currentMode.value;
   }
 
   function getNextBoundary(date: Date): Date {
-    if (!isEnabled.value) {
-      // Return a date far in the future if auto mode is disabled
-      const nextDate = new Date(date);
-      nextDate.setDate(nextDate.getDate() + 1);
-      return nextDate;
-    }
-
-    const currentHour = date.getHours();
-    const currentMinute = date.getMinutes();
-    const dayOfWeek = date.getDay();
-
-    // Create array of all boundaries for today and tomorrow
-    const boundaries: Array<{ date: Date; mode: 'Compact' | 'Nav' }> = [];
-
-    // Add boundaries for today
-    config.value.timeWindows.forEach(window => {
-      if (window.daysOfWeek.includes(dayOfWeek)) {
-        const startDate = new Date(date);
-        startDate.setHours(window.startTime.hour, window.startTime.minute, 0, 0);
-        const endDate = new Date(date);
-        endDate.setHours(window.endTime.hour, window.endTime.minute, 0, 0);
-
-        if (startDate.getTime() > date.getTime()) {
-          boundaries.push({ date: startDate, mode: window.mode });
-        }
-        if (endDate.getTime() > date.getTime()) {
-          boundaries.push({ date: endDate, mode: config.value.defaultMode });
-        }
-      }
-    });
-
-    // If no boundaries left today, check tomorrow
-    if (boundaries.length === 0) {
-      const tomorrow = new Date(date);
-      tomorrow.setDate(tomorrow.getDate() + 1);
-      const tomorrowDayOfWeek = tomorrow.getDay();
-
-      config.value.timeWindows.forEach(window => {
-        if (window.daysOfWeek.includes(tomorrowDayOfWeek)) {
-          const startDate = new Date(tomorrow);
-          startDate.setHours(window.startTime.hour, window.startTime.minute, 0, 0);
-          boundaries.push({ date: startDate, mode: window.mode });
-        }
-      });
-    }
-
-    // Sort boundaries by time and return the earliest one
-    boundaries.sort((a, b) => a.date.getTime() - b.date.getTime());
-    return boundaries.length > 0 ? boundaries[0].date : new Date(date.getTime() + 24 * 60 * 60 * 1000);
+    // Return the next boundary from API, or a fallback
+    return nextBoundary.value || new Date(date.getTime() + 24 * 60 * 60 * 1000);
   }
 
   function getNavModeRefreshSeconds(): number {
-    return config.value.navModeRefreshSeconds;
+    return config.value?.navModeRefreshSeconds || 300;
   }
 
-  function updateConfig(newConfig: Partial<AutoModeConfig>) {
-    config.value = { ...config.value, ...newConfig };
-  }
+  // Reset config to default (server will handle defaults)
+  async function resetConfig(): Promise<void> {
+    const defaultConfig: AutoModeConfig = {
+      enabled: true,
+      timeWindows: [
+        {
+          name: 'morning-commute',
+          mode: 'Nav',
+          startTime: { hour: 8, minute: 30 },
+          endTime: { hour: 9, minute: 30 },
+          daysOfWeek: [1, 2, 3, 4, 5],
+          description: 'Morning commute window',
+        },
+        {
+          name: 'evening-commute',
+          mode: 'Nav',
+          startTime: { hour: 17, minute: 0 },
+          endTime: { hour: 20, minute: 0 },
+          daysOfWeek: [1, 2, 3, 4, 5],
+          description: 'Evening commute window',
+        },
+      ],
+      defaultMode: 'Compact',
+      navModeRefreshSeconds: 300,
+    };
 
-  function resetConfig() {
-    config.value = DEFAULT_CONFIG;
+    await updateConfig(defaultConfig);
   }
 
   return {
-    config: computed(() => config.value),
+    // Reactive state
+    status: computed(() => status.value),
+    config,
     isEnabled,
+    currentMode,
+    nextBoundary,
+    isLoading: computed(() => isLoading.value),
+    error: computed(() => error.value),
+
+    // Methods
+    fetchStatus,
+    updateConfig,
     resolveModeForDate,
     getNextBoundary,
     getNavModeRefreshSeconds,
-    updateConfig,
     resetConfig,
   };
 }

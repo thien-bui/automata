@@ -1,7 +1,7 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { computed, readonly, ref } from 'vue';
 import { useRouteAlerts } from '../useRouteAlerts';
-import type { RouteTimeResponse, WidgetCompactMode } from '@automata/types';
+import type { RouteTimeResponse, WidgetCompactMode, RouteAlert } from '@automata/types';
 
 // Mock dependencies
 vi.mock('../useToasts', () => ({
@@ -11,6 +11,16 @@ vi.mock('../useToasts', () => ({
 vi.mock('../useUiPreferences', () => ({
   useUiPreferences: vi.fn(),
 }));
+
+// Mock fetch for API calls
+const mockFetch = vi.fn();
+global.fetch = mockFetch;
+
+// Helper to create mock response
+const createMockResponse = (data: any) => ({
+  ok: true,
+  json: async () => data,
+});
 
 const mockToasts = {
   push: vi.fn(),
@@ -45,11 +55,67 @@ describe('useRouteAlerts', () => {
     };
     mockUiPreferences.isWidgetCompact.mockReturnValue(false);
 
+    // Set up default fetch mock
+    mockFetch.mockImplementation((url: string, options?: RequestInit) => {
+      if (url.includes('/api/alerts/route')) {
+        // Parse query parameters
+        const urlObj = new URL(url, 'http://localhost');
+        const routeDataJson = urlObj.searchParams.get('routeData');
+        const thresholdMinutes = parseInt(urlObj.searchParams.get('thresholdMinutes') || '0');
+        
+        let alerts: RouteAlert[] = [];
+        let totalCount = 0;
+        let unacknowledgedCount = 0;
+        
+        if (routeDataJson) {
+          try {
+            const routeData = JSON.parse(routeDataJson);
+            if (routeData.durationMinutes > thresholdMinutes) {
+              alerts = [{
+                id: Date.now(),
+                message: `${routeData.durationMinutes.toFixed(1)} min exceeds threshold of ${thresholdMinutes} min.`,
+                thresholdMinutes,
+                routeData,
+                acknowledged: false,
+                createdAtIso: new Date().toISOString(),
+              }];
+              totalCount = 1;
+              unacknowledgedCount = 1;
+            }
+          } catch (e) {
+            // Invalid JSON, return empty alerts
+          }
+        }
+        
+        return Promise.resolve(createMockResponse({
+          alerts,
+          totalCount,
+          unacknowledgedCount,
+          lastUpdatedIso: new Date().toISOString(),
+        }));
+      }
+      
+      if (url.includes('/api/alerts/acknowledge')) {
+        return Promise.resolve(createMockResponse({
+          success: true,
+          message: 'Alerts acknowledged',
+          acknowledgedCount: 1,
+          lastUpdatedIso: new Date().toISOString(),
+        }));
+      }
+      
+      return Promise.resolve(createMockResponse({}));
+    });
+
     const toastsModule = await import('../useToasts');
     const uiPreferencesModule = await import('../useUiPreferences');
 
     vi.mocked(toastsModule.useToasts).mockReturnValue(mockToasts);
     vi.mocked(uiPreferencesModule.useUiPreferences).mockReturnValue(mockUiPreferences);
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
   });
 
   const createRouteData = (durationMinutes: number): RouteTimeResponse => ({
@@ -74,11 +140,16 @@ describe('useRouteAlerts', () => {
     expect(result.activeAlerts.value).toEqual([]);
   });
 
-  it('creates alert when route duration exceeds threshold', () => {
+  it('creates alert when route duration exceeds threshold', async () => {
     const routeData = ref(createRouteData(60)); // 60 minutes > 45 threshold
     const thresholdMinutes = ref(45);
 
     const result = useRouteAlerts({ routeData, thresholdMinutes });
+
+    // Wait for the initial refresh to complete
+    await vi.waitFor(() => {
+      expect(result.loading.value).toBe(false);
+    });
 
     expect(result.activeAlerts.value).toHaveLength(1);
     expect(result.activeAlerts.value[0].message).toContain('60.0 min exceeds threshold of 45 min');
@@ -103,11 +174,16 @@ describe('useRouteAlerts', () => {
     expect(result.activeAlerts.value).toEqual([]);
   });
 
-  it('shows toast when alert is created', () => {
+  it('shows toast when alert is created', async () => {
     const routeData = ref(createRouteData(60));
     const thresholdMinutes = ref(45);
 
-    useRouteAlerts({ routeData, thresholdMinutes });
+    const result = useRouteAlerts({ routeData, thresholdMinutes });
+
+    // Wait for the initial refresh to complete
+    await vi.waitFor(() => {
+      expect(result.loading.value).toBe(false);
+    });
 
     expect(mockToasts.push).toHaveBeenCalledWith({
       text: 'Travel time 60.0 min exceeds threshold of 45 min.',
@@ -116,24 +192,34 @@ describe('useRouteAlerts', () => {
     });
   });
 
-  it('acknowledges alerts correctly', () => {
+  it('acknowledges alerts correctly', async () => {
     const routeData = ref(createRouteData(60));
     const thresholdMinutes = ref(45);
 
     const result = useRouteAlerts({ routeData, thresholdMinutes });
 
+    // Wait for the initial refresh to complete
+    await vi.waitFor(() => {
+      expect(result.loading.value).toBe(false);
+    });
+
     expect(result.activeAlerts.value).toHaveLength(1);
 
-    result.acknowledgeAlerts();
+    await result.acknowledgeAlerts();
 
     expect(result.activeAlerts.value).toEqual([]);
   });
 
-  it('prevents duplicate alerts for same route data and threshold', () => {
+  it('prevents duplicate alerts for same route data and threshold', async () => {
     const routeData = ref(createRouteData(60));
     const thresholdMinutes = ref(45);
 
     const result = useRouteAlerts({ routeData, thresholdMinutes });
+
+    // Wait for the initial refresh to complete
+    await vi.waitFor(() => {
+      expect(result.loading.value).toBe(false);
+    });
 
     // First alert should be created
     expect(result.activeAlerts.value).toHaveLength(1);
@@ -143,16 +229,26 @@ describe('useRouteAlerts', () => {
     const sameRouteData = { ...routeData.value };
     routeData.value = sameRouteData;
 
+    // Wait for the update to process
+    await vi.waitFor(() => {
+      expect(result.loading.value).toBe(false);
+    });
+
     // Should not create new alert
     expect(result.activeAlerts.value).toHaveLength(1);
     expect(mockToasts.push).toHaveBeenCalledTimes(1);
   });
 
-  it('creates new alert when route data changes', () => {
+  it('creates new alert when route data changes', async () => {
     const routeData = ref(createRouteData(60));
     const thresholdMinutes = ref(45);
 
     const result = useRouteAlerts({ routeData, thresholdMinutes });
+
+    // Wait for the initial refresh to complete
+    await vi.waitFor(() => {
+      expect(result.loading.value).toBe(false);
+    });
 
     // First alert
     expect(result.activeAlerts.value).toHaveLength(1);
@@ -162,16 +258,26 @@ describe('useRouteAlerts', () => {
     const newRouteData = createRouteData(65);
     routeData.value = newRouteData;
 
+    // Wait for the update to process
+    await vi.waitFor(() => {
+      expect(result.loading.value).toBe(false);
+    });
+
     // Should create new alert
     expect(result.activeAlerts.value).toHaveLength(1);
     expect(mockToasts.push).toHaveBeenCalledTimes(2);
   });
 
-  it('creates new alert when threshold changes', () => {
+  it('creates new alert when threshold changes', async () => {
     const routeData = ref(createRouteData(60));
     const thresholdMinutes = ref(45);
 
     const result = useRouteAlerts({ routeData, thresholdMinutes });
+
+    // Wait for the initial refresh to complete
+    await vi.waitFor(() => {
+      expect(result.loading.value).toBe(false);
+    });
 
     // First alert with threshold 45
     expect(result.activeAlerts.value).toHaveLength(1);
@@ -180,26 +286,41 @@ describe('useRouteAlerts', () => {
     // Change threshold to 30 (still exceeded)
     thresholdMinutes.value = 30;
 
+    // Wait for the update to process
+    await vi.waitFor(() => {
+      expect(result.loading.value).toBe(false);
+    });
+
     // Should create new alert
     expect(result.activeAlerts.value).toHaveLength(1);
     expect(mockToasts.push).toHaveBeenCalledTimes(2);
   });
 
-  it('removes alert when duration drops below threshold', () => {
+  it('removes alert when duration drops below threshold', async () => {
     const routeData = ref(createRouteData(60));
     const thresholdMinutes = ref(45);
 
     const result = useRouteAlerts({ routeData, thresholdMinutes });
+
+    // Wait for the initial refresh to complete
+    await vi.waitFor(() => {
+      expect(result.loading.value).toBe(false);
+    });
 
     expect(result.activeAlerts.value).toHaveLength(1);
 
     // Update route data with lower duration
     routeData.value = createRouteData(30);
 
+    // Wait for the update to process
+    await vi.waitFor(() => {
+      expect(result.loading.value).toBe(false);
+    });
+
     expect(result.activeAlerts.value).toEqual([]);
   });
 
-  it('handles compact mode correctly', () => {
+  it('handles compact mode correctly', async () => {
     mockUiPreferences.isWidgetCompact.mockReturnValue(true);
 
     const routeData = ref(createRouteData(60));
@@ -207,16 +328,26 @@ describe('useRouteAlerts', () => {
 
     const result = useRouteAlerts({ routeData, thresholdMinutes });
 
+    // Wait for the initial refresh to complete
+    await vi.waitFor(() => {
+      expect(result.loading.value).toBe(false);
+    });
+
     expect(result.activeAlerts.value).toHaveLength(1);
     // In compact mode, message should still be created for toast
     expect(result.activeAlerts.value[0].message).toContain('60.0 min exceeds threshold of 45 min');
   });
 
-  it('emits alert count correctly', () => {
+  it('emits alert count correctly', async () => {
     const routeData = ref(createRouteData(60));
     const thresholdMinutes = ref(45);
 
     const result = useRouteAlerts({ routeData, thresholdMinutes });
+
+    // Wait for the initial refresh to complete
+    await vi.waitFor(() => {
+      expect(result.loading.value).toBe(false);
+    });
 
     const mockEmit = vi.fn();
     result.emitAlertCount = mockEmit;
@@ -226,15 +357,20 @@ describe('useRouteAlerts', () => {
 
     // Should emit count when alert is acknowledged
     mockEmit.mockClear();
-    result.acknowledgeAlerts();
+    await result.acknowledgeAlerts();
     expect(mockEmit).toHaveBeenCalledWith(0);
   });
 
-  it('does not emit count when count is the same', () => {
+  it('does not emit count when count is the same', async () => {
     const routeData = ref(createRouteData(60));
     const thresholdMinutes = ref(45);
 
     const result = useRouteAlerts({ routeData, thresholdMinutes });
+
+    // Wait for the initial refresh to complete
+    await vi.waitFor(() => {
+      expect(result.loading.value).toBe(false);
+    });
 
     const mockEmit = vi.fn();
     result.emitAlertCount = mockEmit;
@@ -247,50 +383,80 @@ describe('useRouteAlerts', () => {
     const sameRouteData = { ...routeData.value };
     routeData.value = sameRouteData;
 
+    // Wait for the update to process
+    await vi.waitFor(() => {
+      expect(result.loading.value).toBe(false);
+    });
+
     expect(mockEmit).not.toHaveBeenCalled();
   });
 
-  it('handles acknowledged alerts correctly', () => {
+  it('handles acknowledged alerts correctly', async () => {
     const routeData = ref(createRouteData(60));
     const thresholdMinutes = ref(45);
 
     const result = useRouteAlerts({ routeData, thresholdMinutes });
 
+    // Wait for the initial refresh to complete
+    await vi.waitFor(() => {
+      expect(result.loading.value).toBe(false);
+    });
+
     // Create and acknowledge alert
     expect(result.activeAlerts.value).toHaveLength(1);
-    result.acknowledgeAlerts();
+    await result.acknowledgeAlerts();
     expect(result.activeAlerts.value).toEqual([]);
 
     // Update with same data should not recreate alert
     const sameRouteData = { ...routeData.value };
     routeData.value = sameRouteData;
 
+    // Wait for the update to process
+    await vi.waitFor(() => {
+      expect(result.loading.value).toBe(false);
+    });
+
     expect(result.activeAlerts.value).toEqual([]);
   });
 
-  it('recreates alert after acknowledgment when data changes', () => {
+  it('recreates alert after acknowledgment when data changes', async () => {
     const routeData = ref(createRouteData(60));
     const thresholdMinutes = ref(45);
 
     const result = useRouteAlerts({ routeData, thresholdMinutes });
 
+    // Wait for the initial refresh to complete
+    await vi.waitFor(() => {
+      expect(result.loading.value).toBe(false);
+    });
+
     // Create and acknowledge alert
     expect(result.activeAlerts.value).toHaveLength(1);
-    result.acknowledgeAlerts();
+    await result.acknowledgeAlerts();
     expect(result.activeAlerts.value).toEqual([]);
 
     // Update with new timestamp should recreate alert
     const newRouteData = createRouteData(65);
     routeData.value = newRouteData;
 
+    // Wait for the update to process
+    await vi.waitFor(() => {
+      expect(result.loading.value).toBe(false);
+    });
+
     expect(result.activeAlerts.value).toHaveLength(1);
   });
 
-  it('formats duration correctly in alert message', () => {
+  it('formats duration correctly in alert message', async () => {
     const routeData = ref(createRouteData(55.75));
     const thresholdMinutes = ref(45);
 
     const result = useRouteAlerts({ routeData, thresholdMinutes });
+
+    // Wait for the initial refresh to complete
+    await vi.waitFor(() => {
+      expect(result.loading.value).toBe(false);
+    });
 
     expect(result.activeAlerts.value[0].message).toContain('55.8 min exceeds threshold of 45 min');
   });

@@ -7,7 +7,7 @@
     "packages/*"
   ],
   "scripts": {
-    "build": "echo \"TODO: implement build\"",
+    "build": "npm run build --workspaces",
     "lint": "echo \"TODO: implement lint\"",
     "test": "npm run test --workspace=@automata/api && npm run test --workspace=@automata/web",
     "test:all": "npm run test"

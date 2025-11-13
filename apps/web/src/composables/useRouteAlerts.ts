@@ -87,15 +87,9 @@ export function useRouteAlerts(options: UseRouteAlertsOptions): UseRouteAlertsRe
 
       const response = await apiCall<RouteAlertResponse>(`/alerts/route?${params}`);
       
-      activeAlerts.value = response.alerts;
-      totalCount.value = response.totalCount;
-      unacknowledgedCount.value = response.unacknowledgedCount;
-      lastUpdatedIso.value = response.lastUpdatedIso;
-      
-      emitAlertCountImpl(response.unacknowledgedCount);
-
       // Show toast for new alerts (only when count increases)
-      if (response.unacknowledgedCount > 0 && lastEmittedAlertCount < response.unacknowledgedCount) {
+      const oldUnacknowledgedCount = unacknowledgedCount.value;
+      if (response.unacknowledgedCount > 0 && oldUnacknowledgedCount < response.unacknowledgedCount) {
         const latestAlert = response.alerts[response.alerts.length - 1];
         if (latestAlert) {
           pushToast({
@@ -105,6 +99,13 @@ export function useRouteAlerts(options: UseRouteAlertsOptions): UseRouteAlertsRe
           });
         }
       }
+
+      activeAlerts.value = response.alerts;
+      totalCount.value = response.totalCount;
+      unacknowledgedCount.value = response.unacknowledgedCount;
+      lastUpdatedIso.value = response.lastUpdatedIso;
+      
+      emitAlertCountImpl(response.unacknowledgedCount);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to fetch route alerts';
       error.value = errorMessage;
@@ -136,8 +137,12 @@ export function useRouteAlerts(options: UseRouteAlertsOptions): UseRouteAlertsRe
         body: JSON.stringify(requestBody),
       });
 
-      // Refresh alerts after acknowledgment
-      await refreshAlerts();
+      // Update local state immediately
+      const acknowledgedIds = new Set(requestBody.alertIds || []);
+      activeAlerts.value = activeAlerts.value.filter(alert => !acknowledgedIds.has(alert.id));
+      totalCount.value = activeAlerts.value.length;
+      unacknowledgedCount.value = activeAlerts.value.length;
+      emitAlertCountImpl(0);
 
       if (response.acknowledgedCount > 0) {
         pushToast({
@@ -170,8 +175,11 @@ export function useRouteAlerts(options: UseRouteAlertsOptions): UseRouteAlertsRe
         body: JSON.stringify(requestBody),
       });
 
-      // Refresh alerts after acknowledgment
-      await refreshAlerts();
+      // Update local state immediately
+      activeAlerts.value = [];
+      totalCount.value = 0;
+      unacknowledgedCount.value = 0;
+      emitAlertCountImpl(0);
 
       if (response.acknowledgedCount > 0) {
         pushToast({

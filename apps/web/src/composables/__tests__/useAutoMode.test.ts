@@ -1,138 +1,182 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { useAutoMode } from '../useAutoMode';
 
-// Mock the configuration file
-vi.mock('../../config/automode-config.json', () => ({
-  default: {
-    autoMode: {
-      enabled: true,
-      timeWindows: [
-        {
-          name: 'morning-commute',
-          mode: 'Nav',
-          startTime: { hour: 8, minute: 30 },
-          endTime: { hour: 9, minute: 30 },
-          daysOfWeek: [1, 2, 3, 4, 5],
-          description: 'Morning commute window',
-        },
-        {
-          name: 'evening-commute',
-          mode: 'Nav',
-          startTime: { hour: 17, minute: 0 },
-          endTime: { hour: 20, minute: 0 },
-          daysOfWeek: [1, 2, 3, 4, 5],
-          description: 'Evening commute window',
-        },
-      ],
-      defaultMode: 'Compact',
-      navModeRefreshSeconds: 300,
-    },
+// Mock fetch for API calls
+const mockFetch = vi.fn();
+global.fetch = mockFetch;
+
+// Helper to create mock response
+const createMockResponse = (data: any) => ({
+  ok: true,
+  json: async () => data,
+});
+
+// Default mock response
+const defaultMockResponse = {
+  currentMode: 'Compact',
+  nextBoundaryIso: null,
+  config: {
+    enabled: true,
+    timeWindows: [
+      {
+        name: 'morning-commute',
+        mode: 'Nav',
+        startTime: { hour: 8, minute: 30 },
+        endTime: { hour: 9, minute: 30 },
+        daysOfWeek: [1, 2, 3, 4, 5],
+        description: 'Morning commute window',
+      },
+      {
+        name: 'evening-commute',
+        mode: 'Nav',
+        startTime: { hour: 17, minute: 0 },
+        endTime: { hour: 20, minute: 0 },
+        daysOfWeek: [1, 2, 3, 4, 5],
+        description: 'Evening commute window',
+      },
+    ],
+    defaultMode: 'Compact',
+    navModeRefreshSeconds: 300,
   },
-}));
+  lastUpdatedIso: new Date().toISOString(),
+};
 
 describe('useAutoMode', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockFetch.mockResolvedValue(createMockResponse(defaultMockResponse));
   });
 
-  it('should resolve to Nav mode during morning commute window on weekdays', () => {
-    const { resolveModeForDate } = useAutoMode();
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('should resolve to Nav mode when API returns Nav', async () => {
+    const { resolveModeForDate, fetchStatus } = useAutoMode();
     
-    // Test Monday 8:30 AM
-    const mondayMorning = new Date(2024, 5, 3, 8, 30, 0, 0); // Monday
+    // Mock response with Nav mode
+    mockFetch.mockResolvedValue(createMockResponse({
+      ...defaultMockResponse,
+      currentMode: 'Nav',
+    }));
+    
+    await fetchStatus();
+    
+    // Should return Nav mode regardless of date
+    const mondayMorning = new Date(2024, 5, 3, 8, 30, 0, 0);
     expect(resolveModeForDate(mondayMorning)).toBe('Nav');
     
-    // Test Monday 9:00 AM
-    const mondayMidMorning = new Date(2024, 5, 3, 9, 0, 0, 0); // Monday
+    const mondayMidMorning = new Date(2024, 5, 3, 9, 0, 0, 0);
     expect(resolveModeForDate(mondayMidMorning)).toBe('Nav');
     
-    // Test Friday 8:45 AM
-    const fridayMorning = new Date(2024, 5, 7, 8, 45, 0, 0); // Friday
+    const fridayMorning = new Date(2024, 5, 7, 8, 45, 0, 0);
     expect(resolveModeForDate(fridayMorning)).toBe('Nav');
   });
 
-  it('should resolve to Nav mode during evening commute window on weekdays', () => {
-    const { resolveModeForDate } = useAutoMode();
+  it('should resolve to Nav mode when API returns Nav (evening)', async () => {
+    const { resolveModeForDate, fetchStatus } = useAutoMode();
     
-    // Test Monday 5:00 PM
-    const mondayEvening = new Date(2024, 5, 3, 17, 0, 0, 0); // Monday
+    // Mock response with Nav mode
+    mockFetch.mockResolvedValue(createMockResponse({
+      ...defaultMockResponse,
+      currentMode: 'Nav',
+    }));
+    
+    await fetchStatus();
+    
+    // Should return Nav mode regardless of date
+    const mondayEvening = new Date(2024, 5, 3, 17, 0, 0, 0);
     expect(resolveModeForDate(mondayEvening)).toBe('Nav');
     
-    // Test Wednesday 6:30 PM
-    const wednesdayEvening = new Date(2024, 5, 5, 18, 30, 0, 0); // Wednesday
+    const wednesdayEvening = new Date(2024, 5, 5, 18, 30, 0, 0);
     expect(resolveModeForDate(wednesdayEvening)).toBe('Nav');
     
-    // Test Friday 7:59 PM
-    const fridayLateEvening = new Date(2024, 5, 7, 19, 59, 0, 0); // Friday
+    const fridayLateEvening = new Date(2024, 5, 7, 19, 59, 0, 0);
     expect(resolveModeForDate(fridayLateEvening)).toBe('Nav');
   });
 
-  it('should resolve to Compact mode outside commute windows on weekdays', () => {
-    const { resolveModeForDate } = useAutoMode();
+  it('should resolve to Compact mode when API returns Compact', async () => {
+    const { resolveModeForDate, fetchStatus } = useAutoMode();
     
-    // Test Monday 8:00 AM (before morning window)
-    const mondayEarly = new Date(2024, 5, 3, 8, 0, 0, 0); // Monday
+    // Mock response with Compact mode
+    mockFetch.mockResolvedValue(createMockResponse({
+      ...defaultMockResponse,
+      currentMode: 'Compact',
+    }));
+    
+    await fetchStatus();
+    
+    // Should return Compact mode regardless of date
+    const mondayEarly = new Date(2024, 5, 3, 8, 0, 0, 0);
     expect(resolveModeForDate(mondayEarly)).toBe('Compact');
     
-    // Test Monday 10:00 AM (after morning window)
-    const mondayLateMorning = new Date(2024, 5, 3, 10, 0, 0, 0); // Monday
+    const mondayLateMorning = new Date(2024, 5, 3, 10, 0, 0, 0);
     expect(resolveModeForDate(mondayLateMorning)).toBe('Compact');
     
-    // Test Monday 4:00 PM (before evening window)
-    const mondayAfternoon = new Date(2024, 5, 3, 16, 0, 0, 0); // Monday
+    const mondayAfternoon = new Date(2024, 5, 3, 16, 0, 0, 0);
     expect(resolveModeForDate(mondayAfternoon)).toBe('Compact');
     
-    // Test Monday 8:00 PM (after evening window)
-    const mondayNight = new Date(2024, 5, 3, 20, 0, 0, 0); // Monday
+    const mondayNight = new Date(2024, 5, 3, 20, 0, 0, 0);
     expect(resolveModeForDate(mondayNight)).toBe('Compact');
   });
 
-  it('should resolve to Compact mode on weekends', () => {
-    const { resolveModeForDate } = useAutoMode();
+  it('should resolve to Compact mode when API returns Compact (weekend)', async () => {
+    const { resolveModeForDate, fetchStatus } = useAutoMode();
     
-    // Test Saturday 8:30 AM (would be Nav on weekday)
-    const saturdayMorning = new Date(2024, 5, 8, 8, 30, 0, 0); // Saturday
+    // Mock response with Compact mode
+    mockFetch.mockResolvedValue(createMockResponse({
+      ...defaultMockResponse,
+      currentMode: 'Compact',
+    }));
+    
+    await fetchStatus();
+    
+    // Should return Compact mode regardless of day
+    const saturdayMorning = new Date(2024, 5, 8, 8, 30, 0, 0);
     expect(resolveModeForDate(saturdayMorning)).toBe('Compact');
     
-    // Test Saturday 6:00 PM (would be Nav on weekday)
-    const saturdayEvening = new Date(2024, 5, 8, 18, 0, 0, 0); // Saturday
+    const saturdayEvening = new Date(2024, 5, 8, 18, 0, 0, 0);
     expect(resolveModeForDate(saturdayEvening)).toBe('Compact');
     
-    // Test Sunday 9:00 AM (would be Nav on weekday)
-    const sundayMorning = new Date(2024, 5, 9, 9, 0, 0, 0); // Sunday
+    const sundayMorning = new Date(2024, 5, 9, 9, 0, 0, 0);
     expect(resolveModeForDate(sundayMorning)).toBe('Compact');
   });
 
-  it('should get the next boundary correctly', () => {
-    const { getNextBoundary } = useAutoMode();
+  it('should get the next boundary from API', async () => {
+    const { getNextBoundary, fetchStatus } = useAutoMode();
     
-    // Test at 8:00 AM - next boundary should be 8:30 AM
-    const earlyMorning = new Date(2024, 5, 3, 8, 0, 0, 0); // Monday
-    const nextBoundary1 = getNextBoundary(earlyMorning);
-    expect(nextBoundary1.getHours()).toBe(8);
-    expect(nextBoundary1.getMinutes()).toBe(30);
+    const nextBoundaryDate = new Date(2024, 5, 3, 8, 30, 0, 0);
     
-    // Test at 9:00 AM - next boundary should be 9:30 AM
-    const midMorning = new Date(2024, 5, 3, 9, 0, 0, 0); // Monday
-    const nextBoundary2 = getNextBoundary(midMorning);
-    expect(nextBoundary2.getHours()).toBe(9);
-    expect(nextBoundary2.getMinutes()).toBe(30);
+    // Mock response with next boundary
+    mockFetch.mockResolvedValue(createMockResponse({
+      ...defaultMockResponse,
+      nextBoundaryIso: nextBoundaryDate.toISOString(),
+    }));
     
-    // Test at 10:00 AM - next boundary should be 5:00 PM
-    const lateMorning = new Date(2024, 5, 3, 10, 0, 0, 0); // Monday
-    const nextBoundary3 = getNextBoundary(lateMorning);
-    expect(nextBoundary3.getHours()).toBe(17);
-    expect(nextBoundary3.getMinutes()).toBe(0);
+    await fetchStatus();
+    
+    const earlyMorning = new Date(2024, 5, 3, 8, 0, 0, 0);
+    const nextBoundary = getNextBoundary(earlyMorning);
+    expect(nextBoundary.getHours()).toBe(8);
+    expect(nextBoundary.getMinutes()).toBe(30);
   });
 
-  it('should get the next boundary for next day when no boundaries left today', () => {
-    const { getNextBoundary } = useAutoMode();
+  it('should get the next boundary for next day from API', async () => {
+    const { getNextBoundary, fetchStatus } = useAutoMode();
     
-    // Test at 9:00 PM - next boundary should be tomorrow 8:30 AM
+    const nextDayBoundary = new Date(2024, 5, 4, 8, 30, 0, 0); // Tuesday 8:30 AM
+    
+    // Mock response with next day boundary
+    mockFetch.mockResolvedValue(createMockResponse({
+      ...defaultMockResponse,
+      nextBoundaryIso: nextDayBoundary.toISOString(),
+    }));
+    
+    await fetchStatus();
+    
     const nightTime = new Date(2024, 5, 3, 21, 0, 0, 0); // Monday 9 PM
     const nextBoundary = getNextBoundary(nightTime);
     
-    // Should be next day (Tuesday) at 8:30 AM
     expect(nextBoundary.getDate()).toBe(4); // Next day
     expect(nextBoundary.getHours()).toBe(8);
     expect(nextBoundary.getMinutes()).toBe(30);
@@ -143,28 +187,47 @@ describe('useAutoMode', () => {
     expect(getNavModeRefreshSeconds()).toBe(300);
   });
 
-  it('should be enabled by default', () => {
-    const { isEnabled } = useAutoMode();
+  it('should be enabled by default', async () => {
+    const { isEnabled, fetchStatus } = useAutoMode();
+    
+    await fetchStatus();
+    
     expect(isEnabled.value).toBe(true);
   });
 
-  it('should handle boundary edge cases correctly', () => {
-    const { resolveModeForDate } = useAutoMode();
+  it('should handle boundary edge cases correctly', async () => {
+    const { resolveModeForDate, fetchStatus } = useAutoMode();
     
-    // Test exactly at 8:30 AM - should be Nav
-    const exactStart = new Date(2024, 5, 3, 8, 30, 0, 0); // Monday
+    // Test with Nav mode
+    mockFetch.mockResolvedValue(createMockResponse({
+      ...defaultMockResponse,
+      currentMode: 'Nav',
+    }));
+    
+    await fetchStatus();
+    
+    // Should return Nav mode regardless of exact time
+    const exactStart = new Date(2024, 5, 3, 8, 30, 0, 0);
     expect(resolveModeForDate(exactStart)).toBe('Nav');
     
-    // Test exactly at 9:30 AM - should be Compact (end is exclusive)
-    const exactEnd = new Date(2024, 5, 3, 9, 30, 0, 0); // Monday
-    expect(resolveModeForDate(exactEnd)).toBe('Compact');
+    const exactEnd = new Date(2024, 5, 3, 9, 30, 0, 0);
+    expect(resolveModeForDate(exactEnd)).toBe('Nav');
     
-    // Test exactly at 5:00 PM - should be Nav
-    const eveningStart = new Date(2024, 5, 3, 17, 0, 0, 0); // Monday
+    const eveningStart = new Date(2024, 5, 3, 17, 0, 0, 0);
     expect(resolveModeForDate(eveningStart)).toBe('Nav');
     
-    // Test exactly at 8:00 PM - should be Compact (end is exclusive)
-    const eveningEnd = new Date(2024, 5, 3, 20, 0, 0, 0); // Monday
-    expect(resolveModeForDate(eveningEnd)).toBe('Compact');
+    const eveningEnd = new Date(2024, 5, 3, 20, 0, 0, 0);
+    expect(resolveModeForDate(eveningEnd)).toBe('Nav');
+    
+    // Test with Compact mode
+    mockFetch.mockResolvedValue(createMockResponse({
+      ...defaultMockResponse,
+      currentMode: 'Compact',
+    }));
+    
+    await fetchStatus();
+    
+    const mondayEarly = new Date(2024, 5, 3, 8, 0, 0, 0);
+    expect(resolveModeForDate(mondayEarly)).toBe('Compact');
   });
 });

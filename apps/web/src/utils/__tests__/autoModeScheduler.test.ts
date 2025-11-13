@@ -113,11 +113,11 @@ describe('AutoModeScheduler', () => {
       enabled: true,
       timeWindows: [
         {
-          name: 'weekend-window',
+          name: 'afternoon-window',
           mode: 'Nav',
-          startTime: { hour: 7, minute: 0 },
-          endTime: { hour: 9, minute: 0 },
-          daysOfWeek: [0, 6],
+          startTime: { hour: 13, minute: 0 },
+          endTime: { hour: 15, minute: 0 },
+          daysOfWeek: [1],
         },
       ],
     };

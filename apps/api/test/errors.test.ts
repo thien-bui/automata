@@ -53,6 +53,7 @@ describe('error builders', () => {
 
     expect(result.statusCode).toBe(400);
     expect(result.payload).toEqual({
+      error: 'Validation failed',
       code: 'INVALID_REQUEST',
       message: 'invalid',
       details: issues,

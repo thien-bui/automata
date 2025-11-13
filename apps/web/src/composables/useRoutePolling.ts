@@ -109,18 +109,20 @@ export function useRoutePolling(options: UseRoutePollingOptions): UseRoutePollin
       autoModeScheduler.destroy();
     }
 
-    autoModeScheduler = createAutoModeScheduler(
-      (newMode: 'Compact' | 'Nav') => {
-        applyAutoMode(newMode);
-      },
-      autoModeConfig.value,
-    );
+    if (autoModeConfig.value) {
+      autoModeScheduler = createAutoModeScheduler(
+        (newMode: 'Compact' | 'Nav') => {
+          applyAutoMode(newMode);
+        },
+        autoModeConfig.value,
+      );
 
-    autoModeScheduler.schedule();
-    autoModeScheduler.applyCurrentMode();
+      autoModeScheduler.schedule();
+      autoModeScheduler.applyCurrentMode();
 
-    if (options.initialMode === MonitoringMode.Nav && mode.value !== MonitoringMode.Nav) {
-      mode.value = MonitoringMode.Nav;
+      if (options.initialMode === MonitoringMode.Nav && mode.value !== MonitoringMode.Nav) {
+        mode.value = MonitoringMode.Nav;
+      }
     }
   }
 
@@ -235,7 +237,7 @@ export function useRoutePolling(options: UseRoutePollingOptions): UseRoutePollin
   watch(
     () => autoModeConfig.value,
     () => {
-      if (autoModeScheduler) {
+      if (autoModeScheduler && autoModeConfig.value) {
         autoModeScheduler.updateConfig(autoModeConfig.value);
       }
     },

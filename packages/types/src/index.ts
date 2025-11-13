@@ -210,3 +210,15 @@ export interface AlertAcknowledgeRequest {
   alertIds?: number[];
   acknowledgeAll?: boolean;
 }
+
+// Auto-mode types
+export interface AutoModeStatusResponse {
+  currentMode: 'Compact' | 'Nav';
+  nextBoundaryIso?: string;
+  config: AutoModeConfig;
+  lastUpdatedIso: string;
+}
+
+export interface AutoModeConfigUpdate {
+  config: AutoModeConfig;
+}
