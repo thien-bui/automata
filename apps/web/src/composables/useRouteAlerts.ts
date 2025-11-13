@@ -87,9 +87,12 @@ export function useRouteAlerts(options: UseRouteAlertsOptions): UseRouteAlertsRe
 
       const response = await apiCall<RouteAlertResponse>(`/alerts/route?${params}`);
       
-      // Show toast for new alerts (only when count increases)
-      const oldUnacknowledgedCount = unacknowledgedCount.value;
-      if (response.unacknowledgedCount > 0 && oldUnacknowledgedCount < response.unacknowledgedCount) {
+      // Show toast for new alerts
+      const hasNewAlerts = response.alerts.length > 0 && 
+        (activeAlerts.value.length === 0 || 
+         response.alerts[response.alerts.length - 1].id !== activeAlerts.value[activeAlerts.value.length - 1]?.id);
+
+      if (hasNewAlerts) {
         const latestAlert = response.alerts[response.alerts.length - 1];
         if (latestAlert) {
           pushToast({

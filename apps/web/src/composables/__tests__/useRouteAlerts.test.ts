@@ -55,6 +55,20 @@ describe('useRouteAlerts', () => {
     };
     mockUiPreferences.isWidgetCompact.mockReturnValue(false);
 
+    // Set to track acknowledged alert IDs
+    const acknowledgedAlertIds = new Set<number>();
+
+    // Helper to generate stable alert ID
+    const generateAlertId = (routeData: any, thresholdMinutes: number): number => {
+      const key = `${routeData.durationMinutes}-${routeData.distanceKm}-${routeData.mode}-${thresholdMinutes}`;
+      let hash = 0;
+      for (let i = 0; i < key.length; i++) {
+        hash = ((hash << 5) - hash) + key.charCodeAt(i);
+        hash = hash & hash;
+      }
+      return Math.abs(hash);
+    };
+
     // Set up default fetch mock
     mockFetch.mockImplementation((url: string, options?: RequestInit) => {
       if (url.includes('/api/alerts/route')) {
@@ -71,16 +85,20 @@ describe('useRouteAlerts', () => {
           try {
             const routeData = JSON.parse(routeDataJson);
             if (routeData.durationMinutes > thresholdMinutes) {
-              alerts = [{
-                id: Date.now(),
-                message: `${routeData.durationMinutes.toFixed(1)} min exceeds threshold of ${thresholdMinutes} min.`,
-                thresholdMinutes,
-                routeData,
-                acknowledged: false,
-                createdAtIso: new Date().toISOString(),
-              }];
-              totalCount = 1;
-              unacknowledgedCount = 1;
+              const alertId = generateAlertId(routeData, thresholdMinutes);
+              // Only create alert if not acknowledged
+              if (!acknowledgedAlertIds.has(alertId)) {
+                alerts = [{
+                  id: alertId,
+                  message: `Travel time ${routeData.durationMinutes.toFixed(1)} min exceeds threshold of ${thresholdMinutes} min.`,
+                  thresholdMinutes,
+                  routeData,
+                  acknowledged: false,
+                  createdAtIso: new Date().toISOString(),
+                }];
+                totalCount = 1;
+                unacknowledgedCount = 1;
+              }
             }
           } catch (e) {
             // Invalid JSON, return empty alerts
@@ -96,10 +114,19 @@ describe('useRouteAlerts', () => {
       }
       
       if (url.includes('/api/alerts/acknowledge')) {
+        const requestBody = options?.body ? JSON.parse(options.body.toString()) : {};
+        
+        if (requestBody.alertIds) {
+          requestBody.alertIds.forEach((id: number) => acknowledgedAlertIds.add(id));
+        } else if (requestBody.acknowledgeAll) {
+          // For acknowledgeAll, clear the set (test doesn't use this in the failing case)
+          acknowledgedAlertIds.clear();
+        }
+        
         return Promise.resolve(createMockResponse({
           success: true,
           message: 'Alerts acknowledged',
-          acknowledgedCount: 1,
+          acknowledgedCount: requestBody.alertIds?.length || 1,
           lastUpdatedIso: new Date().toISOString(),
         }));
       }

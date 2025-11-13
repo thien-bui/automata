@@ -36,29 +36,29 @@ This document provides a step-by-step implementation plan for migrating business
   - Dependencies: Task 1.1.2, Task 1.1.3
 
 ### 1.2 Auto-Mode Logic Migration
-- [ ] **Task 1.2.1**: Create auto-mode status API endpoint
+- [x] **Task 1.2.1**: Create auto-mode status API endpoint
   - File: `apps/api/src/routes/autoMode.ts`
   - Endpoint: `GET /api/auto-mode/status`
   - Interface: `AutoModeStatusResponse`
   - Dependencies: None
 
-- [ ] **Task 1.2.2**: Create auto-mode configuration API endpoint
+- [x] **Task 1.2.2**: Create auto-mode configuration API endpoint
   - File: `apps/api/src/routes/autoMode.ts`
   - Endpoint: `POST /api/auto-mode/config`
   - Interface: `AutoModeConfigUpdate`
   - Dependencies: Task 1.2.1
 
-- [ ] **Task 1.2.3**: Create auto-mode scheduler service
+- [x] **Task 1.2.3**: Create auto-mode scheduler service
   - File: `apps/api/src/services/autoModeScheduler.ts`
   - Server-side time window calculations
   - Dependencies: Task 1.2.1
 
-- [ ] **Task 1.2.4**: Update client composable to use new API
+- [x] **Task 1.2.4**: Update client composable to use new API
   - File: `apps/web/src/composables/useAutoMode.ts`
   - Replace client-side calculations with API calls
   - Dependencies: Task 1.2.1, Task 1.2.3
 
-- [ ] **Task 1.2.5**: Remove client-side scheduler utilities
+- [x] **Task 1.2.5**: Remove client-side scheduler utilities
   - File: `apps/web/src/utils/autoModeScheduler.ts`
   - Delete file after migration
   - Dependencies: Task 1.2.4
