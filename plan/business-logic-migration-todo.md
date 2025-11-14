@@ -64,29 +64,29 @@ This document provides a step-by-step implementation plan for migrating business
   - Dependencies: Task 1.2.4
 
 ### 1.3 Configuration Management Migration
-- [ ] **Task 1.3.1**: Create configuration API endpoint
+- [x] **Task 1.3.1**: Create configuration API endpoint
   - File: `apps/api/src/routes/config.ts`
   - Endpoint: `GET /api/config`
   - Interface: `AppConfigResponse`
   - Dependencies: None
 
-- [ ] **Task 1.3.2**: Create configuration update API endpoint
+- [x] **Task 1.3.2**: Create configuration update API endpoint
   - File: `apps/api/src/routes/config.ts`
   - Endpoint: `POST /api/config`
   - Interface: `ConfigUpdateRequest`
   - Dependencies: Task 1.3.1
 
-- [ ] **Task 1.3.3**: Create configuration service
+- [x] **Task 1.3.3**: Create configuration service
   - File: `apps/api/src/services/configService.ts`
   - Centralized config validation and defaults
   - Dependencies: Task 1.3.1
 
-- [ ] **Task 1.3.4**: Update client to use API configuration
+- [x] **Task 1.3.4**: Update client to use API configuration
   - File: `apps/web/src/composables/useUiPreferences.ts`
   - Replace localStorage with API calls
   - Dependencies: Task 1.3.1, Task 1.3.3
 
-- [ ] **Task 1.3.5**: Remove client-side config files
+- [x] **Task 1.3.5**: Remove client-side config files
   - Files: `apps/web/src/config/*.json`
   - Delete files after migration
   - Dependencies: Task 1.3.4

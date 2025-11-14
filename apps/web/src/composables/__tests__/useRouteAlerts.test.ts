@@ -44,6 +44,8 @@ const mockUiPreferences = {
   setWidgetCompactMode: vi.fn(),
   isWidgetCompact: vi.fn((_widgetName: string) => false),
   didHydrateFromStorage: computed(() => true),
+  isLoading: readonly(ref(false)),
+  error: readonly(ref(null)),
 };
 
 describe('useRouteAlerts', () => {
