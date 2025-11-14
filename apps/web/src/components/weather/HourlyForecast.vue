@@ -67,7 +67,7 @@ function formatHour(timestamp: string): string {
   return new Intl.DateTimeFormat('en-US', {
     hour: 'numeric',
     hour12: true,
-    timeZone: 'UTC',
+    timeZone: 'America/Los_Angeles'
   }).format(date);
 }
 

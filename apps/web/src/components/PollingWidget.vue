@@ -264,7 +264,12 @@ const statusText = computed(() => {
   if (Number.isNaN(timestamp.getTime())) {
     return 'Awaiting first update.';
   }
-  const formatted = timestamp.toLocaleTimeString();
+  const formatted = timestamp.toLocaleTimeString('en-US', {
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: true,
+    timeZone: 'America/Los_Angeles'
+  });
   return props.isStale ? `Showing cached data from ${formatted}.` : `Last updated ${formatted}.`;
 });
 
@@ -276,7 +281,12 @@ const lastUpdateDisplay = computed(() => {
   if (Number.isNaN(timestamp.getTime())) {
     return null;
   }
-  const formatted = timestamp.toLocaleTimeString();
+  const formatted = timestamp.toLocaleTimeString('en-US', {
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: true,
+    timeZone: 'America/Los_Angeles'
+  });
   return props.isStale ? `Cached from ${formatted}` : `Updated ${formatted}`;
 });
 

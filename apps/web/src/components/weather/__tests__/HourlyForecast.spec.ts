@@ -316,8 +316,8 @@ describe('HourlyForecast', () => {
     const wrapper = mountComponent();
     const vm = wrapper.vm as any;
 
-    expect(vm.formatHour('2025-10-06T20:00:00Z')).toMatch(/8 PM/);
-    expect(vm.formatHour('2025-10-06T09:00:00Z')).toMatch(/9 AM/);
+    expect(vm.formatHour('2025-10-06T20:00:00Z')).toMatch(/1 PM/);
+    expect(vm.formatHour('2025-10-06T09:00:00Z')).toMatch(/2 AM/);
     expect(vm.formatHour('invalid-date')).toBe('—');
   });
 });

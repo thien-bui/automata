@@ -264,10 +264,11 @@ export function useDailyReminders(
  */
 export function formatReminderTime(scheduledAt: string): string {
   const date = new Date(scheduledAt);
-  return date.toLocaleTimeString(undefined, {
+  return date.toLocaleTimeString('en-US', {
     hour: '2-digit',
     minute: '2-digit',
-    hour12: false,
+    hour12: true,
+    timeZone: 'America/Los_Angeles'
   });
 }
 
