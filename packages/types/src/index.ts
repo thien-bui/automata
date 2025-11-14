@@ -222,3 +222,19 @@ export interface AutoModeStatusResponse {
 export interface AutoModeConfigUpdate {
   config: AutoModeConfig;
 }
+
+// Configuration management types
+export interface AppConfigResponse {
+  weather: WeatherConfig;
+  discord: DiscordConfig;
+  autoMode: AutoModeConfig;
+  ui: UiPreferencesState;
+  lastUpdatedIso: string;
+}
+
+export interface ConfigUpdateRequest {
+  weather?: Partial<WeatherConfig>;
+  discord?: Partial<DiscordConfig>;
+  autoMode?: Partial<AutoModeConfig>;
+  ui?: Partial<UiPreferencesState>;
+}
