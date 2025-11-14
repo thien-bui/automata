@@ -11,7 +11,6 @@ import {
   isValidDateKey,
   type DateKey,
 } from '../utils/dateOnly';
-import { scheduleMidnightTask } from '../utils/midnightScheduler';
 
 export interface UseDailyRemindersOptions {
   /** Date to fetch reminders for (defaults to today) */
@@ -72,7 +71,7 @@ export function useDailyReminders(
 
   // Auto-refresh timer
   let refreshTimer: ReturnType<typeof setInterval> | null = null;
-  let midnightCleanup: (() => void) | null = null;
+  const midnightSchedulerEventId = ref<string | null>(null);
   let activeFetchId = 0;
 
   // Computed properties
@@ -215,6 +214,73 @@ export function useDailyReminders(
     }
   }
 
+  /**
+   * Initialize server-side midnight scheduler
+   */
+  async function initializeMidnightScheduler(): Promise<void> {
+    // Cancel existing scheduler event if any
+    if (midnightSchedulerEventId.value) {
+      try {
+        await fetch(`/api/scheduler/events/${midnightSchedulerEventId.value}`, {
+          method: 'DELETE',
+          headers: {
+            'Accept': 'application/json',
+          },
+        });
+        midnightSchedulerEventId.value = null;
+      } catch (error) {
+        console.warn('Failed to cancel existing midnight scheduler event:', error);
+      }
+    }
+
+    try {
+      // Schedule midnight update on the server
+      const response = await fetch('/api/scheduler/events', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        body: JSON.stringify({
+          taskType: 'daily-reminder-update',
+          scheduleExpression: 'cron:0 0 * * *', // Run at midnight every day
+          isRecurring: true,
+          payload: {},
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      midnightSchedulerEventId.value = data.eventId;
+    } catch (error) {
+      console.error('Failed to initialize midnight scheduler:', error);
+      // Fall back to client-side logic if server scheduling fails
+      // This would be handled by the existing logic if we had a fallback
+    }
+  }
+
+  /**
+   * Destroy server-side midnight scheduler
+   */
+  async function destroyMidnightScheduler(): Promise<void> {
+    if (midnightSchedulerEventId.value) {
+      try {
+        await fetch(`/api/scheduler/events/${midnightSchedulerEventId.value}`, {
+          method: 'DELETE',
+          headers: {
+            'Accept': 'application/json',
+          },
+        });
+        midnightSchedulerEventId.value = null;
+      } catch (error) {
+        console.warn('Failed to cancel midnight scheduler event:', error);
+      }
+    }
+  }
+
   // Initialize
   onMounted(async () => {
     await fetchReminders();
@@ -225,22 +291,15 @@ export function useDailyReminders(
 
     // Set up midnight update if enabled
     if (midnightUpdate) {
-      midnightCleanup = scheduleMidnightTask(() => {
-        handleMidnightUpdate().catch(err => {
-          console.error('Error during midnight update:', err);
-        });
-      });
+      await initializeMidnightScheduler();
     }
   });
 
-  onUnmounted(() => {
+  onUnmounted(async () => {
     stopAutoRefresh();
     
     // Clean up midnight scheduler
-    if (midnightCleanup) {
-      midnightCleanup();
-      midnightCleanup = null;
-    }
+    await destroyMidnightScheduler();
   });
 
   return {

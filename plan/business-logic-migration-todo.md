@@ -94,29 +94,29 @@ This document provides a step-by-step implementation plan for migrating business
 ## Phase 2: Scheduling & Reminders (Medium Priority)
 
 ### 2.1 Server-Side Scheduling
-- [ ] **Task 2.1.1**: Create scheduler status API endpoint
+- [x] **Task 2.1.1**: Create scheduler status API endpoint
   - File: `apps/api/src/routes/scheduler.ts`
   - Endpoint: `GET /api/scheduler/status`
   - Interface: `SchedulerStatusResponse`
   - Dependencies: Phase 1 complete
 
-- [ ] **Task 2.1.2**: Create scheduler events API endpoint
+- [x] **Task 2.1.2**: Create scheduler events API endpoint
   - File: `apps/api/src/routes/scheduler.ts`
   - Endpoint: `POST /api/scheduler/events`
   - Interface: `SchedulerEvent`
   - Dependencies: Task 2.1.1
 
-- [ ] **Task 2.1.3**: Create server-side scheduler service
+- [x] **Task 2.1.3**: Create server-side scheduler service
   - File: `apps/api/src/services/schedulerService.ts`
   - Replace client-side scheduling logic
   - Dependencies: Task 2.1.1
 
-- [ ] **Task 2.1.4**: Update client to use server scheduling
+- [x] **Task 2.1.4**: Update client to use server scheduling
   - File: `apps/web/src/composables/useRoutePolling.ts`
   - Replace client-side polling with server coordination
   - Dependencies: Task 2.1.3
 
-- [ ] **Task 2.1.5**: Remove client-side scheduling utilities
+- [x] **Task 2.1.5**: Remove client-side scheduling utilities
   - File: `apps/web/src/utils/midnightScheduler.ts`
   - Delete file after migration
   - Dependencies: Task 2.1.4

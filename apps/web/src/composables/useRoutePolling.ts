@@ -3,7 +3,6 @@ import { useRouteTime, type RouteFetchReason } from './useRouteTime';
 import { useAutoMode } from './useAutoMode';
 import { useToasts } from './useToasts';
 import { MonitoringMode } from '../components/monitoringMode';
-import { createAutoModeScheduler, type AutoModeScheduler } from '../utils/autoModeScheduler';
 
 interface UseRoutePollingOptions {
   from: string;
@@ -43,8 +42,9 @@ export function useRoutePolling(options: UseRoutePollingOptions): UseRoutePollin
 
   const { push: pushToast } = useToasts();
 
-  // Cron scheduler for auto mode switching
-  let autoModeScheduler: AutoModeScheduler | null = null;
+  // Server-side scheduler event IDs
+  let autoModeSchedulerEventId: string | null = null;
+  let pollingSchedulerEventId: string | null = null;
 
   // State
   const mode = ref<MonitoringMode>(options.initialMode);
@@ -104,32 +104,97 @@ export function useRoutePolling(options: UseRoutePollingOptions): UseRoutePollin
     }
   }
 
-  function initializeAutoModeScheduler(): void {
-    if (autoModeScheduler) {
-      autoModeScheduler.destroy();
+  async function initializeAutoModeScheduler(): Promise<void> {
+    // Cancel existing scheduler event if any
+    if (autoModeSchedulerEventId) {
+      try {
+        await fetch(`/api/scheduler/events/${autoModeSchedulerEventId}`, {
+          method: 'DELETE',
+          headers: {
+            'Accept': 'application/json',
+          },
+        });
+        autoModeSchedulerEventId = null;
+      } catch (error) {
+        console.warn('Failed to cancel existing auto-mode scheduler event:', error);
+      }
     }
 
-    if (autoModeConfig.value) {
-      autoModeScheduler = createAutoModeScheduler(
-        (newMode: 'Compact' | 'Nav') => {
-          applyAutoMode(newMode);
-        },
-        autoModeConfig.value,
-      );
-
-      autoModeScheduler.schedule();
-      autoModeScheduler.applyCurrentMode();
-
-      if (options.initialMode === MonitoringMode.Nav && mode.value !== MonitoringMode.Nav) {
-        mode.value = MonitoringMode.Nav;
+    if (autoModeConfig.value?.enabled) {
+      try {
+        // Schedule auto-mode switching on the server
+        const response = await fetch('/api/scheduler/events', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+          },
+          body: JSON.stringify({
+            taskType: 'auto-mode-switch',
+            scheduleExpression: 'cron:0 * * * *', // Check every hour
+            isRecurring: true,
+            payload: {
+              config: autoModeConfig.value,
+            },
+          }),
+        });
+        
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        
+        const data = await response.json();
+        autoModeSchedulerEventId = data.eventId;
+        
+        // Apply current mode immediately
+        const now = new Date();
+        const currentHour = now.getHours();
+        const currentDay = now.getDay();
+        
+        // Simple logic to determine current mode based on config
+        let currentMode: 'Compact' | 'Nav' = autoModeConfig.value.defaultMode;
+        
+        for (const window of autoModeConfig.value.timeWindows) {
+          const startHour = window.startTime.hour;
+          const endHour = window.endTime.hour;
+          
+          if (currentHour >= startHour && currentHour < endHour && 
+              window.daysOfWeek.includes(currentDay)) {
+            currentMode = window.mode;
+            break;
+          }
+        }
+        
+        applyAutoMode(currentMode);
+        
+        if (options.initialMode === MonitoringMode.Nav && mode.value !== MonitoringMode.Nav) {
+          mode.value = MonitoringMode.Nav;
+        }
+      } catch (error) {
+        console.error('Failed to initialize auto-mode scheduler:', error);
+        // Server-side scheduling is now required, no fallback to client-side
+        pushToast({
+          text: 'Failed to initialize auto-mode scheduling. Please check server configuration.',
+          variant: 'error',
+          timeout: 5000,
+        });
       }
     }
   }
 
-  function destroyAutoModeScheduler(): void {
-    if (autoModeScheduler) {
-      autoModeScheduler.destroy();
-      autoModeScheduler = null;
+  async function destroyAutoModeScheduler(): Promise<void> {
+    if (autoModeSchedulerEventId) {
+      try {
+        await fetch(`/api/scheduler/events/${autoModeSchedulerEventId}`, {
+          method: 'DELETE',
+          headers: {
+            'Accept': 'application/json',
+          },
+        });
+        autoModeSchedulerEventId = null;
+      } catch (error) {
+        console.warn('Failed to cancel auto-mode scheduler event:', error);
+      }
     }
   }
 
@@ -228,33 +293,33 @@ export function useRoutePolling(options: UseRoutePollingOptions): UseRoutePollin
     { flush: 'sync', immediate: true },
   );
 
-  function initializePolling(): void {
-    initializeAutoModeScheduler();
+  async function initializePolling(): Promise<void> {
+    await initializeAutoModeScheduler();
     void triggerPolling('initial');
   }
 
   // Watch for config changes and update scheduler
   watch(
     () => autoModeConfig.value,
-    () => {
-      if (autoModeScheduler && autoModeConfig.value) {
-        autoModeScheduler.updateConfig(autoModeConfig.value);
+    async () => {
+      if (autoModeConfig.value) {
+        await initializeAutoModeScheduler();
       }
     },
     { deep: true },
   );
 
   if (hasVueInstance) {
-    onMounted(() => {
-      initializePolling();
+    onMounted(async () => {
+      await initializePolling();
     });
 
-    onBeforeUnmount(() => {
+    onBeforeUnmount(async () => {
       clearIntervalHandle();
-      destroyAutoModeScheduler();
+      await destroyAutoModeScheduler();
     });
   } else {
-    initializePolling();
+    void initializePolling();
   }
 
   return {

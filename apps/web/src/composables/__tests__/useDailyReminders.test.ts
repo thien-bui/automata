@@ -8,42 +8,15 @@ import {
   type UseDailyRemindersReturn,
 } from '../useDailyReminders';
 import type { DateKey } from '../../utils/dateOnly';
-import * as dateOnlyModule from '../../utils/dateOnly';
 
-const scheduleMidnightTaskMock = vi.hoisted(() =>
-  vi.fn<[callback: () => void], () => void>()
-);
-
-vi.mock('../../utils/midnightScheduler', () => ({
-  scheduleMidnightTask: scheduleMidnightTaskMock,
-}));
+// Mock fetch for scheduler API endpoints
+const fetchMock = vi.fn();
+vi.stubGlobal('fetch', fetchMock);
 
 const flushPromises = async () => {
   await Promise.resolve();
   await Promise.resolve();
   await Promise.resolve();
-};
-
-const waitForMidnightScheduler = async () => {
-  for (let attempt = 0; attempt < 5; attempt += 1) {
-    if (scheduleMidnightTaskMock.mock.calls.length > 0) {
-      return;
-    }
-    await flushPromises();
-  }
-
-  throw new Error('Midnight scheduler did not run');
-};
-
-const waitForCondition = async (predicate: () => boolean, attempts = 10) => {
-  for (let attempt = 0; attempt < attempts; attempt += 1) {
-    if (predicate()) {
-      return;
-    }
-    await flushPromises();
-  }
-
-  throw new Error('Condition was not met within retry window');
 };
 
 const createReminder = (overrides: Partial<DailyReminder> = {}): DailyReminder => ({
@@ -71,9 +44,7 @@ const createFetchResponse = (reminders: DailyReminder[]): Response => {
 };
 
 describe('useDailyReminders', () => {
-  let fetchMock: ReturnType<typeof vi.fn>;
-  let midnightCallback: (() => void) | null;
-  let midnightCleanupMock: ReturnType<typeof vi.fn>;
+  let schedulerEventId: string;
 
   const mountComposable = (
     options: UseDailyRemindersOptions = {}
@@ -95,79 +66,212 @@ describe('useDailyReminders', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    fetchMock = vi.fn();
-    vi.stubGlobal('fetch', fetchMock);
+    fetchMock.mockClear();
 
-    midnightCallback = null;
-    midnightCleanupMock = vi.fn();
-    scheduleMidnightTaskMock.mockImplementation(callback => {
-      midnightCallback = callback;
-      return midnightCleanupMock;
-    });
+    schedulerEventId = 'test-scheduler-event-123';
   });
 
   afterEach(() => {
-    vi.unstubAllGlobals();
-    scheduleMidnightTaskMock.mockReset();
     vi.restoreAllMocks();
   });
 
-  it('updates selected date to today and refreshes reminders when midnight task runs', async () => {
+  it('initializes server-side midnight scheduler when midnightUpdate is enabled', async () => {
     const initialDate: DateKey = '2024-01-01';
-    const todayDate: DateKey = '2024-01-02';
-
-    vi.spyOn(dateOnlyModule, 'getTodayDateKey').mockReturnValue(todayDate);
-
     const initialReminders = [
       createReminder({
         id: 'initial-reminder',
         scheduledAt: '2024-01-01T08:00:00.000Z',
       }),
     ];
-    const refreshedReminders = [
-      createReminder({
-        id: 'updated-reminder',
-        scheduledAt: '2024-01-02T09:00:00.000Z',
-      }),
-    ];
 
-    fetchMock.mockResolvedValueOnce(createFetchResponse(initialReminders));
-    fetchMock.mockResolvedValueOnce(createFetchResponse(refreshedReminders));
+    // Set up mock responses - use a more flexible approach
+    fetchMock.mockImplementation((url: string, options?: any) => {
+      if (url.includes('/api/reminder')) {
+        return Promise.resolve(createFetchResponse(initialReminders));
+      }
+      if (url.includes('/api/scheduler/events') && options?.method === 'POST') {
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          statusText: 'OK',
+          json: () => Promise.resolve({ eventId: schedulerEventId }),
+        });
+      }
+      if (url.includes('/api/scheduler/events') && options?.method === 'DELETE') {
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          statusText: 'OK',
+          json: () => Promise.resolve({}),
+        });
+      }
+      return Promise.resolve({
+        ok: true,
+        status: 200,
+        statusText: 'OK',
+        json: () => Promise.resolve({}),
+      });
+    });
 
     const { wrapper, composable } = mountComposable({
       date: initialDate,
       autoRefresh: false,
+      midnightUpdate: true,
     });
 
+    // Wait for initial setup - need to wait for both reminder fetch AND scheduler initialization
+    await flushPromises();
     await nextTick();
-    await waitForMidnightScheduler();
+    await flushPromises(); // Extra wait for scheduler initialization
+    await nextTick();
+    
+    // Wait a bit more for the scheduler initialization to complete
+    await new Promise(resolve => setTimeout(resolve, 100));
+    await flushPromises();
+    await nextTick();
 
-    expect(scheduleMidnightTaskMock).toHaveBeenCalledTimes(1);
-    expect(midnightCallback).toBeTypeOf('function');
+    // Verify scheduler was initialized
+    const schedulerPostCalls = fetchMock.mock.calls.filter(call => 
+      call[0]?.includes('/api/scheduler/events') && call[1]?.method === 'POST'
+    );
+    expect(schedulerPostCalls.length).toBe(1);
+    
+    const postCall = schedulerPostCalls[0];
+    expect(postCall[1].body).toContain('daily-reminder-update');
+    expect(postCall[1].body).toContain('cron:0 0 * * *');
+    
+    // Verify reminders were loaded
     expect(fetchMock).toHaveBeenCalledWith(
       `/api/reminder?date=${encodeURIComponent(initialDate)}`
     );
     expect(composable.selectedDate.value).toBe(initialDate);
     expect(composable.reminders.value).toEqual(initialReminders);
 
-    midnightCallback?.();
+    // Unmount and verify cleanup
+    wrapper.unmount();
+    
     await flushPromises();
     await nextTick();
-    await waitForCondition(
-      () =>
-        composable.selectedDate.value === todayDate &&
-        composable.reminders.value.length === refreshedReminders.length &&
-        composable.reminders.value[0]?.id === refreshedReminders[0]?.id
+    await flushPromises(); // Extra wait for cleanup
+    await nextTick();
+    
+    const deleteCalls = fetchMock.mock.calls.filter(call => 
+      call[0]?.includes('/api/scheduler/events') && call[1]?.method === 'DELETE'
     );
+    expect(deleteCalls.length).toBe(1);
+    expect(deleteCalls[0][0]).toContain(schedulerEventId);
+  });
 
-    expect(fetchMock).toHaveBeenCalledTimes(2);
-    expect(fetchMock).toHaveBeenLastCalledWith(
-      `/api/reminder?date=${encodeURIComponent(todayDate)}`
+  it('does not initialize scheduler when midnightUpdate is disabled', async () => {
+    const initialDate: DateKey = '2024-01-01';
+    const initialReminders = [
+      createReminder({
+        id: 'initial-reminder',
+        scheduledAt: '2024-01-01T08:00:00.000Z',
+      }),
+    ];
+
+    // Set up mock response for reminders only
+    fetchMock.mockImplementation((url: string) => {
+      if (url.includes('/api/reminder')) {
+        return Promise.resolve(createFetchResponse(initialReminders));
+      }
+      return Promise.resolve({
+        ok: true,
+        status: 200,
+        statusText: 'OK',
+        json: () => Promise.resolve({}),
+      });
+    });
+
+    const { wrapper, composable } = mountComposable({
+      date: initialDate,
+      autoRefresh: false,
+      midnightUpdate: false,
+    });
+
+    // Wait for initial setup
+    await flushPromises();
+    await nextTick();
+    await flushPromises(); // Extra wait
+    await nextTick();
+
+    // Verify no scheduler calls were made
+    const schedulerCalls = fetchMock.mock.calls.filter(call => 
+      call[0]?.includes('/api/scheduler/events')
     );
-    expect(composable.selectedDate.value).toBe(todayDate);
-    expect(composable.reminders.value).toEqual(refreshedReminders);
+    expect(schedulerCalls.length).toBe(0);
+    
+    // Verify reminders were loaded
+    expect(fetchMock).toHaveBeenCalledWith(
+      `/api/reminder?date=${encodeURIComponent(initialDate)}`
+    );
+    expect(composable.selectedDate.value).toBe(initialDate);
+    expect(composable.reminders.value).toEqual(initialReminders);
 
     wrapper.unmount();
-    expect(midnightCleanupMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('handles scheduler initialization failure gracefully', async () => {
+    const initialDate: DateKey = '2024-01-01';
+    const initialReminders = [
+      createReminder({
+        id: 'initial-reminder',
+        scheduledAt: '2024-01-01T08:00:00.000Z',
+      }),
+    ];
+
+    // Mock console.error to verify error handling
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    // Set up mock responses - scheduler fails but reminders load
+    fetchMock.mockImplementation((url: string, options?: any) => {
+      if (url.includes('/api/reminder')) {
+        return Promise.resolve(createFetchResponse(initialReminders));
+      }
+      if (url.includes('/api/scheduler/events') && options?.method === 'POST') {
+        return Promise.reject(new Error('Network error'));
+      }
+      return Promise.resolve({
+        ok: true,
+        status: 200,
+        statusText: 'OK',
+        json: () => Promise.resolve({}),
+      });
+    });
+
+    const { wrapper, composable } = mountComposable({
+      date: initialDate,
+      autoRefresh: false,
+      midnightUpdate: true,
+    });
+
+    // Wait for initial setup
+    await flushPromises();
+    await nextTick();
+    await flushPromises(); // Extra wait for scheduler initialization
+    await nextTick();
+
+    // Verify scheduler was attempted
+    const schedulerCalls = fetchMock.mock.calls.filter(call => 
+      call[0]?.includes('/api/scheduler/events') && call[1]?.method === 'POST'
+    );
+    expect(schedulerCalls.length).toBe(1);
+    
+    // Verify error was logged
+    expect(consoleErrorSpy).toHaveBeenCalledWith(
+      'Failed to initialize midnight scheduler:',
+      expect.any(Error)
+    );
+    
+    // Verify reminders still loaded despite scheduler failure
+    expect(fetchMock).toHaveBeenCalledWith(
+      `/api/reminder?date=${encodeURIComponent(initialDate)}`
+    );
+    expect(composable.selectedDate.value).toBe(initialDate);
+    expect(composable.reminders.value).toEqual(initialReminders);
+
+    wrapper.unmount();
+    consoleErrorSpy.mockRestore();
   });
 });

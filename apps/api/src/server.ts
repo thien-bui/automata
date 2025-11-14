@@ -10,6 +10,7 @@ import { registerDiscord } from './routes/discord';
 import { registerReminder } from './routes/reminder';
 import { registerAlert } from './routes/alert';
 import { registerAutoMode } from './routes/autoMode';
+import { registerScheduler } from './routes/scheduler';
 import { ReminderScheduler } from './services/reminderScheduler';
 import { ReminderRepository } from './adapters/reminderRepository';
 import { buildRateLimitError } from './utils/errors';
@@ -75,6 +76,7 @@ export function buildServer(options: BuildServerOptions = {}): FastifyInstance {
   app.register(registerReminder, { prefix: '/api' });
   app.register(registerAlert, { prefix: '/api' });
   app.register(registerAutoMode, { prefix: '/api' });
+  app.register(registerScheduler, { prefix: '/api' });
 
   return app;
 }

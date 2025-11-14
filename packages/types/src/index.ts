@@ -238,3 +238,33 @@ export interface ConfigUpdateRequest {
   autoMode?: Partial<AutoModeConfig>;
   ui?: Partial<UiPreferencesState>;
 }
+
+// Scheduler types
+export interface SchedulerStatusResponse {
+  isHealthy: boolean;
+  activeSchedules: number;
+  nextScheduledEvents: Array<{
+    eventId: string;
+    scheduledAtIso: string;
+    taskType: string;
+  }>;
+  lastUpdatedIso: string;
+}
+
+export interface SchedulerEvent {
+  eventId: string;
+  taskType: string;
+  scheduleExpression: string;
+  payload?: Record<string, unknown>;
+  isRecurring: boolean;
+  nextRunAtIso?: string;
+  lastRunAtIso?: string;
+  createdAtIso: string;
+}
+
+export interface SchedulerEventRequest {
+  taskType: string;
+  scheduleExpression: string;
+  payload?: Record<string, unknown>;
+  isRecurring?: boolean;
+}
