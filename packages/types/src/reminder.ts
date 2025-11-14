@@ -55,6 +55,8 @@ export type ReminderRemovalPolicy = {
 export type ReminderResponse = {
   reminders: DailyReminder[];
   expiresAfterMinutes: number;
+  overdueCount: number;
+  serverTime: string;
 };
 
 /**
@@ -83,5 +85,14 @@ export type ReminderTemplate = {
   recurrence: 'daily';
   isActive: boolean;
   createdAt: string;
+  updatedAt: string;
+};
+
+/**
+ * Auto-refresh configuration for reminders
+ */
+export type AutoRefreshConfig = {
+  enabled: boolean;
+  intervalSeconds: number;
   updatedAt: string;
 };

@@ -178,6 +178,7 @@ const {
   isLoading,
   error,
   selectedDate,
+  serverTime,
   refresh,
   setDate,
   completeReminder,

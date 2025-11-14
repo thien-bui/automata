@@ -29,10 +29,12 @@ const createReminder = (overrides: Partial<DailyReminder> = {}): DailyReminder =
   createdAt: overrides.createdAt ?? '2023-12-31T12:00:00.000Z',
 });
 
-const createFetchResponse = (reminders: DailyReminder[]): Response => {
+const createFetchResponse = (reminders: DailyReminder[], serverTime?: string, overdueCount?: number): Response => {
   const payload: ReminderResponse = {
     reminders,
     expiresAfterMinutes: 15,
+    overdueCount: overdueCount ?? reminders.filter(r => !r.isCompleted).length,
+    serverTime: serverTime ?? new Date().toISOString(),
   };
 
   return {
@@ -273,5 +275,215 @@ describe('useDailyReminders', () => {
 
     wrapper.unmount();
     consoleErrorSpy.mockRestore();
+  });
+
+  it('uses server-provided overdue count when available', async () => {
+    const initialDate: DateKey = '2024-01-01';
+    const serverOverdueCount = 3;
+    const initialReminders = [
+      createReminder({
+        id: 'reminder-1',
+        scheduledAt: '2024-01-01T08:00:00.000Z',
+        isCompleted: false,
+      }),
+      createReminder({
+        id: 'reminder-2',
+        scheduledAt: '2024-01-01T09:00:00.000Z',
+        isCompleted: false,
+      }),
+      createReminder({
+        id: 'reminder-3',
+        scheduledAt: '2024-01-01T10:00:00.000Z',
+        isCompleted: false,
+      }),
+    ];
+
+    // Set up mock response with server overdue count
+    fetchMock.mockImplementation((url: string) => {
+      if (url.includes('/api/reminder')) {
+        return Promise.resolve(createFetchResponse(initialReminders, undefined, serverOverdueCount));
+      }
+      return Promise.resolve({
+        ok: true,
+        status: 200,
+        statusText: 'OK',
+        json: () => Promise.resolve({}),
+      });
+    });
+
+    const { wrapper, composable } = mountComposable({
+      date: initialDate,
+      autoRefresh: false,
+      midnightUpdate: false,
+    });
+
+    // Wait for initial setup
+    await flushPromises();
+    await nextTick();
+    await flushPromises();
+    await nextTick();
+
+    // Verify server overdue count is used
+    expect(composable.overdueCount.value).toBe(serverOverdueCount);
+    expect(composable.serverTime.value).toBeTruthy();
+
+    wrapper.unmount();
+  });
+
+  it('falls back to client-side overdue calculation when server count is not available', async () => {
+    const initialDate: DateKey = '2024-01-01';
+    const serverTime = '2024-01-01T12:00:00.000Z';
+    
+    // Create reminders where some would be overdue based on current time
+    const now = new Date();
+    const overdueTime = new Date(now.getTime() - 20 * 60 * 1000); // 20 minutes ago
+    const futureTime = new Date(now.getTime() + 60 * 60 * 1000); // 1 hour from now
+    
+    const initialReminders = [
+      createReminder({
+        id: 'reminder-1',
+        scheduledAt: overdueTime.toISOString(),
+        isCompleted: false,
+      }),
+      createReminder({
+        id: 'reminder-2',
+        scheduledAt: futureTime.toISOString(),
+        isCompleted: false,
+      }),
+      createReminder({
+        id: 'reminder-3',
+        scheduledAt: overdueTime.toISOString(),
+        isCompleted: true, // completed, so not overdue
+      }),
+    ];
+
+    // Mock fetch to return response with null overdue count
+    fetchMock.mockImplementation((url: string) => {
+      if (url.includes('/api/reminder')) {
+        return Promise.resolve(createFetchResponse(initialReminders, serverTime, null as any));
+      }
+      return Promise.resolve({
+        ok: true,
+        status: 200,
+        statusText: 'OK',
+        json: () => Promise.resolve({}),
+      });
+    });
+
+    const { wrapper, composable } = mountComposable({
+      date: initialDate,
+      autoRefresh: false,
+      midnightUpdate: false,
+    });
+
+    // Wait for initial setup
+    await flushPromises();
+    await nextTick();
+    await flushPromises();
+    await nextTick();
+
+    // Verify server time is available
+    expect(composable.serverTime.value).toBe(serverTime);
+    
+    // Verify fallback to client calculation (should be 2 overdue - both incomplete reminders are overdue)
+    expect(composable.overdueCount.value).toBe(2);
+
+    wrapper.unmount();
+  });
+
+  it('exposes server time from API response', async () => {
+    const initialDate: DateKey = '2024-01-01';
+    const serverTime = '2024-01-01T15:30:00.000Z';
+    const initialReminders = [
+      createReminder({
+        id: 'reminder-1',
+        scheduledAt: '2024-01-01T08:00:00.000Z',
+      }),
+    ];
+
+    // Set up mock response with specific server time
+    fetchMock.mockImplementation((url: string) => {
+      if (url.includes('/api/reminder')) {
+        return Promise.resolve(createFetchResponse(initialReminders, serverTime));
+      }
+      return Promise.resolve({
+        ok: true,
+        status: 200,
+        statusText: 'OK',
+        json: () => Promise.resolve({}),
+      });
+    });
+
+    const { wrapper, composable } = mountComposable({
+      date: initialDate,
+      autoRefresh: false,
+      midnightUpdate: false,
+    });
+
+    // Wait for initial setup
+    await flushPromises();
+    await nextTick();
+    await flushPromises();
+    await nextTick();
+
+    // Verify server time is exposed
+    expect(composable.serverTime.value).toBe(serverTime);
+
+    wrapper.unmount();
+  });
+
+  it('handles API response with enhanced reminder data', async () => {
+    const initialDate: DateKey = '2024-01-01';
+    const serverTime = '2024-01-01T16:45:00.000Z';
+    const serverOverdueCount = 2;
+    const initialReminders = [
+      createReminder({
+        id: 'reminder-1',
+        title: 'Test Reminder 1',
+        scheduledAt: '2024-01-01T08:00:00.000Z',
+        isCompleted: false,
+      }),
+      createReminder({
+        id: 'reminder-2',
+        title: 'Test Reminder 2',
+        scheduledAt: '2024-01-01T09:00:00.000Z',
+        isCompleted: true,
+      }),
+    ];
+
+    // Set up mock response with all enhanced data
+    fetchMock.mockImplementation((url: string) => {
+      if (url.includes('/api/reminder')) {
+        return Promise.resolve(createFetchResponse(initialReminders, serverTime, serverOverdueCount));
+      }
+      return Promise.resolve({
+        ok: true,
+        status: 200,
+        statusText: 'OK',
+        json: () => Promise.resolve({}),
+      });
+    });
+
+    const { wrapper, composable } = mountComposable({
+      date: initialDate,
+      autoRefresh: false,
+      midnightUpdate: false,
+    });
+
+    // Wait for initial setup
+    await flushPromises();
+    await nextTick();
+    await flushPromises();
+    await nextTick();
+
+    // Verify all enhanced data is properly handled
+    expect(composable.reminders.value).toEqual(initialReminders);
+    expect(composable.serverTime.value).toBe(serverTime);
+    expect(composable.overdueCount.value).toBe(serverOverdueCount);
+    expect(composable.selectedDate.value).toBe(initialDate);
+    expect(composable.isLoading.value).toBe(false);
+    expect(composable.error.value).toBeNull();
+
+    wrapper.unmount();
   });
 });

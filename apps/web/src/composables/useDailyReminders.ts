@@ -34,6 +34,8 @@ export type UseDailyRemindersReturn = {
   error: ComputedRef<string | null>;
   /** Selected date in YYYY-MM-DD format */
   selectedDate: ComputedRef<DateKey>;
+  /** Server time from API response (ISO string) */
+  serverTime: ComputedRef<string | null>;
   /** Refresh reminders for current date */
   refresh: () => Promise<void>;
   /** Change the selected date */
@@ -76,6 +78,15 @@ export function useDailyReminders(
 
   // Computed properties
   const overdueCount = computed(() => {
+    // Use server-provided overdue count if available, otherwise fall back to client calculation
+    return serverOverdueCount.value ?? clientOverdueCount.value;
+  });
+
+  // Server-provided overdue count from API response
+  const serverOverdueCount = ref<number | null>(null);
+
+  // Client-side overdue calculation as fallback
+  const clientOverdueCount = computed(() => {
     const now = new Date();
     return reminders.value.filter(reminder => {
       const scheduledTime = new Date(reminder.scheduledAt);
@@ -83,6 +94,9 @@ export function useDailyReminders(
       return now > expireTime && !reminder.isCompleted;
     }).length;
   });
+
+  // Server time from API response
+  const serverTime = ref<string | null>(null);
 
   /**
    * Fetch reminders for the selected date
@@ -107,6 +121,8 @@ export function useDailyReminders(
       const data: ReminderResponse = await response.json();
       if (requestId === activeFetchId) {
         reminders.value = data.reminders;
+        serverOverdueCount.value = data.overdueCount;
+        serverTime.value = data.serverTime;
         error.value = null;
       }
     } catch (err) {
@@ -308,6 +324,7 @@ export function useDailyReminders(
     isLoading: computed(() => isLoading.value),
     error: computed(() => error.value),
     selectedDate: computed(() => selectedDate.value),
+    serverTime: computed(() => serverTime.value),
     refresh,
     setDate,
     completeReminder,

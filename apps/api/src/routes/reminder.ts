@@ -23,6 +23,11 @@ const completeReminderSchema = z.object({
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid date format. Expected YYYY-MM-DD').optional(),
 });
 
+const autoRefreshSchema = z.object({
+  enabled: z.boolean(),
+  intervalSeconds: z.number().min(10).max(3600).optional(),
+});
+
 interface CachedReminderRecord {
   payload: Omit<ReminderResponse, 'cache'>;
   cachedAtIso: string;
@@ -31,6 +36,8 @@ interface CachedReminderRecord {
 interface ReminderResponse {
   reminders: DailyReminder[];
   expiresAfterMinutes: number;
+  overdueCount: number;
+  serverTime: string;
   cache: {
     hit: boolean;
     ageSeconds: number;
@@ -155,9 +162,27 @@ export async function registerReminder(
         throw new Error('Failed to generate ISO timestamp for reminder payload');
       }
 
+      // Calculate overdue count on server side
+      const serverTime = now.toISO();
+      if (!serverTime) {
+        throw new Error('Failed to generate ISO timestamp for server time');
+      }
+
+      const overdueCount = reminderResponse.reminders.filter(reminder => {
+        if (reminder.isCompleted) return false;
+        
+        const scheduledTime = DateTime.fromISO(reminder.scheduledAt, { zone: 'utc' });
+        if (!scheduledTime.isValid) return false;
+        
+        const expireTime = scheduledTime.plus({ minutes: reminderResponse.expiresAfterMinutes });
+        return now > expireTime;
+      }).length;
+
       const payload: Omit<ReminderResponse, 'cache'> = {
         reminders: reminderResponse.reminders,
         expiresAfterMinutes: reminderResponse.expiresAfterMinutes,
+        overdueCount,
+        serverTime,
       };
 
       const response: ReminderResponse = {
@@ -287,6 +312,81 @@ export async function registerReminder(
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       app.log.error({ err: error }, 'Error getting scheduler status');
+      
+      const errorResponse = buildInternalError(error as Error);
+      return reply.status(errorResponse.statusCode).send(errorResponse.payload);
+    }
+  });
+
+  // POST /reminder/auto-refresh - Configure auto-refresh settings
+  app.post('/reminder/auto-refresh', async (request, reply) => {
+    const validation = autoRefreshSchema.safeParse(request.body);
+    if (!validation.success) {
+      const { statusCode, payload } = buildValidationError('Invalid request body', {
+        issues: validation.error.flatten(),
+      });
+      return reply.status(statusCode).send(payload);
+    }
+
+    const { enabled, intervalSeconds } = validation.data;
+
+    try {
+      // Store auto-refresh configuration in Redis
+      const configKey = 'reminder:auto-refresh-config';
+      const config = {
+        enabled,
+        intervalSeconds: intervalSeconds ?? 60, // Default to 60 seconds
+        updatedAt: DateTime.utc().toISO(),
+      };
+
+      await app.redis.set(configKey, JSON.stringify(config), 'EX', 86400); // 24 hour expiry
+
+      app.log.info(`Updated reminder auto-refresh config: enabled=${enabled}, interval=${intervalSeconds ?? 60}s`);
+      
+      return {
+        success: true,
+        message: 'Auto-refresh configuration updated',
+        config,
+      };
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      app.log.error({ err: error }, 'Error updating auto-refresh configuration');
+      
+      const errorResponse = buildInternalError(error as Error);
+      return reply.status(errorResponse.statusCode).send(errorResponse.payload);
+    }
+  });
+
+  // GET /reminder/auto-refresh - Get current auto-refresh configuration
+  app.get('/reminder/auto-refresh', async (request, reply) => {
+    try {
+      const configKey = 'reminder:auto-refresh-config';
+      const configRaw = await app.redis.get(configKey);
+      
+      let config;
+      if (configRaw) {
+        try {
+          config = JSON.parse(configRaw);
+        } catch (error) {
+          app.log.warn({ err: error }, 'Failed to parse auto-refresh config, using defaults');
+          config = null;
+        }
+      }
+
+      // Return default config if none found or parsing failed
+      const defaultConfig = {
+        enabled: true,
+        intervalSeconds: 60,
+        updatedAt: DateTime.utc().toISO(),
+      };
+
+      const responseConfig = config || defaultConfig;
+      
+      app.log.info('Retrieved reminder auto-refresh configuration');
+      return responseConfig;
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      app.log.error({ err: error }, 'Error getting auto-refresh configuration');
       
       const errorResponse = buildInternalError(error as Error);
       return reply.status(errorResponse.statusCode).send(errorResponse.payload);

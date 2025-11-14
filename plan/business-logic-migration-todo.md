@@ -122,23 +122,23 @@ This document provides a step-by-step implementation plan for migrating business
   - Dependencies: Task 2.1.4
 
 ### 2.2 Reminder Management Enhancement
-- [ ] **Task 2.2.1**: Enhance reminder API with server calculations
+- [x] **Task 2.2.1**: Enhance reminder API with server calculations
   - File: `apps/api/src/routes/reminder.ts`
   - Add `overdueCount` and `serverTime` to response
   - Dependencies: Phase 1 complete
 
-- [ ] **Task 2.2.2**: Create reminder auto-refresh API endpoint
+- [x] **Task 2.2.2**: Create reminder auto-refresh API endpoint
   - File: `apps/api/src/routes/reminder.ts`
   - Endpoint: `POST /api/reminder/auto-refresh`
   - Interface: `AutoRefreshConfig`
   - Dependencies: Task 2.2.1
 
-- [ ] **Task 2.2.3**: Update reminder composable to use enhanced API
+- [x] **Task 2.2.3**: Update reminder composable to use enhanced API
   - File: `apps/web/src/composables/useDailyReminders.ts`
   - Replace client-side overdue calculations
   - Dependencies: Task 2.2.1, Task 2.2.2
 
-- [ ] **Task 2.2.4**: Update reminder widget to use server time
+- [x] **Task 2.2.4**: Update reminder widget to use server time
   - File: `apps/web/src/components/reminder/ReminderWidget.vue`
   - Replace client-side date handling
   - Dependencies: Task 2.2.3
