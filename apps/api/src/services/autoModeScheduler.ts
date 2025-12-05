@@ -155,13 +155,37 @@ export class AutoModeScheduler {
         if (!window.startTime || typeof window.startTime.hour !== 'number' ||
             typeof window.startTime.minute !== 'number') {
           errors.push(`timeWindows[${index}].startTime must have valid hour and minute`);
+        } else {
+          if (window.startTime.hour < 0 || window.startTime.hour > 23) {
+            errors.push(`timeWindows[${index}].startTime.hour must be between 0 and 23`);
+          }
+          if (window.startTime.minute < 0 || window.startTime.minute > 59) {
+            errors.push(`timeWindows[${index}].startTime.minute must be between 0 and 59`);
+          }
         }
         if (!window.endTime || typeof window.endTime.hour !== 'number' ||
             typeof window.endTime.minute !== 'number') {
           errors.push(`timeWindows[${index}].endTime must have valid hour and minute`);
+        } else {
+          if (window.endTime.hour < 0 || window.endTime.hour > 23) {
+            errors.push(`timeWindows[${index}].endTime.hour must be between 0 and 23`);
+          }
+          if (window.endTime.minute < 0 || window.endTime.minute > 59) {
+            errors.push(`timeWindows[${index}].endTime.minute must be between 0 and 59`);
+          }
         }
+        
+        // Note: startMinutes can be greater than endMinutes for windows that cross midnight
+        // This is valid, so we don't validate the relationship between start and end times
+        
         if (!Array.isArray(window.daysOfWeek)) {
           errors.push(`timeWindows[${index}].daysOfWeek must be an array`);
+        } else {
+          window.daysOfWeek.forEach((day, dayIndex) => {
+            if (typeof day !== 'number' || day < 0 || day > 6) {
+              errors.push(`timeWindows[${index}].daysOfWeek[${dayIndex}] must be a number between 0 and 6`);
+            }
+          });
         }
       });
     }

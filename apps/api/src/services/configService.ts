@@ -191,16 +191,21 @@ export class ConfigService {
 
     // Validate time windows
     for (const window of config.autoMode.timeWindows) {
-      const startMinutes = window.startTime.hour * 60 + window.startTime.minute;
-      const endMinutes = window.endTime.hour * 60 + window.endTime.minute;
-      
-      if (startMinutes >= endMinutes) {
-        return false; // Start time must be before end time
-      }
-      
+      // Validate day of week values (0-6)
       if (window.daysOfWeek.some(day => day < 0 || day > 6)) {
         return false; // Invalid day of week
       }
+      
+      // Validate time values (0-23 for hours, 0-59 for minutes)
+      if (window.startTime.hour < 0 || window.startTime.hour > 23 ||
+          window.startTime.minute < 0 || window.startTime.minute > 59 ||
+          window.endTime.hour < 0 || window.endTime.hour > 23 ||
+          window.endTime.minute < 0 || window.endTime.minute > 59) {
+        return false; // Invalid time value
+      }
+      
+      // Note: startMinutes can be greater than endMinutes for windows that cross midnight
+      // This is valid, so we don't validate the relationship between start and end times
     }
 
     return true;

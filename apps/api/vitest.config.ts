@@ -8,7 +8,7 @@ export default defineConfig({
   test: {
     globals: true,
     environment: 'node',
-    include: ['test/**/*.test.ts'],
+    include: ['src/**/*.test.ts'],
     clearMocks: true,
     restoreMocks: true,
     coverage: {
