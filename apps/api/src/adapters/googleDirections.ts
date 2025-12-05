@@ -110,7 +110,9 @@ export async function fetchGoogleDirections(
 
 function calculateDurationSeconds(route: Route): number {
   const fromRoute = extractDurationSeconds(route.duration);
-  if (fromRoute > 0) {
+  // If route.duration is provided (non-null/undefined), use it even if zero or negative.
+  // The validation later will catch invalid values.
+  if (route.duration !== null && route.duration !== undefined) {
     return fromRoute;
   }
 

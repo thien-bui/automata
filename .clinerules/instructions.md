@@ -70,9 +70,6 @@ This is a TypeScript monorepo with:
 - Prefer declarative data flows (Pinia/composables) over ad-hoc event buses
 - Keep cross-cutting state co-located with domain features
 
-### Testing
-- Co-locate component unit tests next to components using `*.spec.ts`
-
 ## Modern Web Fundamentals
 
 ### Accessibility & Performance
@@ -100,10 +97,7 @@ This is a TypeScript monorepo with:
 - Seed fixture data via helper factories under `test/` directories
 - Clean up with `beforeEach/afterEach` hooks
 - Focus on minimal unit test targeting primary functionalities.
-
-### Integration Tests
-- Spin up Fastify via `buildServer` and hit the HTTP layer
-- Assert against full responses, not internals
+- Put unit tests within the same directory as the file being tested and with suffix `*.spec.ts`next to components using.
 
 ## Testing Commands
 
