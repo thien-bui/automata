@@ -10,9 +10,9 @@ const isLoadingRef = ref(false);
 const errorRef = ref<string | null>(null);
 const selectedDateRef = ref('2024-04-10');
 
-const refreshMock = vi.fn<[], Promise<void>>(() => Promise.resolve());
-const setDateMock = vi.fn<[string], Promise<void>>(() => Promise.resolve());
-const completeReminderMock = vi.fn<[string], Promise<void>>(() => Promise.resolve());
+const refreshMock = vi.fn<() => Promise<void>>(() => Promise.resolve());
+const setDateMock = vi.fn<(date: string) => Promise<void>>(() => Promise.resolve());
+const completeReminderMock = vi.fn<(id: string) => Promise<void>>(() => Promise.resolve());
 
 vi.mock('../../../composables/useDailyReminders', () => ({
   useDailyReminders: vi.fn(() => ({

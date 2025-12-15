@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest';
 import { mount } from '@vue/test-utils';
 import { defineComponent, h } from 'vue';
 import WeatherSettings from '../WeatherSettings.vue';
@@ -134,7 +134,7 @@ const DividerStub = defineComponent({
 });
 
 describe('WeatherSettings', () => {
-  let onSaveMock: ReturnType<typeof vi.fn>;
+  let onSaveMock: Mock;
 
   beforeEach(() => {
     onSaveMock = vi.fn();

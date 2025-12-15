@@ -4,18 +4,19 @@
  */
 
 import { Redis } from 'ioredis';
-import { 
-  DailyReminder, 
-  ReminderTemplate, 
+import { DateTime } from 'luxon';
+import {
+  DailyReminder,
+  ReminderTemplate,
   DailyReminderPayload,
-  ReminderResponse 
+  ReminderResponse
 } from '@automata/types';
-import { 
-  formatDateKey, 
-  createUtcTimestamp, 
-  filterExpiredReminders, 
+import {
+  formatDateKey,
+  createUtcTimestamp,
+  filterExpiredReminders,
   sortRemindersByTime,
-  getReminderExpireWindowMinutes, 
+  getReminderExpireWindowMinutes,
 } from '../config/reminder';
 
 export class ReminderRepository {
@@ -68,9 +69,27 @@ export class ReminderRepository {
       // Sort by scheduled time (earliest first)
       const sortedReminders = sortRemindersByTime(nonExpiredReminders);
 
+      // Calculate overdue count (reminders that are not completed and have expired)
+      const now = DateTime.utc();
+      let overdueCount = 0;
+      for (const reminder of sortedReminders) {
+        if (reminder.isCompleted) continue;
+        const scheduledTime = DateTime.fromISO(reminder.scheduledAt, { zone: 'utc' });
+        if (!scheduledTime.isValid) continue;
+        const expireTime = scheduledTime.plus({ minutes: expireWindowMinutes });
+        if (now > expireTime) {
+          overdueCount++;
+        }
+      }
+
+      // Generate server time
+      const serverTime = now.toISO() ?? new Date().toISOString();
+
       return {
         reminders: sortedReminders,
         expiresAfterMinutes: expireWindowMinutes,
+        overdueCount,
+        serverTime,
       };
     } catch (error) {
       console.error('Error fetching reminders for date:', dateKey, error);

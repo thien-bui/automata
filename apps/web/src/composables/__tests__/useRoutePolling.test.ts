@@ -10,10 +10,10 @@ import type { Mock } from 'vitest';
 type UseRouteTimeResult = ReturnType<typeof useRouteTime>;
 type UseAutoModeReturn = ReturnType<typeof useAutoMode>;
 type AugmentedRouteTimeMock = UseRouteTimeResult & {
-  refresh: Mock<any[], Promise<void>>;
-  setMode: Mock<any[], void>;
-  setFreshnessSeconds: Mock<any[], void>;
-  setEndpoints: Mock<any[], void>;
+  refresh: Mock<(...args: any[]) => Promise<void>>;
+  setMode: Mock<(...args: any[]) => void>;
+  setFreshnessSeconds: Mock<(...args: any[]) => void>;
+  setEndpoints: Mock<(...args: any[]) => void>;
 };
 
 // Mock dependencies

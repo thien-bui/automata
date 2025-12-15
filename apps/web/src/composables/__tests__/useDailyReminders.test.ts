@@ -41,7 +41,7 @@ const createFetchResponse = (reminders: DailyReminder[], serverTime?: string, ov
     ok: true,
     status: 200,
     statusText: 'OK',
-    json: vi.fn<[], Promise<ReminderResponse>>().mockResolvedValue(payload),
+    json: vi.fn<() => Promise<ReminderResponse>>().mockResolvedValue(payload),
   } as unknown as Response;
 };
 

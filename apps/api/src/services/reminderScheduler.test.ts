@@ -69,7 +69,9 @@ describe('ReminderScheduler', () => {
       await scheduler.seedTomorrowReminders();
 
       expect(mockRepository.seedRecurringReminders).toHaveBeenCalledTimes(1);
-      const callDate = mockRepository.seedRecurringReminders.mock.calls[0][0];
+      const call = mockRepository.seedRecurringReminders.mock.calls[0];
+      expect(call).toBeDefined();
+      const callDate = call![0]!;
       expect(callDate.getUTCDate()).toBe(tomorrow.getUTCDate());
     });
   });
@@ -84,9 +86,12 @@ describe('ReminderScheduler', () => {
       expect(mockRepository.seedRecurringReminders).toHaveBeenCalledTimes(3);
       
       const calls = mockRepository.seedRecurringReminders.mock.calls;
-      expect(calls[0][0].toISOString().split('T')[0]).toBe('2024-01-01');
-      expect(calls[1][0].toISOString().split('T')[0]).toBe('2024-01-02');
-      expect(calls[2][0].toISOString().split('T')[0]).toBe('2024-01-03');
+      expect(calls[0]).toBeDefined();
+      expect(calls[1]).toBeDefined();
+      expect(calls[2]).toBeDefined();
+      expect((calls[0]![0] as Date).toISOString().split('T')[0]).toBe('2024-01-01');
+      expect((calls[1]![0] as Date).toISOString().split('T')[0]).toBe('2024-01-02');
+      expect((calls[2]![0] as Date).toISOString().split('T')[0]).toBe('2024-01-03');
     });
 
     it('should throw error when start date is after end date', async () => {
@@ -135,44 +140,68 @@ describe('ReminderScheduler', () => {
 
   describe('getStatus', () => {
     const mockTemplates = [
-      { id: 1, name: 'Morning Meeting' },
-      { id: 2, name: 'Evening Review' },
+      {
+        id: '1',
+        title: 'Morning Meeting',
+        description: 'Daily morning meeting',
+        localTime: '09:00',
+        timezone: 'America/Los_Angeles',
+        recurrence: 'daily' as const,
+        isActive: true,
+        createdAt: '2024-01-01T00:00:00.000Z',
+        updatedAt: '2024-01-01T00:00:00.000Z',
+      },
+      {
+        id: '2',
+        title: 'Evening Review',
+        description: 'Daily evening review',
+        localTime: '18:00',
+        timezone: 'America/Los_Angeles',
+        recurrence: 'daily' as const,
+        isActive: true,
+        createdAt: '2024-01-01T00:00:00.000Z',
+        updatedAt: '2024-01-01T00:00:00.000Z',
+      },
     ];
 
     const mockTodayReminders = {
       reminders: [
-        { id: 1, title: 'Test Reminder 1' },
+        { id: '1', title: 'Test Reminder 1', scheduledAt: '2024-01-01T09:00:00.000Z', isRecurring: true, isCompleted: false, createdAt: '2024-01-01T00:00:00.000Z' },
       ],
-      templateCount: 1,
+      expiresAfterMinutes: 60,
+      overdueCount: 0,
+      serverTime: '2024-01-01T12:00:00.000Z',
     };
 
     const mockTomorrowReminders = {
       reminders: [
-        { id: 2, title: 'Test Reminder 2' },
+        { id: '2', title: 'Test Reminder 2', scheduledAt: '2024-01-02T18:00:00.000Z', isRecurring: true, isCompleted: false, createdAt: '2024-01-01T00:00:00.000Z' },
       ],
-      templateCount: 1,
+      expiresAfterMinutes: 60,
+      overdueCount: 0,
+      serverTime: '2024-01-01T12:00:00.000Z',
     };
 
     it('should return status with seeded days when data exists', async () => {
       mockRepository.getReminderTemplates.mockResolvedValue(mockTemplates);
       mockRepository.getRemindersForDate
-        .mockImplementation((date: Date) => {
+        .mockImplementation((date?: Date) => {
           const today = new Date();
           today.setUTCHours(0, 0, 0, 0);
           
-          const inputDate = new Date(date);
+          const inputDate = date ? new Date(date) : new Date();
           inputDate.setUTCHours(0, 0, 0, 0);
           
           if (inputDate.getTime() === today.getTime()) {
-            return Promise.resolve(mockTodayReminders as any);
+            return Promise.resolve(mockTodayReminders);
           } else {
             const tomorrow = new Date(today);
             tomorrow.setUTCDate(tomorrow.getUTCDate() + 1);
             if (inputDate.getTime() === tomorrow.getTime()) {
-              return Promise.resolve(mockTomorrowReminders as any);
+              return Promise.resolve(mockTomorrowReminders);
             }
           }
-          return Promise.resolve({ reminders: [], templateCount: 0 } as any);
+          return Promise.resolve({ reminders: [], expiresAfterMinutes: 60, overdueCount: 0, serverTime: new Date().toISOString() });
         });
 
       const status = await scheduler.getStatus();
@@ -189,8 +218,10 @@ describe('ReminderScheduler', () => {
       mockRepository.getReminderTemplates.mockResolvedValue([]);
       mockRepository.getRemindersForDate.mockResolvedValue({
         reminders: [],
-        templateCount: 0,
-      } as any);
+        expiresAfterMinutes: 60,
+        overdueCount: 0,
+        serverTime: new Date().toISOString(),
+      });
 
       const status = await scheduler.getStatus();
 

@@ -66,7 +66,7 @@ describe('ConfigService', () => {
 
   describe('getCurrentTimestamp', () => {
     it('should return ISO timestamp', () => {
-      const mockDate = DateTime.utc(2024, 1, 1, 12, 0, 0);
+      const mockDate = DateTime.utc(2024, 1, 1, 12, 0, 0) as DateTime<true>;
       vi.spyOn(DateTime, 'utc').mockReturnValue(mockDate);
 
       const timestamp = configService.getCurrentTimestamp();
